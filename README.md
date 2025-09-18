@@ -234,11 +234,6 @@ python -m pytest tests/test_paragraph_builder.py -v
 python -m pytest tests/test_models.py -v
 ```
 
-### Run Demo
-```bash
-python demo.py
-```
-
 ### Build Package
 ```bash
 python -m build

@@ -1,0 +1,1190 @@
+openapi: 3.0.1
+info:
+  title: development
+  version: "0.0"
+paths:
+  /font/find:
+    get:
+      operationId: findFont
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: fontName
+        in: query
+        required: true
+        explode: false
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findFont 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /font/register:
+    post:
+      operationId: registerFont
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ttfFile:
+                  type: string
+                  format: binary
+            encoding:
+              ttfFile:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: registerFont 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /pdf/add:
+    post:
+      operationId: addObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddRequest"
+        required: true
+      responses:
+        "200":
+          description: addObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/delete:
+    delete:
+      operationId: deleteObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteRequest"
+        required: true
+      responses:
+        "200":
+          description: deleteObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/find:
+    post:
+      operationId: findObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindRequest"
+        required: true
+      responses:
+        "200":
+          description: findObject 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ObjectRef"
+  /pdf/modify:
+    put:
+      operationId: modifyObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/move:
+    put:
+      operationId: moveObject
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequest"
+        required: true
+      responses:
+        "200":
+          description: moveObject 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/add:
+    post:
+      operationId: addPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: position
+        in: query
+        explode: false
+        schema:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/Position"
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Page"
+        required: true
+      responses:
+        "200":
+          description: addPage 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObjectRef"
+  /pdf/page/delete:
+    delete:
+      operationId: deletePage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObjectRef"
+        required: true
+      responses:
+        "200":
+          description: deletePage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/find:
+    post:
+      operationId: findPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: pageNumber
+        in: query
+        explode: false
+        schema:
+          type: integer
+          format: int32
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findPage 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ObjectRef"
+  /pdf/page/modify:
+    put:
+      operationId: modifyPage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyPage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/page/move:
+    put:
+      operationId: movePage
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PageMoveRequest"
+        required: true
+      responses:
+        "200":
+          description: movePage 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/text/line:
+    put:
+      operationId: modifyTextLine
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyTextRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyTextLine 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /pdf/text/paragraph:
+    put:
+      operationId: modifyParagraph
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyTextRequest"
+        required: true
+      responses:
+        "200":
+          description: modifyParagraph 200 response
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /ping:
+    get:
+      operationId: index
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: index 200 response
+          content:
+            text/plain:
+              schema:
+                type: string
+  /session/create:
+    post:
+      summary: Creates a new session by uploading and processing a PDF document.
+      description: "Creates a new session by uploading and processing a PDF document.\
+        \ This operation validates the uploaded file, creates a unique session identifier,\
+        \ processes the PDF structure for manipulation, and stores the session for\
+        \ future operations. The PDF is analyzed to extract its internal structure\
+        \ and prepare it for editing."
+      operationId: createSession
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pdf:
+                  type: string
+                  description: uploaded PDF file from the multipart request
+                  format: binary
+            encoding:
+              pdf:
+                contentType: application/octet-stream
+                explode: false
+        required: true
+      responses:
+        "200":
+          description: HTTP response containing the generated session ID for subsequent
+            operations
+          content:
+            application/json:
+              schema:
+                type: string
+  /session/{sessionId}:
+    delete:
+      summary: Deletes an existing session and cleans up associated resources.
+      description: Deletes an existing session and cleans up associated resources.
+        This operation removes the session from the store and should also clean up
+        temporary files and release any held resources.
+      operationId: deleteSession
+      parameters:
+      - name: sessionId
+        in: path
+        description: unique identifier of the session to delete
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: HTTP response indicating whether the session was successfully
+            deleted
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /session/{sessionId}/pdf:
+    get:
+      summary: Retrieves the current state of the PDF document from the specified
+        session.
+      description: "Retrieves the current state of the PDF document from the specified\
+        \ session. This operation builds and streams the PDF with all applied modifications,\
+        \ generating the final PDF output that reflects all changes made during the\
+        \ session. The PDF is built asynchronously and streamed to avoid memory issues\
+        \ with large files."
+      operationId: getSessionPdf
+      parameters:
+      - name: sessionId
+        in: path
+        description: unique identifier of the session containing the PDF
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: HTTP response containing the streamed PDF file with all modifications
+            applied
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /test:
+    get:
+      operationId: test
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: test 200 response
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    AddRequest:
+      required:
+      - object
+      type: object
+      properties:
+        object:
+          $ref: "#/components/schemas/PDFObject"
+    BoundingRect:
+      required:
+      - height
+      - width
+      - x
+      - "y"
+      type: object
+      properties:
+        origin:
+          $ref: "#/components/schemas/Point"
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          format: int32
+        green:
+          type: integer
+          format: int32
+        blue:
+          type: integer
+          format: int32
+        alpha:
+          type: integer
+          format: int32
+    DeleteRequest:
+      required:
+      - objectRef
+      type: object
+      properties:
+        objectRef:
+          $ref: "#/components/schemas/ObjectRef"
+    FindRequest:
+      required:
+      - hint
+      - objectType
+      - position
+      type: object
+      properties:
+        objectType:
+          $ref: "#/components/schemas/ObjectType"
+        position:
+          $ref: "#/components/schemas/Position"
+        hint:
+          type: string
+    Font:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: number
+          format: double
+    Form:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          name:
+            type: string
+          type:
+            $ref: "#/components/schemas/Form.FormType"
+          value:
+            type: string
+          size:
+            $ref: "#/components/schemas/Size"
+          font:
+            $ref: "#/components/schemas/Font"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    Form.FormType:
+      type: string
+      enum:
+      - TEXT_FIELD
+      - CHECKBOX
+      - RADIO_BUTTON
+      - DROPDOWN
+      - BUTTON
+    Image:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          format:
+            type: string
+          size:
+            $ref: "#/components/schemas/Size"
+          data:
+            type: string
+            format: byte
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    ModifyRequest:
+      required:
+      - newObject
+      - ref
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        newObject:
+          $ref: "#/components/schemas/PDFObject"
+    ModifyTextRequest:
+      required:
+      - newTextLine
+      - ref
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        newTextLine:
+          type: string
+    MoveRequest:
+      required:
+      - newPosition
+      - objectRef
+      type: object
+      properties:
+        objectRef:
+          $ref: "#/components/schemas/ObjectRef"
+        newPosition:
+          $ref: "#/components/schemas/Position"
+    ObjectRef:
+      required:
+      - internalId
+      - position
+      - type
+      type: object
+      properties:
+        internalId:
+          type: string
+        position:
+          $ref: "#/components/schemas/Position"
+        type:
+          $ref: "#/components/schemas/ObjectType"
+    ObjectType:
+      type: string
+      enum:
+      - PDF
+      - PAGE
+      - CHARACTER
+      - PARAGRAPH
+      - IMAGE
+      - PATH
+      - LINE
+      - RECTANGLE
+      - BEZIER
+      - CLIPPING
+      - FORM
+      - WORD
+      - TEXT_LINE
+    PDFObject:
+      type: object
+      properties:
+        id:
+          type: string
+        position:
+          $ref: "#/components/schemas/Position"
+        objectType:
+          $ref: "#/components/schemas/ObjectType"
+      discriminator:
+        propertyName: type
+        mapping:
+          image: "#/components/schemas/Image"
+          path: "#/components/schemas/Path"
+          paragraph: "#/components/schemas/Paragraph"
+          form: "#/components/schemas/Form"
+          textLine: "#/components/schemas/TextLine"
+      oneOf:
+      - $ref: "#/components/schemas/Image"
+      - $ref: "#/components/schemas/Path"
+      - $ref: "#/components/schemas/Form"
+      - $ref: "#/components/schemas/Paragraph"
+      - $ref: "#/components/schemas/TextLine"
+    Page:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          id:
+            type: string
+          pageNumber:
+            type: integer
+            format: int32
+          size:
+            $ref: "#/components/schemas/Size"
+          paragraphs:
+            type: array
+            items:
+              $ref: "#/components/schemas/Paragraph"
+          images:
+            type: array
+            items:
+              $ref: "#/components/schemas/Image"
+          paths:
+            type: array
+            items:
+              $ref: "#/components/schemas/PathSegment"
+          forms:
+            type: array
+            items:
+              $ref: "#/components/schemas/Form"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          position:
+            $ref: "#/components/schemas/Position"
+    PageMoveRequest:
+      required:
+      - fromPageNumber
+      - toPageNumber
+      type: object
+      properties:
+        fromPageNumber:
+          type: integer
+          format: int32
+        toPageNumber:
+          type: integer
+          format: int32
+    Paragraph:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          lines:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextLine"
+          lineSpacings:
+            type: array
+            items:
+              type: number
+              format: double
+          font:
+            $ref: "#/components/schemas/Font"
+    Path:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          position:
+            $ref: "#/components/schemas/Position"
+          pathSegments:
+            type: array
+            items:
+              $ref: "#/components/schemas/PathSegment"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    PathSegment:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          strokeColor:
+            $ref: "#/components/schemas/Color"
+          fillColor:
+            $ref: "#/components/schemas/Color"
+          strokeWidth:
+            type: number
+            format: double
+    Point:
+      required:
+      - x
+      - "y"
+      type: object
+      properties:
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+    Position:
+      type: object
+      properties:
+        textStartsWith:
+          type: string
+        x:
+          type: number
+          format: double
+        "y":
+          type: number
+          format: double
+        pageNumber:
+          type: integer
+          format: int32
+        shape:
+          $ref: "#/components/schemas/Position.ShapeType"
+        mode:
+          $ref: "#/components/schemas/Position.PositionMode"
+        boundingRect:
+          $ref: "#/components/schemas/BoundingRect"
+    Position.PositionMode:
+      type: string
+      enum:
+      - INTERSECT
+      - CONTAINS
+    Position.ShapeType:
+      type: string
+      enum:
+      - POINT
+      - LINE
+      - CIRCLE
+      - RECT
+    Size:
+      type: object
+      properties:
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+        area:
+          type: number
+          format: double
+    TextElement:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          text:
+            type: string
+          font:
+            $ref: "#/components/schemas/Font"
+          color:
+            $ref: "#/components/schemas/Color"
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+    TextLine:
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/PDFObject"
+      - type: object
+        properties:
+          objectType:
+            $ref: "#/components/schemas/ObjectType"
+          textElements:
+            type: array
+            items:
+              $ref: "#/components/schemas/TextElement"
+          color:
+            $ref: "#/components/schemas/Color"

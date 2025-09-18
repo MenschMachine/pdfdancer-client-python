@@ -159,8 +159,8 @@ def test_add_paragraph_with_custom_font3():
     base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
     # Use DancingScript-Regular.ttf from repo fonts directory
     from pathlib import Path
-    repo_root = Path(__file__).resolve().parents[4]
-    ttf_path = repo_root / 'fonts' / 'DancingScript-Regular.ttf'
+    repo_root = Path(__file__).resolve().parents[2]
+    ttf_path = repo_root / 'tests/fixtures' / 'DancingScript-Regular.ttf'
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
         pb = client.paragraph_builder() \
             .from_string('Awesomely\nObvious!') \

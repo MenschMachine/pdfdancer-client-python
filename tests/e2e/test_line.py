@@ -1,6 +1,6 @@
 import pytest
-
 from pdfdancer import ClientV1, Position
+
 from tests.e2e import _require_env_and_fixture
 
 

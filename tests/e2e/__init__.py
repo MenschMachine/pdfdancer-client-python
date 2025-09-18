@@ -14,7 +14,7 @@ def _read_token() -> str | None:
     if token:
         return token.strip()
     # Try common token files in repo
-    repo_root = Path(__file__).resolve().parents[4]
+    repo_root = Path(__file__).resolve().parents[2]
     candidates = list(repo_root.glob('jwt-token-*.txt')) + list(
         (repo_root / 'clients' / 'python').glob('jwt-token-*.txt'))
     for f in candidates:

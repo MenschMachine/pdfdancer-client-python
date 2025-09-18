@@ -15,7 +15,7 @@ A Python client library for the PDFDancer PDF manipulation API that closely mirr
 ## Installation
 
 ```bash
-pip install pdfdancer-python
+pip install pdfdancer-client-python
 # Or for development:
 pip install -e .
 ```

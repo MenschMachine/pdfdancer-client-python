@@ -3,8 +3,8 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pdfdancer-python"
-version = "0.0.1"
+name = "pdfdancer-client-python"
+version = "0.1.0"
 description = "Python client for PDFDancer API"
 readme = "README.md"
 authors = [

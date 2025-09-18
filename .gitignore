@@ -4,3 +4,4 @@ comprehensive_output.pdf
 jwt-token-mlahr-20250829-160417.txt
 dist/
 src/pdfdancer_python.egg-info
+.aider*

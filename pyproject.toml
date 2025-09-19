@@ -8,18 +8,17 @@ version = "0.1.2"
 description = "Python client for PDFDancer API"
 readme = "README.md"
 authors = [
-    { name = "TFC", email = "info@example.com" }
+    { name = "The Famous Cat Ltd.", email = "hi@thefamouscat.com" }
 ]
 license = { text = "MIT" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
     "requests>=2.25.0",
@@ -37,8 +36,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tfc/pdfdancer-python"
-Repository = "https://github.com/tfc/pdfdancer-python.git"
+Homepage = "https://www.pdfdancer.com/"
+Repository = "https://github.com/MenschMachine/pdfdancer-client-python"
 
 [tool.setuptools.packages.find]
 where = ["src"]

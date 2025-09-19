@@ -19,8 +19,9 @@ from .exceptions import (
     ValidationException
 )
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Image, Paragraph,
-    FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ShapeType, PositionMode
+    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef,
+    FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
+    ShapeType, PositionMode
 )
 
 
@@ -75,7 +76,6 @@ class ClientV1:
     def _process_pdf_data(self, pdf_data: Union[bytes, Path, str, BinaryIO]) -> bytes:
         """
         Process PDF data from various input types with strict validation.
-        Equivalent to readFile() method in Java client.
         """
         if pdf_data is None:
             raise ValidationException("PDF data cannot be null")
@@ -152,7 +152,6 @@ class ClientV1:
     def _create_session(self) -> str:
         """
         Creates a new PDF processing session by uploading the PDF data.
-        Equivalent to createSession() method in Java client.
         """
         try:
             files = {
@@ -182,7 +181,6 @@ class ClientV1:
                       params: Optional[dict] = None) -> requests.Response:
         """
         Make HTTP request with session headers and error handling.
-        Equivalent to retrieve() method pattern in Java client.
         """
         headers = {
             'X-Session-Id': self._session_id,
@@ -241,35 +239,53 @@ class ClientV1:
     def find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for paragraph objects at the specified position.
-        Equivalent to findParagraphs() in Java client.
         """
         return self.find(ObjectType.PARAGRAPH, position)
 
     def find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for image objects at the specified position.
-        Equivalent to findImages() in Java client.
         """
         return self.find(ObjectType.IMAGE, position)
 
     def find_forms(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for form field objects at the specified position.
-        Equivalent to findForms() in Java client.
         """
         return self.find(ObjectType.FORM_X_OBJECT, position)
+
+    def find_form_fields(self, position: Optional[Position] = None) -> List[FormFieldRef]:
+        """
+        Searches for form fields at the specified position.
+        Returns FormFieldRef objects with name and value properties.
+        """
+        request_data = FindRequest(ObjectType.FORM_FIELD, position).to_dict()
+        response = self._make_request('POST', '/pdf/find', data=request_data)
+
+        # Parse response into ObjectRef objects
+        objects_data = response.json()
+        return [self._parse_form_field_ref(obj_data) for obj_data in objects_data]
+
+    def change_form_field(self, form_field_ref: FormFieldRef, new_value: str) -> bool:
+        """
+        Changes the value of a form field.
+        """
+        if form_field_ref is None:
+            raise ValidationException("Form field reference cannot be null")
+
+        request_data = ChangeFormFieldRequest(form_field_ref, new_value).to_dict()
+        response = self._make_request('PUT', '/pdf/modify/formField', data=request_data)
+        return response.json()
 
     def find_paths(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for vector path objects at the specified position.
-        Equivalent to findPaths() in Java client.
         """
         return self.find(ObjectType.PATH, position)
 
     def find_text_lines(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for text line objects at the specified position.
-        Equivalent to findTextLines() in Java client.
         """
         return self.find(ObjectType.TEXT_LINE, position)
 
@@ -278,7 +294,6 @@ class ClientV1:
     def get_pages(self) -> List[ObjectRef]:
         """
         Retrieves references to all pages in the PDF document.
-        Equivalent to getPages() in Java client.
         """
         response = self._make_request('POST', '/pdf/page/find')
         pages_data = response.json()
@@ -287,7 +302,6 @@ class ClientV1:
     def get_page(self, page_index: int) -> Optional[ObjectRef]:
         """
         Retrieves a reference to a specific page by its page index.
-        Equivalent to getPage() in Java client.
 
         Args:
             page_index: The page index to retrieve (1-based indexing)
@@ -310,7 +324,6 @@ class ClientV1:
     def delete_page(self, page_ref: ObjectRef) -> bool:
         """
         Deletes a page from the PDF document.
-        Equivalent to deletePage() in Java client.
 
         Args:
             page_ref: Reference to the page to be deleted
@@ -331,7 +344,6 @@ class ClientV1:
     def delete(self, object_ref: ObjectRef) -> bool:
         """
         Deletes the specified PDF object from the document.
-        Equivalent to delete() in Java client.
 
         Args:
             object_ref: Reference to the object to be deleted
@@ -349,7 +361,6 @@ class ClientV1:
     def move(self, object_ref: ObjectRef, position: Position) -> bool:
         """
         Moves a PDF object to a new position within the document.
-        Equivalent to move() in Java client.
 
         Args:
             object_ref: Reference to the object to be moved
@@ -372,7 +383,6 @@ class ClientV1:
     def add_image(self, image: Image, position: Optional[Position] = None) -> bool:
         """
         Adds an image to the PDF document.
-        Equivalent to addImage() methods in Java client.
 
         Args:
             image: The image object to add
@@ -395,7 +405,6 @@ class ClientV1:
     def add_paragraph(self, paragraph: Paragraph) -> bool:
         """
         Adds a paragraph to the PDF document.
-        Equivalent to addParagraph() in Java client with validation.
 
         Args:
             paragraph: The paragraph object to add
@@ -417,7 +426,6 @@ class ClientV1:
     def _add_object(self, pdf_object) -> bool:
         """
         Internal method to add any PDF object.
-        Equivalent to addObject() in Java client.
         """
         request_data = AddRequest(pdf_object).to_dict()
         response = self._make_request('POST', '/pdf/add', data=request_data)
@@ -428,7 +436,6 @@ class ClientV1:
     def modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> bool:
         """
         Modifies a paragraph object or its text content.
-        Equivalent to modifyParagraph() methods in Java client.
 
         Args:
             object_ref: Reference to the paragraph to modify
@@ -456,7 +463,6 @@ class ClientV1:
     def modify_text_line(self, object_ref: ObjectRef, new_text: str) -> bool:
         """
         Modifies a text line object.
-        Equivalent to modifyTextLine() in Java client.
 
         Args:
             object_ref: Reference to the text line to modify
@@ -479,7 +485,6 @@ class ClientV1:
     def find_fonts(self, font_name: str, font_size: int) -> List[Font]:
         """
         Finds available fonts matching the specified name and size.
-        Equivalent to findFonts() in Java client.
 
         Args:
             font_name: Name of the font to search for
@@ -502,7 +507,6 @@ class ClientV1:
     def register_font(self, ttf_file: Union[Path, str, bytes, BinaryIO]) -> str:
         """
         Registers a custom font for use in PDF operations.
-        Equivalent to registerFont() in Java client.
 
         Args:
             ttf_file: TTF font file as Path, filename, bytes, or file-like object
@@ -577,7 +581,6 @@ class ClientV1:
     def get_pdf_file(self) -> bytes:
         """
         Downloads the current state of the PDF document with all modifications applied.
-        Equivalent to getPDFFile() in Java client.
 
         Returns:
             PDF file data as bytes with all session modifications applied
@@ -588,7 +591,6 @@ class ClientV1:
     def save_pdf(self, file_path: Union[str, Path]) -> None:
         """
         Saves the current PDF to a file.
-        Equivalent to savePDF() in Java client.
 
         Args:
             file_path: Path where to save the PDF file
@@ -628,6 +630,21 @@ class ClientV1:
             type=object_type
         )
 
+    def _parse_form_field_ref(self, obj_data: dict) -> ObjectRef:
+        """Parse JSON object data into ObjectRef instance."""
+        position_data = obj_data.get('position', {})
+        position = self._parse_position(position_data) if position_data else None
+
+        object_type = ObjectType(obj_data['type'])
+
+        return FormFieldRef(
+            internal_id=obj_data['internalId'] if 'internalId' in obj_data else None,
+            position=position,
+            type=object_type,
+            name=obj_data['name'] if 'name' in obj_data else None,
+            value=obj_data['value'] if 'value' in obj_data else None,
+        )
+
     def _parse_position(self, pos_data: dict) -> Position:
         """Parse JSON position data into Position instance."""
         position = Position()
@@ -656,8 +673,6 @@ class ClientV1:
     def paragraph_builder(self) -> 'ParagraphBuilder':
         """
         Creates a new ParagraphBuilder for fluent paragraph construction.
-        Equivalent to paragraphBuilder() in Java client.
-
         Returns:
             A new ParagraphBuilder instance
         """

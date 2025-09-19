@@ -10,12 +10,16 @@ from typing import Optional, List, Any
 
 class ObjectType(Enum):
     """Object type enumeration matching the Java ObjectType."""
+    FORM_FIELD = "FORM_FIELD"
     IMAGE = "IMAGE"
     FORM_X_OBJECT = "FORM_X_OBJECT"
     PATH = "PATH"
     PARAGRAPH = "PARAGRAPH"
     TEXT_LINE = "TEXT_LINE"
     PAGE = "PAGE"
+    TEXT_FIELD = "TEXT_FIELD"
+    CHECK_BOX = "CHECK_BOX"
+    RADIO_BUTTON = "RADIO_BUTTON"
 
 
 class PositionMode(Enum):
@@ -74,6 +78,7 @@ class Position:
     mode: Optional[PositionMode] = None
     bounding_rect: Optional[BoundingRect] = None
     text_starts_with: Optional[str] = None
+    name: Optional[str] = None
 
     @staticmethod
     def at_page(page_index: int) -> 'Position':
@@ -91,6 +96,16 @@ class Position:
         """
         position = Position.at_page(page_index)
         position.at_coordinates(Point(x, y))
+        return position
+
+    @staticmethod
+    def by_name(name: str) -> 'Position':
+        """
+        Creates a position specification for finding objects by name.
+        Equivalent to Position.byName() in Java.
+        """
+        position = Position()
+        position.name = name
         return position
 
     def at_coordinates(self, point: Point) -> None:
@@ -269,6 +284,8 @@ class FindRequest:
             "pageIndex": position.page_index,
             "textStartsWith": position.text_starts_with
         }
+        if position.name:
+            result["name"] = position.name
         if position.shape:
             result["shape"] = position.shape.value
         if position.mode:
@@ -420,3 +437,38 @@ class ModifyTextRequest:
             },
             "newTextLine": self.new_text
         }
+
+
+@dataclass
+class ChangeFormFieldRequest:
+    object_ref: ObjectRef
+    value: str
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "ref": {
+                "internalId": self.object_ref.internal_id,
+                "position": FindRequest._position_to_dict(self.object_ref.position),
+                "type": self.object_ref.type.value
+            },
+            "value": self.value
+        }
+
+
+@dataclass
+class FormFieldRef(ObjectRef):
+    """
+    Represents a form field reference with additional form-specific properties.
+    Extends ObjectRef to include form field name and value.
+    """
+    name: Optional[str] = None
+    value: Optional[str] = None
+
+    def get_name(self) -> Optional[str]:
+        """Get the form field name."""
+        return self.name
+
+    def get_value(self) -> Optional[str]:
+        """Get the form field value."""
+        return self.value

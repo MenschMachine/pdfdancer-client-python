@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, staging, develop, development, dev ]
+  pull_request:
+    branches: [ main, staging, develop, development, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Create virtual environment
+      run: python -m venv venv
+
+    - name: Install dependencies
+      run: |
+        venv/bin/pip install --upgrade pip
+        venv/bin/pip install -e .
+        venv/bin/pip install -r requirements-dev.txt
+
+    - name: Run tests
+      run: venv/bin/python -m pytest tests/ -v --ignore=tests/e2e/
+
+    - name: Build distribution packages
+      run: venv/bin/python -m build
+
+    - name: Validate packages
+      run: venv/bin/python -m twine check dist/*

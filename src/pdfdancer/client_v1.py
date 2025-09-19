@@ -248,7 +248,7 @@ class ClientV1:
         """
         return self.find(ObjectType.IMAGE, position)
 
-    def find_forms(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def find_form_x_objects(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for form field objects at the specified position.
         """

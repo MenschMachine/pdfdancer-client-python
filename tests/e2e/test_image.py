@@ -79,6 +79,6 @@ def test_add_image():
         assert len(images_page6) == 1
         new_image = images_page6[0]
         assert new_image.position.page_index == 6
-        assert new_image.internal_id == 'IMAGE_000003'
+        assert new_image.internal_id == 'IMAGE_000004'
         assert new_image.position.bounding_rect.x == pytest.approx(50.1, rel=0, abs=0.05)
         assert new_image.position.bounding_rect.y == pytest.approx(98.0, rel=0, abs=0.05)

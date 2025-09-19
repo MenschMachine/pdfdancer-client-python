@@ -623,7 +623,7 @@ class ClientV1:
         object_type = ObjectType(obj_data['type'])
 
         return ObjectRef(
-            internal_id=obj_data['internalId'],
+            internal_id=obj_data['internalId'] if 'internalId' in obj_data else None,
             position=position,
             type=object_type
         )

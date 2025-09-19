@@ -11,7 +11,7 @@ from typing import Optional, List, Any
 class ObjectType(Enum):
     """Object type enumeration matching the Java ObjectType."""
     IMAGE = "IMAGE"
-    FORM = "FORM"
+    FORM_X_OBJECT = "FORM_X_OBJECT"
     PATH = "PATH"
     PARAGRAPH = "PARAGRAPH"
     TEXT_LINE = "TEXT_LINE"

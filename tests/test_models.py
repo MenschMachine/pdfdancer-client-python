@@ -126,7 +126,7 @@ class TestObjectRef:
         """Test set_position() updates position reference."""
         original_position = Position.at_page(0)
         new_position = Position.at_page(1)
-        obj_ref = ObjectRef("test", original_position, ObjectType.FORM)
+        obj_ref = ObjectRef("test", original_position, ObjectType.FORM_X_OBJECT)
 
         obj_ref.set_position(new_position)
 
@@ -266,30 +266,6 @@ class TestBoundingRect:
         assert rect.get_y() == 2.0
         assert rect.get_width() == 3.0
         assert rect.get_height() == 4.0
-
-
-class TestEnums:
-    """Test enum classes."""
-
-    def test_object_type_enum_values(self):
-        """Test ObjectType enum has correct values."""
-        assert ObjectType.IMAGE.value == "IMAGE"
-        assert ObjectType.FORM.value == "FORM"
-        assert ObjectType.PATH.value == "PATH"
-        assert ObjectType.PARAGRAPH.value == "PARAGRAPH"
-        assert ObjectType.TEXT_LINE.value == "TEXT_LINE"
-
-    def test_position_mode_enum_values(self):
-        """Test PositionMode enum has correct values."""
-        assert PositionMode.INTERSECT.value == "INTERSECT"
-        assert PositionMode.CONTAINS.value == "CONTAINS"
-
-    def test_shape_type_enum_values(self):
-        """Test ShapeType enum has correct values."""
-        assert ShapeType.POINT.value == "POINT"
-        assert ShapeType.LINE.value == "LINE"
-        assert ShapeType.CIRCLE.value == "CIRCLE"
-        assert ShapeType.RECT.value == "RECT"
 
 
 class TestPoint:

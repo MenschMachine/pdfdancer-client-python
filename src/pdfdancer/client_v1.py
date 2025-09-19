@@ -35,7 +35,7 @@ class ClientV1:
     """
 
     def __init__(self, token: str, pdf_data: Union[bytes, Path, str, BinaryIO],
-                 base_url: str = "http://localhost:8080", read_timeout: float = 30.0):
+                 base_url: str = "http://localhost:8080", read_timeout: float = 0):
         """
         Creates a new client with PDF data.
         This constructor initializes the client, uploads the PDF data to create
@@ -257,7 +257,7 @@ class ClientV1:
         Searches for form field objects at the specified position.
         Equivalent to findForms() in Java client.
         """
-        return self.find(ObjectType.FORM, position)
+        return self.find(ObjectType.FORM_X_OBJECT, position)
 
     def find_paths(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """

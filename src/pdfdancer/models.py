@@ -76,7 +76,7 @@ class Position:
     text_starts_with: Optional[str] = None
 
     @staticmethod
-    def from_page_index(page_index: int) -> 'Position':
+    def at_page(page_index: int) -> 'Position':
         """
         Creates a position specification for an entire page.
         Equivalent to Position.fromPageIndex() in Java.
@@ -84,16 +84,16 @@ class Position:
         return Position(page_index=page_index, mode=PositionMode.CONTAINS)
 
     @staticmethod
-    def on_page_coordinates(page_index: int, x: float, y: float) -> 'Position':
+    def at_page_coordinates(page_index: int, x: float, y: float) -> 'Position':
         """
         Creates a position specification for specific coordinates on a page.
         Equivalent to Position.onPageCoordinates() in Java.
         """
-        position = Position.from_page_index(page_index)
-        position.set_point(Point(x, y))
+        position = Position.at_page(page_index)
+        position.at_coordinates(Point(x, y))
         return position
 
-    def set_point(self, point: Point) -> None:
+    def at_coordinates(self, point: Point) -> None:
         """
         Sets the position to a specific point location.
         Equivalent to Position.set() in Java.
@@ -101,17 +101,22 @@ class Position:
         self.mode = PositionMode.CONTAINS
         self.shape = ShapeType.POINT
         self.bounding_rect = BoundingRect(point.x, point.y, 0, 0)
+        return self;
+
+    def with_text_starts(self, text: str) -> 'Position':
+        self.text_starts_with = text
+        return self
 
     def move_x(self, x_offset: float) -> 'Position':
         """Move the position horizontally by the specified offset."""
         if self.bounding_rect:
-            self.set_point(Point(self.get_x() + x_offset, self.get_y()))
+            self.at_coordinates(Point(self.get_x() + x_offset, self.get_y()))
         return self
 
     def move_y(self, y_offset: float) -> 'Position':
         """Move the position vertically by the specified offset."""
         if self.bounding_rect:
-            self.set_point(Point(self.get_x(), self.get_y() + y_offset))
+            self.at_coordinates(Point(self.get_x(), self.get_y() + y_offset))
         return self
 
     def get_x(self) -> Optional[float]:

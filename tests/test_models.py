@@ -17,7 +17,7 @@ class TestPosition:
 
     def test_from_page_index_creates_position(self):
         """Test Position.from_page_index() factory method."""
-        position = Position.from_page_index(2)
+        position = Position.at_page(2)
 
         assert position.page_index == 2
         assert position.mode == PositionMode.CONTAINS
@@ -26,7 +26,7 @@ class TestPosition:
 
     def test_on_page_coordinates_creates_point_position(self):
         """Test Position.on_page_coordinates() factory method."""
-        position = Position.on_page_coordinates(1, 100.5, 200.7)
+        position = Position.at_page_coordinates(1, 100.5, 200.7)
 
         assert position.page_index == 1
         assert position.mode == PositionMode.CONTAINS
@@ -41,7 +41,7 @@ class TestPosition:
         position = Position()
         point = Point(50.0, 75.0)
 
-        position.set_point(point)
+        position.at_coordinates(point)
 
         assert position.mode == PositionMode.CONTAINS
         assert position.shape == ShapeType.POINT
@@ -52,7 +52,7 @@ class TestPosition:
 
     def test_get_x_y_coordinates(self):
         """Test get_x() and get_y() methods."""
-        position = Position.on_page_coordinates(0, 123.45, 678.90)
+        position = Position.at_page_coordinates(0, 123.45, 678.90)
 
         assert position.get_x() == 123.45
         assert position.get_y() == 678.90
@@ -66,7 +66,7 @@ class TestPosition:
 
     def test_move_x_updates_position(self):
         """Test move_x() updates x coordinate."""
-        position = Position.on_page_coordinates(0, 100.0, 200.0)
+        position = Position.at_page_coordinates(0, 100.0, 200.0)
 
         position.move_x(50.0)
 
@@ -75,7 +75,7 @@ class TestPosition:
 
     def test_move_y_updates_position(self):
         """Test move_y() updates y coordinate."""
-        position = Position.on_page_coordinates(0, 100.0, 200.0)
+        position = Position.at_page_coordinates(0, 100.0, 200.0)
 
         position.move_y(-25.0)
 
@@ -84,8 +84,8 @@ class TestPosition:
 
     def test_copy_creates_independent_copy(self):
         """Test copy() creates independent copy of position."""
-        original = Position.on_page_coordinates(1, 50.0, 75.0)
-        original.text_starts_with = "Test"
+        original = Position.at_page_coordinates(1, 50.0, 75.0)
+        original = original.with_text_starts("Test")
 
         copy = original.copy()
 
@@ -106,7 +106,7 @@ class TestObjectRef:
 
     def test_constructor_sets_properties(self):
         """Test ObjectRef constructor sets all properties."""
-        position = Position.from_page_index(0)
+        position = Position.at_page(0)
         obj_ref = ObjectRef("obj-123", position, ObjectType.PARAGRAPH)
 
         assert obj_ref.internal_id == "obj-123"
@@ -115,7 +115,7 @@ class TestObjectRef:
 
     def test_getter_methods(self):
         """Test getter methods match Java patterns."""
-        position = Position.from_page_index(1)
+        position = Position.at_page(1)
         obj_ref = ObjectRef("ref-456", position, ObjectType.IMAGE)
 
         assert obj_ref.get_internal_id() == "ref-456"
@@ -124,8 +124,8 @@ class TestObjectRef:
 
     def test_set_position_updates_position(self):
         """Test set_position() updates position reference."""
-        original_position = Position.from_page_index(0)
-        new_position = Position.from_page_index(1)
+        original_position = Position.at_page(0)
+        new_position = Position.at_page(1)
         obj_ref = ObjectRef("test", original_position, ObjectType.FORM)
 
         obj_ref.set_position(new_position)
@@ -196,7 +196,7 @@ class TestImage:
     def test_get_set_position(self):
         """Test Image position getter and setter."""
         image = Image()
-        position = Position.on_page_coordinates(0, 100.0, 150.0)
+        position = Position.at_page_coordinates(0, 100.0, 150.0)
 
         assert image.get_position() is None
 
@@ -221,7 +221,7 @@ class TestParagraph:
     def test_get_set_position(self):
         """Test Paragraph position getter and setter."""
         paragraph = Paragraph()
-        position = Position.from_page_index(2)
+        position = Position.at_page(2)
 
         assert paragraph.get_position() is None
 
@@ -231,7 +231,7 @@ class TestParagraph:
 
     def test_constructor_with_parameters(self):
         """Test Paragraph constructor with all parameters."""
-        position = Position.from_page_index(1)
+        position = Position.at_page(1)
         text_lines = ["Line 1", "Line 2"]
         font = Font("Arial", 14.0)
         color = Color(255, 0, 0)

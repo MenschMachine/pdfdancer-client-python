@@ -26,8 +26,7 @@ def test_find_lines_by_position():
 def test_find_lines_by_text():
     base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos = Position.from_page_index(0)
-        pos.text_starts_with = 'the complete'
+        pos = Position.at_page(0).with_text_starts("the complete")
         lines = client.find_text_lines(pos)
         assert len(lines) == 1
         line = lines[0]
@@ -40,12 +39,10 @@ def test_find_lines_by_text():
 def test_delete_line(tmp_path):
     base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos = Position.from_page_index(0)
-        pos.text_starts_with = 'The Complete'
+        pos = Position.at_page(0).with_text_starts('The Complete')
         ref = client.find_text_lines(pos)[0]
         assert client.delete(ref) is True
-        pos2 = Position.from_page_index(0)
-        pos2.text_starts_with = 'The Complete'
+        pos2 = Position.at_page(0).with_text_starts('The Complete')
         assert client.find_text_lines(pos2) == []
         out = tmp_path / 'deleteLine.pdf'
         client.save_pdf(out)
@@ -55,8 +52,7 @@ def test_delete_line(tmp_path):
 def test_move_line(tmp_path):
     base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos3 = Position.from_page_index(0)
-        pos3.text_starts_with = 'The Complete'
+        pos3 = Position.at_page(0).with_text_starts('The Complete')
         ref = client.find_text_lines(pos3)[0]
         new_pos = ref.position.copy()
         new_pos.move_x(100)
@@ -72,8 +68,7 @@ def test_move_line(tmp_path):
 def test_modify_line(tmp_path):
     base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos4 = Position.from_page_index(0)
-        pos4.text_starts_with = 'The Complete'
+        pos4 = Position.at_page(0).with_text_starts('The Complete')
         ref = client.find_text_lines(pos4)[0]
         assert client.modify_text_line(ref, ' replaced ') is True
 
@@ -81,12 +76,9 @@ def test_modify_line(tmp_path):
         client.save_pdf(out)
         assert out.exists() and out.stat().st_size > 0
 
-        pos5 = Position.from_page_index(0)
-        pos5.text_starts_with = 'The Complete'
+        pos5 = Position.at_page(0).with_text_starts('The Complete')
         assert client.find_text_lines(pos5) == []
-        pos6 = Position.from_page_index(0)
-        pos6.text_starts_with = ' replaced '
+        pos6 = Position.at_page(0).with_text_starts(' replaced ')
         assert client.find_text_lines(pos6) != []
-        pos7 = Position.from_page_index(0)
-        pos7.text_starts_with = ' replaced '
+        pos7 = Position.at_page(0).with_text_starts(' replaced ')
         assert client.find_paragraphs(pos7) != []

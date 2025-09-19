@@ -25,9 +25,9 @@ def test_delete_form(tmp_path: Path):
 def test_find_form_by_position():
     base_url, token, pdf_path = _require_env_and_fixture('mixed-form-types.pdf')
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        forms = client.find_forms(Position.on_page_coordinates(0, 0, 0))
+        forms = client.find_forms(Position.at_page_coordinates(0, 0, 0))
         assert len(forms) == 0
 
-        forms = client.find_forms(Position.on_page_coordinates(0, 17, 447))
+        forms = client.find_forms(Position.at_page_coordinates(0, 17, 447))
         assert len(forms) == 1
         assert forms[0].internal_id == 'FORM_000001'

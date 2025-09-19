@@ -47,10 +47,10 @@ client.move(images[0], new_position)
 
 # Builder pattern (mirrors Java ParagraphBuilder)
 paragraph = (client.paragraph_builder()
-    .from_string("Text content")
-    .with_font(Font("Arial", 12))
-    .with_position(Position.on_page_coordinates(0, 100, 200))
-    .build())
+             .from_string("Text content")
+             .with_font(Font("Arial", 12))
+             .with_position(Position.at_page_coordinates(0, 100, 200))
+             .build())
 
 # Context manager support (Python enhancement)
 with ClientV1(token="jwt-token", pdf_data=pdf_file) as client:

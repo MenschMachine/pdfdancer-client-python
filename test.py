@@ -31,7 +31,7 @@ def find_operations(client):
     text_lines = client.find_text_lines()
 
     # Find with specific object type and position
-    specific_position = Position.on_page_coordinates(0, 100, 100)
+    specific_position = Position.at_page_coordinates(0, 100, 100)
     paragraphs_at_pos = client.find(ObjectType.PARAGRAPH, specific_position)
 
     return paragraphs, text_lines  # Keep only what's needed for object_manipulation
@@ -53,8 +53,8 @@ def page_management(client):
 def position_system(client):
     """Test position and coordinate system operations."""
     # Different ways to create positions
-    page_pos = Position.from_page_index(0)
-    coord_pos = Position.on_page_coordinates(0, 50, 100)
+    page_pos = Position.at_page(0)
+    coord_pos = Position.at_page_coordinates(0, 50, 100)
 
     # Position manipulation
     moved_pos = coord_pos.copy()
@@ -103,7 +103,7 @@ def paragraph_operations(client):
     basic_paragraph = (client.paragraph_builder()
                        .from_string("Basic paragraph with default settings")
                        .with_font(arial_font)
-                       .with_position(Position.on_page_coordinates(0, 50, 200))
+                       .with_position(Position.at_page_coordinates(0, 50, 200))
                        .build())
     client.add_paragraph(basic_paragraph)
 
@@ -113,7 +113,7 @@ def paragraph_operations(client):
                           .with_font(arial_font_large)
                           .with_line_spacing(1.5)
                           .with_color(blue_color)
-                          .with_position(Position.on_page_coordinates(0, 50, 250))
+                          .with_position(Position.at_page_coordinates(0, 50, 250))
                           .build())
     client.add_paragraph(advanced_paragraph)
 
@@ -132,7 +132,7 @@ def object_manipulation(client, paragraphs, text_lines):
         # Move operation (if we have more paragraphs)
         if len(paragraphs) > 1:
             second_paragraph = paragraphs[1]
-            new_position = Position.on_page_coordinates(0, 100, 300)
+            new_position = Position.at_page_coordinates(0, 100, 300)
             client.move(second_paragraph, new_position)
 
         # Modify operations
@@ -141,7 +141,7 @@ def object_manipulation(client, paragraphs, text_lines):
 
             # Modify with new paragraph object
             modified_paragraph = Paragraph(
-                position=Position.on_page_coordinates(0, 50, 350),
+                position=Position.at_page_coordinates(0, 50, 350),
                 text_lines=["Modified paragraph text"],
                 font=arial_font,
                 color=red_color
@@ -165,11 +165,11 @@ def text_line_operations(client):
     all_text_lines = client.find_text_lines()
 
     # Find text lines at specific position
-    specific_position = Position.on_page_coordinates(0, 100, 100)
+    specific_position = Position.at_page_coordinates(0, 100, 100)
     text_lines_at_position = client.find_text_lines(specific_position)
 
     # Find text lines on entire page
-    page_position = Position.from_page_index(0)
+    page_position = Position.at_page(0)
     text_lines_on_page = client.find_text_lines(page_position)
 
     # Demonstrate text line modification if text lines are found
@@ -189,7 +189,7 @@ def text_line_operations(client):
         # Demonstrate position modification for text lines
         if len(all_text_lines) > 1:
             second_text_line = all_text_lines[1]
-            new_position = Position.on_page_coordinates(0, 120, 150)
+            new_position = Position.at_page_coordinates(0, 120, 150)
             client.move(second_text_line, new_position)
 
 
@@ -200,11 +200,11 @@ def form_operations(client):
     all_forms = client.find_forms()
 
     # Find forms at specific position
-    specific_position = Position.on_page_coordinates(0, 150, 200)
+    specific_position = Position.at_page_coordinates(0, 150, 200)
     forms_at_position = client.find_forms(specific_position)
 
     # Find forms on entire page
-    page_position = Position.from_page_index(0)
+    page_position = Position.at_page(0)
     forms_on_page = client.find_forms(page_position)
 
     # Demonstrate form manipulation if forms are found
@@ -220,7 +220,7 @@ def form_operations(client):
         # Demonstrate position modification for forms
         if len(all_forms) > 1:
             second_form = all_forms[1]
-            new_position = Position.on_page_coordinates(0, 180, 250)
+            new_position = Position.at_page_coordinates(0, 180, 250)
             client.move(second_form, new_position)
             manipulated_form = second_form
 
@@ -237,11 +237,11 @@ def path_operations(client):
     all_paths = client.find_paths()
 
     # Find paths at specific position
-    specific_position = Position.on_page_coordinates(0, 100, 150)
+    specific_position = Position.at_page_coordinates(0, 100, 150)
     paths_at_position = client.find_paths(specific_position)
 
     # Find paths on entire page
-    page_position = Position.from_page_index(0)
+    page_position = Position.at_page(0)
     paths_on_page = client.find_paths(page_position)
 
     # Demonstrate path manipulation if paths are found
@@ -257,7 +257,7 @@ def path_operations(client):
         # Demonstrate position modification for paths
         if len(all_paths) > 1:
             second_path = all_paths[1]
-            new_position = Position.on_page_coordinates(0, 120, 180)
+            new_position = Position.at_page_coordinates(0, 120, 180)
             client.move(second_path, new_position)
             manipulated_path = second_path
 
@@ -281,7 +281,7 @@ def register_font_operations(client):
     paragraph_with_custom_font = (client.paragraph_builder()
                                   .from_string("This text uses JetBrains Mono font")
                                   .with_font(jetbrains_font)
-                                  .with_position(Position.on_page_coordinates(0, 50, 450))
+                                  .with_position(Position.at_page_coordinates(0, 50, 450))
                                   .build())
     client.add_paragraph(paragraph_with_custom_font)
 
@@ -304,7 +304,7 @@ def image_operations(client):
 
     # Create image object with real image data
     logo_image = Image(
-        position=Position.on_page_coordinates(0, 200, 400),
+        position=Position.at_page_coordinates(0, 200, 400),
         format="image/png",
         width=80.0,
         height=80.0,
@@ -327,7 +327,7 @@ def image_operations(client):
         image_position = first_image.get_position()
 
         # Move image to a new position
-        new_image_position = Position.on_page_coordinates(0, 250, 450)
+        new_image_position = Position.at_page_coordinates(0, 250, 450)
         client.move(first_image, new_image_position)
 
 
@@ -342,7 +342,7 @@ def objectref_operations(client, paragraphs):
         obj_dict = obj_ref.to_dict()
 
         # Set new position
-        new_ref_position = Position.on_page_coordinates(0, 75, 125)
+        new_ref_position = Position.at_page_coordinates(0, 75, 125)
         obj_ref.set_position(new_ref_position)
         updated_position = obj_ref.get_position()
 
@@ -397,7 +397,7 @@ def context_management():
             paragraph = (client.paragraph_builder()
                          .from_string("Context managed")
                          .with_font(Font("Arial", 12))
-                         .with_position(Position.on_page_coordinates(0, 50, 10))
+                         .with_position(Position.at_page_coordinates(0, 50, 10))
                          .build())
 
             client.add_paragraph(paragraph)
@@ -409,9 +409,9 @@ def advanced_positioning():
     """Test advanced positioning features."""
     # Create positions using different methods
     positions = [
-        Position.from_page_index(0),
-        Position.on_page_coordinates(1, 100, 200),
-        Position.on_page_coordinates(2, 150, 250)
+        Position.at_page(0),
+        Position.at_page_coordinates(1, 100, 200),
+        Position.at_page_coordinates(2, 150, 250)
     ]
 
     modified_positions = []

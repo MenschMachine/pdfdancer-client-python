@@ -109,7 +109,7 @@ class TestClientV1:
 
     def test_find_paragraphs_calls_correct_endpoint(self, mock_client):
         """Test find_paragraphs calls the correct API endpoint."""
-        position = Position.from_page_index(0)
+        position = Position.at_page(0)
 
         # Mock API response
         mock_response = Mock()
@@ -143,7 +143,7 @@ class TestClientV1:
 
     def test_find_images_with_position(self, mock_client):
         """Test find_images with position constraint."""
-        position = Position.on_page_coordinates(1, 100.0, 200.0)
+        position = Position.at_page_coordinates(1, 100.0, 200.0)
 
         mock_response = Mock()
         mock_response.json.return_value = []
@@ -169,7 +169,7 @@ class TestClientV1:
         """Test successful object deletion."""
         obj_ref = ObjectRef(
             internal_id='obj-1',
-            position=Position.from_page_index(0),
+            position=Position.at_page(0),
             type=ObjectType.PARAGRAPH
         )
 
@@ -189,8 +189,8 @@ class TestClientV1:
 
     def test_move_object_validates_inputs(self, mock_client):
         """Test move method validates inputs."""
-        obj_ref = ObjectRef('obj-1', Position.from_page_index(0), ObjectType.PARAGRAPH)
-        position = Position.on_page_coordinates(0, 50.0, 75.0)
+        obj_ref = ObjectRef('obj-1', Position.at_page(0), ObjectType.PARAGRAPH)
+        position = Position.at_page_coordinates(0, 50.0, 75.0)
 
         # Test null object reference
         with pytest.raises(ValidationException, match="Object reference cannot be null"):
@@ -213,7 +213,7 @@ class TestClientV1:
     def test_add_image_with_position_override(self, mock_client):
         """Test add_image with position parameter."""
         image = Image()
-        position = Position.on_page_coordinates(0, 100.0, 150.0)
+        position = Position.at_page_coordinates(0, 100.0, 150.0)
 
         mock_response = Mock()
         mock_response.json.return_value = True
@@ -243,7 +243,7 @@ class TestClientV1:
             mock_client.add_paragraph(paragraph)
 
         # Test paragraph with negative page index
-        paragraph.set_position(Position.from_page_index(-1))
+        paragraph.set_position(Position.at_page(-1))
         with pytest.raises(ValidationException, match="Paragraph position page index is less than 0"):
             mock_client.add_paragraph(paragraph)
 
@@ -416,7 +416,7 @@ class TestClientV1:
 
     def test_modify_paragraph_with_text_string(self, mock_client):
         """Test modify_paragraph with text string."""
-        obj_ref = ObjectRef('para-1', Position.from_page_index(0), ObjectType.PARAGRAPH)
+        obj_ref = ObjectRef('para-1', Position.at_page(0), ObjectType.PARAGRAPH)
         new_text = "Updated paragraph text"
 
         mock_response = Mock()
@@ -435,7 +435,7 @@ class TestClientV1:
 
     def test_modify_text_line_validates_inputs(self, mock_client):
         """Test modify_text_line validates inputs."""
-        obj_ref = ObjectRef('line-1', Position.from_page_index(0), ObjectType.TEXT_LINE)
+        obj_ref = ObjectRef('line-1', Position.at_page(0), ObjectType.TEXT_LINE)
 
         with pytest.raises(ValidationException, match="Object reference cannot be null"):
             mock_client.modify_text_line(None, "new text")

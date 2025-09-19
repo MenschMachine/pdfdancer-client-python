@@ -206,7 +206,7 @@ class TestParagraphBuilder:
     def test_with_position_sets_position(self, mock_client):
         """Test with_position sets paragraph position."""
         builder = ParagraphBuilder(mock_client)
-        position = Position.on_page_coordinates(0, 100.0, 200.0)
+        position = Position.at_page_coordinates(0, 100.0, 200.0)
 
         result = builder.with_position(position)
 
@@ -237,7 +237,7 @@ class TestParagraphBuilder:
         builder = ParagraphBuilder(mock_client)
         font = Font("Arial", 12.0)
         color = Color(255, 0, 0)
-        position = Position.on_page_coordinates(0, 50.0, 75.0)
+        position = Position.at_page_coordinates(0, 50.0, 75.0)
 
         paragraph = (builder
                      .from_string("Test paragraph text\\nWith multiple lines", color)
@@ -258,7 +258,7 @@ class TestParagraphBuilder:
         builder = ParagraphBuilder(mock_client)
         font = Font("Times", 14.0)
         color = Color(0, 0, 255)  # Blue
-        position = Position.from_page_index(1)
+        position = Position.at_page(1)
 
         # Test that all methods return the builder for chaining
         result = (builder

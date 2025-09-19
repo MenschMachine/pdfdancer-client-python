@@ -12,7 +12,7 @@ from pdfdancer.models import (
 def test_find_request():
     """Test FindRequest serialization."""
     print("Testing FindRequest...")
-    position = Position.on_page_coordinates(1, 10.0, 20.0)
+    position = Position.at_page_coordinates(1, 10.0, 20.0)
     find_req = FindRequest(ObjectType.PARAGRAPH, position, "test hint")
     result = find_req.to_dict()
 
@@ -42,7 +42,7 @@ def test_move_request():
     print("Testing MoveRequest...")
     position = Position(page_index=1)
     obj_ref = ObjectRef("test-id", position, ObjectType.PARAGRAPH)
-    new_position = Position.on_page_coordinates(2, 50.0, 60.0)
+    new_position = Position.at_page_coordinates(2, 50.0, 60.0)
     move_req = MoveRequest(obj_ref, new_position)
     result = move_req.to_dict()
 
@@ -55,7 +55,7 @@ def test_move_request():
 def test_add_request():
     """Test AddRequest serialization."""
     print("Testing AddRequest...")
-    position = Position.on_page_coordinates(1, 10.0, 20.0)
+    position = Position.at_page_coordinates(1, 10.0, 20.0)
     paragraph = Paragraph(position=position, text_lines=["test line"], font=Font("Arial", 12))
     add_req = AddRequest(paragraph)
     result = add_req.to_dict()
@@ -97,7 +97,7 @@ def test_modify_text_request():
 def test_object_ref():
     """Test ObjectRef serialization."""
     print("Testing ObjectRef...")
-    position = Position.on_page_coordinates(1, 10.0, 20.0)
+    position = Position.at_page_coordinates(1, 10.0, 20.0)
     obj_ref = ObjectRef("test-id", position, ObjectType.PARAGRAPH)
     result = obj_ref.to_dict()
 

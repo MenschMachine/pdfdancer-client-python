@@ -30,18 +30,18 @@ client = ClientV1(token="your-jwt-token", pdf_data="document.pdf")
 
 # Find operations (mirrors Java client methods)
 paragraphs = client.find_paragraphs(None)
-images = client.find_images(Position.from_page_index(0))
+images = client.find_images(Position.at_page(0))
 
 # Manipulation operations (mirrors Java client methods)
 client.delete(paragraphs[0])
-client.move(images[0], Position.on_page_coordinates(0, 100, 200))
+client.move(images[0], Position.at_page_coordinates(0, 100, 200))
 
 # Builder pattern (mirrors Java ParagraphBuilder)
 paragraph = (client.paragraph_builder()
              .from_string("Hello World")
              .with_font(Font("Arial", 12))
              .with_color(Color(255, 0, 0))
-             .with_position(Position.from_page_index(0))
+             .with_position(Position.at_page(0))
              .build())
 
 client.add_paragraph(paragraph)
@@ -140,8 +140,8 @@ paragraph = (builder
 from pdfdancer import Position
 
 # Factory methods (Java: Position.fromPageNumber(), Position.onPageCoordinates())
-position = Position.from_page_index(0)
-position = Position.on_page_coordinates(0, 100, 200)
+position = Position.at_page(0)
+position = Position.at_page_coordinates(0, 100, 200)
 
 # Coordinate access (Java: position.getX(), position.getY())
 x = position.get_x()
@@ -210,7 +210,7 @@ font = Font(name="Arial", size=12.0)
 color = Color(r=255, g=128, b=0)
 
 # Position with bounding rectangle (Java: Position, BoundingRect)
-position = Position.on_page_coordinates(page=0, x=100.0, y=200.0)
+position = Position.at_page_coordinates(page=0, x=100.0, y=200.0)
 ```
 
 ## Development

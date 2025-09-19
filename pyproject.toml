@@ -8,9 +8,9 @@ version = "0.1.1"
 description = "Python client for PDFDancer API"
 readme = "README.md"
 authors = [
-    {name = "TFC", email = "info@example.com"}
+    { name = "TFC", email = "info@example.com" }
 ]
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -45,8 +45,8 @@ where = ["src"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py30']
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 strict = true

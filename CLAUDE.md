@@ -46,7 +46,7 @@ client._delete(paragraphs[0])
 client._move(images[0], new_position)
 
 # Builder pattern (mirrors Java ParagraphBuilder)
-paragraph = (client.paragraph_builder()
+paragraph = (client._paragraph_builder()
              .from_string("Text content")
              .with_font(Font("Arial", 12))
              .with_position(Position.at_page_coordinates(0, 100, 200))

@@ -37,7 +37,7 @@ client._delete(paragraphs[0])
 client._move(images[0], Position.at_page_coordinates(0, 100, 200))
 
 # Builder pattern (mirrors Java ParagraphBuilder)
-paragraph = (client.paragraph_builder()
+paragraph = (client._paragraph_builder()
              .from_string("Hello World")
              .with_font(Font("Arial", 12))
              .with_color(Color(255, 0, 0))
@@ -115,25 +115,26 @@ result = client.modify_text_line(ref, "new text")
 ```
 
 ### Builder Pattern
+
 ```python
 # Java: client.paragraphBuilder()
-builder = client.paragraph_builder()
+builder = client._paragraph_builder()
 
 # Fluent interface (mirrors Java ParagraphBuilder)
 paragraph = (builder
-    .from_string("Text content")           # Java: fromString()
-    .with_font(Font("Arial", 12))          # Java: withFont()
-    .with_color(Color(255, 0, 0))          # Java: withColor()
-    .with_line_spacing(1.5)                # Java: withLineSpacing()
-    .with_position(position)               # Java: withPosition()
-    .build())                              # Java: build()
+             .from_string("Text content")  # Java: fromString()
+             .with_font(Font("Arial", 12))  # Java: withFont()
+             .with_color(Color(255, 0, 0))  # Java: withColor()
+             .with_line_spacing(1.5)  # Java: withLineSpacing()
+             .with_position(position)  # Java: withPosition()
+             .build())  # Java: build()
 
 # Font file registration (Java: withFont(File, double))
 paragraph = (builder
-    .with_font_file("custom.ttf", 14.0)    # Java: withFont(File, double)
-    .from_string("Custom font text")
-    .with_position(position)
-    .build())
+             .with_font_file("custom.ttf", 14.0)  # Java: withFont(File, double)
+             .from_string("Custom font text")
+             .with_position(position)
+             .build())
 ```
 
 ### Position API

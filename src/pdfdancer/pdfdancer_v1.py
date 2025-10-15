@@ -6,6 +6,7 @@ Provides session-based PDF manipulation operations with strict validation.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import List, Optional, Union, BinaryIO
 
@@ -116,11 +117,33 @@ class PDFDancer:
     @classmethod
     def open(cls,
              pdf_data: Union[bytes, Path, str, BinaryIO],
-             token: str,
-             base_url: str = "http://localhost:8080",
+             token: Optional[str] = None,
+             base_url: Optional[str] = None,
              timeout: float = 30.0) -> "PDFDancer":
+        """
+        Create a client session, falling back to environment variables when needed.
 
-        return PDFDancer(token, pdf_data, base_url, timeout)
+        Args:
+            pdf_data: PDF payload supplied directly or via filesystem handles.
+            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environement variable.
+            base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
+                or defaults to `https://api.pdfdancer.com`.
+            timeout: HTTP read timeout in seconds.
+
+        Returns:
+            A ready-to-use `PDFDancer` client instance.
+        """
+        resolved_token = token.strip() if token and token.strip() else None
+        if resolved_token is None:
+            env_token = os.getenv("PDFDANCER_TOKEN")
+            resolved_token = env_token.strip() if env_token and env_token.strip() else None
+
+        env_base_url = os.getenv("PDFDANCER_BASE_URL")
+        resolved_base_url = base_url or (env_base_url.strip() if env_base_url and env_base_url.strip() else None)
+        if resolved_base_url is None:
+            resolved_base_url = "https://api.pdfdancer.com"
+
+        return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
 
     def __init__(self, token: str, pdf_data: Union[bytes, Path, str, BinaryIO],
                  base_url: str, read_timeout: float = 0):
@@ -811,7 +834,7 @@ class PDFDancer:
 
     # Builder Pattern Support
 
-    def paragraph_builder(self) -> 'ParagraphBuilder':
+    def _paragraph_builder(self) -> 'ParagraphBuilder':
         """
         Creates a new ParagraphBuilder for fluent paragraph construction.
         Returns:

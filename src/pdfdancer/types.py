@@ -31,21 +31,6 @@ class PDFObjectBase:
         self.internal_id = internal_id
         self.object_type = object_type
 
-    # --------------------------------------------------------------
-    # Core properties
-    # --------------------------------------------------------------
-    def internal_id(self) -> str:
-        """Internal PDFDancer object identifier, e.g. 'PATH_000023'."""
-        return self.internal_id
-
-    def type(self) -> ObjectType:
-        """Enum value representing the PDF object type."""
-        return self.object_type
-
-    def position(self) -> Position:
-        """The geometric position of the object on its page."""
-        return self.position
-
     @property
     def page_index(self) -> int:
         """Page index where this object resides."""

@@ -9,7 +9,7 @@ def test_get_pages():
         pages = pdf.pages()
         assert pages is not None
         assert len(pages) == 12
-        assert pages[0].type() == ObjectType.PAGE
+        assert pages[0].object_type == ObjectType.PAGE
 
 
 def test_get_page():

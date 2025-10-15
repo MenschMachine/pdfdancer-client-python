@@ -11,7 +11,7 @@ def test_delete_form(tmp_path: Path):
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         forms = pdf.select_forms()
         assert len(forms) == 17
-        assert forms[0].type() == ObjectType.FORM_X_OBJECT
+        assert forms[0].object_type == ObjectType.FORM_X_OBJECT
 
         # Delete all form XObjects
         for form in forms:

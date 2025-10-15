@@ -13,7 +13,7 @@ def test_find_images():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         images = pdf.select_images()
         assert len(images) == 3
-        assert images[0].type() == ObjectType.IMAGE
+        assert images[0].object_type == ObjectType.IMAGE
 
         images_page0 = pdf.page(0).select_images()
         assert len(images_page0) == 2

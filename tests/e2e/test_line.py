@@ -1,84 +1,83 @@
 import pytest
-from pdfdancer import ClientV1, Position
 
-from tests.e2e import _require_env_and_fixture
+from e2e import _require_env_and_fixture
+from pdfdancer.pdfdancer_v1 import PDFDancer
 
 
 def test_find_lines_by_position():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        lines = client.find_text_lines(None)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        lines = pdf.select_text_lines()
         assert len(lines) == 340
 
         first = lines[0]
-        assert first.internal_id == 'LINE_000001'
+        assert first.internal_id == "LINE_000001"
         assert first.position is not None
-        assert first.position.bounding_rect.x == pytest.approx(326, rel=0, abs=1)
-        assert first.position.bounding_rect.y == pytest.approx(706, rel=0, abs=1)
+        assert pytest.approx(first.position.x(), rel=0, abs=1) == 326
+        assert pytest.approx(first.position.y(), rel=0, abs=1) == 706
 
         last = lines[-1]
-        assert last.internal_id == 'LINE_000340'
+        assert last.internal_id == "LINE_000340"
         assert last.position is not None
-        assert last.position.bounding_rect.x == pytest.approx(548, rel=0, abs=2)
-        assert last.position.bounding_rect.y == pytest.approx(35, rel=0, abs=2)
+        assert pytest.approx(last.position.x(), rel=0, abs=2) == 548
+        assert pytest.approx(last.position.y(), rel=0, abs=2) == 35
 
 
 def test_find_lines_by_text():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos = Position.at_page(0).with_text_starts("the complete")
-        lines = client.find_text_lines(pos)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        lines = pdf.page(0).select_text_lines_starting_with("the complete")
         assert len(lines) == 1
+
         line = lines[0]
-        assert line.internal_id == 'LINE_000002'
-        assert line.position is not None
-        assert line.position.bounding_rect.x == pytest.approx(54, rel=0, abs=1)
-        assert line.position.bounding_rect.y == pytest.approx(606, rel=0, abs=2)
+        assert line.internal_id == "LINE_000002"
+        assert pytest.approx(line.position.x(), rel=0, abs=1) == 54
+        assert pytest.approx(line.position.y(), rel=0, abs=2) == 606
 
 
 def test_delete_line(tmp_path):
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_text_lines(pos)[0]
-        assert client.delete(ref) is True
-        pos2 = Position.at_page(0).with_text_starts('The Complete')
-        assert client.find_text_lines(pos2) == []
-        out = tmp_path / 'deleteLine.pdf'
-        client.save_pdf(out)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        line.delete()
+        assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
+
+        out = tmp_path / "deleteLine.pdf"
+        pdf.save(out)
         assert out.exists() and out.stat().st_size > 0
 
 
 def test_move_line(tmp_path):
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos3 = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_text_lines(pos3)[0]
-        new_pos = ref.position.copy()
-        new_pos.move_x(100)
-        assert client.move(ref, new_pos) is True
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
-        ref2 = client.find_paragraphs(new_pos)[0]
-        assert ref2 is not None
-        out = tmp_path / 'moveLine.pdf'
-        client.save_pdf(out)
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        pos = line.position
+        line.move_to(pos.x() + 100, pos.y())
+
+        moved_para = pdf.page(0).select_paragraphs_at(pos.x() + 100, pos.y())[0]
+        assert moved_para is not None
+
+        out = tmp_path / "moveLine.pdf"
+        pdf.save(out)
         assert out.exists() and out.stat().st_size > 0
 
 
 def test_modify_line(tmp_path):
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos4 = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_text_lines(pos4)[0]
-        assert client.modify_text_line(ref, ' replaced ') is True
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
-        out = tmp_path / 'modifyLine.pdf'
-        client.save_pdf(out)
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        line.edit().replace(" replaced ").apply()
+
+        out = tmp_path / "modifyLine.pdf"
+        pdf.save(out)
         assert out.exists() and out.stat().st_size > 0
 
-        pos5 = Position.at_page(0).with_text_starts('The Complete')
-        assert client.find_text_lines(pos5) == []
-        pos6 = Position.at_page(0).with_text_starts(' replaced ')
-        assert client.find_text_lines(pos6) != []
-        pos7 = Position.at_page(0).with_text_starts(' replaced ')
-        assert client.find_paragraphs(pos7) != []
+        # Validate replacements
+        assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
+        assert pdf.page(0).select_text_lines_starting_with(" replaced ") != []
+        assert pdf.page(0).select_paragraphs_starting_with(" replaced ") != []

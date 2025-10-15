@@ -347,6 +347,12 @@ class PDFDancer:
         """
         return self.find(ObjectType.TEXT_LINE, position)
 
+    def select_text_lines(self) -> List[TextLineObject]:
+        """
+        Searches for text line objects at the specified position.
+        """
+        return self._to_textline_objects(self.find(ObjectType.TEXT_LINE, None))
+
     def page(self, page_index: int) -> PageClient:
         return PageClient(page_index, self)
 
@@ -492,7 +498,6 @@ class PDFDancer:
         response = self._make_request('POST', '/pdf/add', data=request_data)
         return response.json()
 
-
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)
 
@@ -525,7 +530,7 @@ class PDFDancer:
 
         return response.json()
 
-    def modify_text_line(self, object_ref: ObjectRef, new_text: str) -> bool:
+    def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> bool:
         """
         Modifies a text line object.
 
@@ -653,7 +658,7 @@ class PDFDancer:
         response = self._make_request('GET', f'/session/{self._session_id}/pdf')
         return response.content
 
-    def save_pdf(self, file_path: Union[str, Path]) -> None:
+    def save(self, file_path: Union[str, Path]) -> None:
         """
         Saves the current PDF to a file.
 

@@ -14,6 +14,11 @@ class BoundingRect:
     height: Optional[float] = None
 
 
+class UnsupportedOperation(Exception):
+    def __init__(self, msg: str):
+        super().__init__(msg)
+
+
 class PDFObjectBase:
     """
     Base class for all PDF objects (paths, paragraphs, text lines, etc.)
@@ -115,66 +120,94 @@ DEFAULT_LINE_SPACING = 1.2
 DEFAULT_COLOR = Color(0, 0, 0)
 
 
-class ParagraphEdit:
-    def __init__(self, paragraph: 'ParagraphObject', object_ref: ObjectRef):
+class BaseTextEdit:
+    """Common base for text-like editable objects (Paragraph, TextLine, etc.)"""
+
+    def __init__(self, target_obj, object_ref):
         self._color = None
         self._position = None
         self._line_spacing = None
         self._font_size = None
         self._font_name = None
         self._new_text = None
-        self._paragraph = paragraph
+        self._target_obj = target_obj
         self._object_ref = object_ref
 
-    def __enter__(self) -> ParagraphEdit:
+    def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if not exc_type:  # auto-apply if no exception
+        if not exc_type:
             self.apply()
 
-    def apply(self) -> bool:
-        if self._position is None and self._line_spacing is None and self._font_size is None and self._font_name is None and self._color is None:
-            # noinspection PyProtectedMember
-            return self._paragraph._client.modify_paragraph(self._object_ref, self._new_text)
-        else:
-            new_paragraph = Paragraph(position=self._position,
-                                      line_spacing=self._line_spacing if self._line_spacing is not None else DEFAULT_LINE_SPACING,
-                                      font=Font(name=self._font_name, size=self._font_size),
-                                      text_lines=_process_text_lines(self._new_text),
-                                      color=self._color if self._color is not None else DEFAULT_COLOR
-                                      )
-            # noinspection PyProtectedMember
-            return self._paragraph._client.modify_paragraph(self._object_ref, new_paragraph)
+    # --- Common fluent configuration methods ---
 
-    def replace(self, text: str) -> 'ParagraphEdit':
+    def replace(self, text: str):
         self._new_text = text
         return self
 
-    def font(self, font_name: str, font_size: float) -> 'ParagraphEdit':
+    def font(self, font_name: str, font_size: float):
         self._font_name = font_name
         self._font_size = font_size
         return self
 
-    def color(self, color: Color) -> 'ParagraphEdit':
+    def color(self, color):
         self._color = color
         return self
 
-    def line_spacing(self, line_spacing: float) -> 'ParagraphEdit':
+    def line_spacing(self, line_spacing: float):
         self._line_spacing = line_spacing
         return self
 
-    def move_to(self, x: float, y: float) -> 'ParagraphEdit':
-        self._position = Position()
-        self._position = self._position.at_coordinates(Point(x, y))
+    def move_to(self, x: float, y: float):
+        self._position = Position().at_coordinates(Point(x, y))
         return self
+
+    # --- Abstract method: implemented by subclass ---
+    def apply(self):
+        raise NotImplementedError("Subclasses must implement apply()")
+
+
+class ParagraphEdit(BaseTextEdit):
+    def apply(self) -> bool:
+        if (
+                self._position is None
+                and self._line_spacing is None
+                and self._font_size is None
+                and self._font_name is None
+                and self._color is None
+        ):
+            # noinspection PyProtectedMember
+            return self._target_obj._client.modify_paragraph(self._object_ref, self._new_text)
+        else:
+            new_paragraph = Paragraph(
+                position=self._position,
+                line_spacing=self._line_spacing if self._line_spacing is not None else DEFAULT_LINE_SPACING,
+                font=Font(name=self._font_name, size=self._font_size),
+                text_lines=_process_text_lines(self._new_text),
+                color=self._color if self._color is not None else DEFAULT_COLOR,
+            )
+            # noinspection PyProtectedMember
+            return self._target_obj._client.modify_paragraph(self._object_ref, new_paragraph)
+
+
+class TextLineEdit(BaseTextEdit):
+    def apply(self) -> bool:
+        if (
+                self._position is None
+                and self._line_spacing is None
+                and self._font_size is None
+                and self._font_name is None
+                and self._color is None
+        ):
+            # noinspection PyProtectedMember
+            return self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
+        else:
+            raise UnsupportedOperation("TextLineEdit cannot be applied to text lines")
 
 
 class ParagraphObject(PDFObjectBase):
     """Represents a paragraph text block inside a PDF page."""
-
-    def __repr__(self) -> str:
-        return f"<ParagraphObject id={self.internal_id} page={self.page_index}>"
 
     def edit(self) -> ParagraphEdit:
         return ParagraphEdit(self, self.object_ref())
@@ -183,5 +216,5 @@ class ParagraphObject(PDFObjectBase):
 class TextLineObject(PDFObjectBase):
     """Represents a single line of text inside a PDF page."""
 
-    def __repr__(self) -> str:
-        return f"<TextLineObject id={self.internal_id} page={self.page_index}>"
+    def edit(self) -> TextLineEdit:
+        return TextLineEdit(self, self.object_ref())

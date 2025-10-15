@@ -108,7 +108,7 @@ class Position:
         position.name = name
         return position
 
-    def at_coordinates(self, point: Point) -> None:
+    def at_coordinates(self, point: Point) -> 'Position':
         """
         Sets the position to a specific point location.
         Equivalent to Position.set() in Java.
@@ -116,7 +116,7 @@ class Position:
         self.mode = PositionMode.CONTAINS
         self.shape = ShapeType.POINT
         self.bounding_rect = BoundingRect(point.x, point.y, 0, 0)
-        return self;
+        return self
 
     def with_text_starts(self, text: str) -> 'Position':
         self.text_starts_with = text

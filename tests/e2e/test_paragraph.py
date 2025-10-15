@@ -73,8 +73,7 @@ def test_modify_paragraph():
 
         paragraph.edit() \
             .replace("Awesomely\nObvious!") \
-            .font("Helvetica") \
-            .size(14) \
+            .font("Helvetica", 12) \
             .line_spacing(0.7) \
             .move_to(300.1, 500) \
             .apply()

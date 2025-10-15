@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from . import ObjectType, Position, ObjectRef
+from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color
 
 
 @dataclass
@@ -14,12 +14,10 @@ class BoundingRect:
     height: Optional[float] = None
 
 
-class PathObject:
+class PDFObjectBase:
     """
-    Represents a vector path object inside a PDF page.
-    Provides high-level methods for inspecting, moving, and deleting paths.
-
-    Instances are created internally by PDFDancer selectors (e.g. pdf.select_paths()).
+    Base class for all PDF objects (paths, paragraphs, text lines, etc.)
+    providing shared behavior such as position, deletion, and movement.
     """
 
     def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position):
@@ -40,106 +38,150 @@ class PathObject:
         return self.object_type
 
     def position(self) -> Position:
-        """The geometric position of the path on its page."""
+        """The geometric position of the object on its page."""
         return self.position
 
     @property
     def page_index(self) -> int:
-        """Page index where this path resides."""
+        """Page index where this object resides."""
         return self.position.page_index
+
+    def object_ref(self) -> ObjectRef:
+        return ObjectRef(self.internal_id, self.position, self.object_type)
+
+    # --------------------------------------------------------------
+    # Common actions
+    # --------------------------------------------------------------
+    def delete(self) -> bool:
+        """Delete this object from the PDF document."""
+        return self._client.delete(self.object_ref())
+
+    def move_to(self, x: float, y: float) -> bool:
+        """Move this object to a new position."""
+        return self._client.move(
+            self.object_ref(),
+            Position.at_page_coordinates(self.position.page_index, x, y)
+        )
+
+
+# -------------------------------------------------------------------
+# Subclasses
+# -------------------------------------------------------------------
+
+class PathObject(PDFObjectBase):
+    """Represents a vector path object inside a PDF page."""
 
     @property
     def bounding_box(self) -> Optional[BoundingRect]:
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
 
-    def delete(self) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.delete(ObjectRef(self.internal_id, self.position, self.object_type))
-
-    def move_to(self, x: float, y: float) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.move(ObjectRef(self.internal_id, self.position, self.object_type),
-                                 Position.at_page_coordinates(self.position.page_index, x, y))
-
-    # --------------------------------------------------------------
-    # Representation helpers
-    # --------------------------------------------------------------
     def __repr__(self) -> str:
         return f"<PathObject id={self.internal_id} page={self.page_index}>"
 
 
-class ParagraphObject:
+def _process_text_lines(text: str) -> list[str]:
+    """
+    Process text into lines for the paragraph.
+    This is a simplified version - the full implementation would handle
+    word wrapping, line breaks, and other text formatting based on the font
+    and paragraph width. TODO
 
-    def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position):
-        self._client = client
-        self.position = position
-        self.internal_id = internal_id
-        self.object_type = object_type
+    Args:
+        text: The input text to process
 
-    # --------------------------------------------------------------
-    # Core properties
-    # --------------------------------------------------------------
-    def internal_id(self) -> str:
-        """Internal PDFDancer object identifier, e.g. 'PATH_000023'."""
-        return self.internal_id
+    Returns:
+        List of text lines for the paragraph
+    """
+    # Handle escaped newlines (\\n) as actual newlines
+    processed_text = text.replace('\\n', '\n')
 
-    def type(self) -> ObjectType:
-        """Enum value representing the PDF object type."""
-        return self.object_type
+    # Simple implementation - split on newlines
+    # In the full version, this would implement proper text layout
+    lines = processed_text.split('\n')
 
-    def position(self) -> Position:
-        """The geometric position of the path on its page."""
-        return self.position
+    # Remove empty lines at the end but preserve intentional line breaks
+    while lines and not lines[-1].strip():
+        lines.pop()
 
-    @property
-    def page_index(self) -> int:
-        """Page index where this path resides."""
-        return self.position.page_index
+    # Ensure at least one line
+    if not lines:
+        lines = ['']
 
-    def delete(self) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.delete(ObjectRef(self.internal_id, self.position, self.object_type))
-
-    def move_to(self, x: float, y: float) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.move(ObjectRef(self.internal_id, self.position, self.object_type),
-                                 Position.at_page_coordinates(self.position.page_index, x, y))
+    return lines
 
 
-class TextLineObject:
+DEFAULT_LINE_SPACING = 1.2
+DEFAULT_COLOR = Color(0, 0, 0)
 
-    def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position):
-        self._client = client
-        self.position = position
-        self.internal_id = internal_id
-        self.object_type = object_type
 
-    # --------------------------------------------------------------
-    # Core properties
-    # --------------------------------------------------------------
-    def internal_id(self) -> str:
-        """Internal PDFDancer object identifier, e.g. 'PATH_000023'."""
-        return self.internal_id
+class ParagraphEdit:
+    def __init__(self, paragraph: 'ParagraphObject', object_ref: ObjectRef):
+        self._color = None
+        self._position = None
+        self._line_spacing = None
+        self._font_size = None
+        self._font_name = None
+        self._new_text = None
+        self._paragraph = paragraph
+        self._object_ref = object_ref
 
-    def type(self) -> ObjectType:
-        """Enum value representing the PDF object type."""
-        return self.object_type
+    def __enter__(self) -> ParagraphEdit:
+        return self
 
-    def position(self) -> Position:
-        """The geometric position of the path on its page."""
-        return self.position
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_type:  # auto-apply if no exception
+            self.apply()
 
-    @property
-    def page_index(self) -> int:
-        """Page index where this path resides."""
-        return self.position.page_index
+    def apply(self) -> bool:
+        if self._position is None and self._line_spacing is None and self._font_size is None and self._font_name is None and self._color is None:
+            # noinspection PyProtectedMember
+            return self._paragraph._client.modify_paragraph(self._object_ref, self._new_text)
+        else:
+            new_paragraph = Paragraph(position=self._position,
+                                      line_spacing=self._line_spacing if self._line_spacing is not None else DEFAULT_LINE_SPACING,
+                                      font=Font(name=self._font_name, size=self._font_size),
+                                      text_lines=_process_text_lines(self._new_text),
+                                      color=self._color if self._color is not None else DEFAULT_COLOR
+                                      )
+            # noinspection PyProtectedMember
+            return self._paragraph._client.modify_paragraph(self._object_ref, new_paragraph)
 
-    def delete(self) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.delete(ObjectRef(self.internal_id, self.position, self.object_type))
+    def replace(self, text: str) -> 'ParagraphEdit':
+        self._new_text = text
+        return self
 
-    def move_to(self, x: float, y: float) -> bool:
-        """Delete this path from the PDF document."""
-        return self._client.move(ObjectRef(self.internal_id, self.position, self.object_type),
-                                 Position.at_page_coordinates(self.position.page_index, x, y))
+    def font(self, font_name: str, font_size: float) -> 'ParagraphEdit':
+        self._font_name = font_name
+        self._font_size = font_size
+        return self
+
+    def color(self, color: Color) -> 'ParagraphEdit':
+        self._color = color
+        return self
+
+    def line_spacing(self, line_spacing: float) -> 'ParagraphEdit':
+        self._line_spacing = line_spacing
+        return self
+
+    def move_to(self, x: float, y: float) -> 'ParagraphEdit':
+        self._position = Position()
+        self._position = self._position.at_coordinates(Point(x, y))
+        return self
+
+
+class ParagraphObject(PDFObjectBase):
+    """Represents a paragraph text block inside a PDF page."""
+
+    def __repr__(self) -> str:
+        return f"<ParagraphObject id={self.internal_id} page={self.page_index}>"
+
+    def edit(self) -> ParagraphEdit:
+        return ParagraphEdit(self, self.object_ref())
+
+
+class TextLineObject(PDFObjectBase):
+    """Represents a single line of text inside a PDF page."""
+
+    def __repr__(self) -> str:
+        return f"<TextLineObject id={self.internal_id} page={self.page_index}>"

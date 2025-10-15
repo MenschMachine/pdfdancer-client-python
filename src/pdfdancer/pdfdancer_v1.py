@@ -138,6 +138,12 @@ class PDFDancer:
             env_token = os.getenv("PDFDANCER_TOKEN")
             resolved_token = env_token.strip() if env_token and env_token.strip() else None
 
+        if resolved_token is None:
+            raise ValidationException(
+                "Missing PDFDancer API token. Pass a token via the `token` argument "
+                "or set the PDFDANCER_TOKEN environment variable."
+            )
+
         env_base_url = os.getenv("PDFDANCER_BASE_URL")
         resolved_base_url = base_url or (env_base_url.strip() if env_base_url and env_base_url.strip() else None)
         if resolved_base_url is None:
@@ -259,6 +265,22 @@ class PDFDancer:
             # If JSON parsing fails, return response content or status
             return response.text or f"HTTP {response.status_code}"
 
+    def _handle_authentication_error(self, response: Optional[requests.Response]) -> None:
+        """
+        Translate authentication failures into a clear, actionable validation error.
+        """
+        if response is None:
+            return
+
+        if response.status_code in (401, 403):
+            details = self._extract_error_message(response)
+            raise ValidationException(
+                "Authentication with the PDFDancer API failed. "
+                "Confirm that your API token is valid, has not expired, and is supplied via "
+                "the `token` argument or the PDFDANCER_TOKEN environment variable. "
+                f"Server response: {details}"
+            )
+
     def _create_session(self) -> str:
         """
         Creates a new PDF processing session by uploading the PDF data.
@@ -274,6 +296,7 @@ class PDFDancer:
                 timeout=self._read_timeout if self._read_timeout > 0 else None
             )
 
+            self._handle_authentication_error(response)
             response.raise_for_status()
             session_id = response.text.strip()
 
@@ -283,6 +306,7 @@ class PDFDancer:
             return session_id
 
         except requests.exceptions.RequestException as e:
+            self._handle_authentication_error(getattr(e, 'response', None))
             error_message = self._extract_error_message(getattr(e, 'response', None))
             raise HttpClientException(f"Failed to create session: {error_message}",
                                       response=getattr(e, 'response', None), cause=e) from None
@@ -316,10 +340,12 @@ class PDFDancer:
                 except (json.JSONDecodeError, KeyError):
                     pass
 
+            self._handle_authentication_error(response)
             response.raise_for_status()
             return response
 
         except requests.exceptions.RequestException as e:
+            self._handle_authentication_error(getattr(e, 'response', None))
             error_message = self._extract_error_message(getattr(e, 'response', None))
             raise HttpClientException(f"API request failed: {error_message}", response=getattr(e, 'response', None),
                                       cause=e) from None

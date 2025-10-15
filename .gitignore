@@ -6,3 +6,4 @@ dist/
 src/pdfdancer_python.egg-info
 .aider*
 src/pdfdancer_client_python.egg-info
+/logs/

@@ -6,7 +6,7 @@ import requests
 
 
 def _get_base_url():
-    return os.getenv('PDFDANCER_BASE_URL', 'http://localhost:8080')
+    return os.getenv('PDFDANCER_BASE_URL', 'https://api.pdfdancer.com')
 
 
 def _read_token() -> str | None:

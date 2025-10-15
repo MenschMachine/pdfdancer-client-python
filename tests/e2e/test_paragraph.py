@@ -1,165 +1,175 @@
 import pytest
 
-from pdfdancer import ClientV1, Position, Font, Color
+from pdfdancer import Color
+from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 
 def test_find_paragraphs_by_position():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        paras = client.find_paragraphs(None)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paras = pdf.select_paragraphs()
         assert len(paras) == 172
 
-        paras_page0 = client.find_paragraphs(Position.at_page(0))
+        paras_page0 = pdf.page(0).select_paragraphs()
         assert len(paras_page0) == 2
 
         first = paras_page0[0]
-        assert first.internal_id == 'PARAGRAPH_000003'
+        assert first.internal_id == "PARAGRAPH_000003"
         assert first.position is not None
-        assert first.position.bounding_rect.x == pytest.approx(326, rel=0, abs=1)
-        assert first.position.bounding_rect.y == pytest.approx(706, rel=0, abs=1)
+        assert pytest.approx(first.position.x(), rel=0, abs=1) == 326
+        assert pytest.approx(first.position.y(), rel=0, abs=1) == 706
 
         last = paras_page0[-1]
-        assert last.internal_id == 'PARAGRAPH_000004'
+        assert last.internal_id == "PARAGRAPH_000004"
         assert last.position is not None
-        assert last.position.bounding_rect.x == pytest.approx(54, rel=0, abs=1)
-        assert last.position.bounding_rect.y == pytest.approx(496, rel=0, abs=2)
+        assert pytest.approx(last.position.x(), rel=0, abs=1) == 54
+        assert pytest.approx(last.position.y(), rel=0, abs=2) == 496
 
 
 def test_find_paragraphs_by_text():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos = Position.at_page(0).with_text_starts('The Complete')
-        paras = client.find_paragraphs(pos)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paras = pdf.page(0).select_paragraphs_starting_with("The Complete")
         assert len(paras) == 1
         p = paras[0]
-        assert p.internal_id == 'PARAGRAPH_000004'
-        assert p.position is not None
-        assert p.position.bounding_rect.x == pytest.approx(54, rel=0, abs=1)
-        assert p.position.bounding_rect.y == pytest.approx(496, rel=0, abs=2)
+        assert p.internal_id == "PARAGRAPH_000004"
+        assert pytest.approx(p.position.x(), rel=0, abs=1) == 54
+        assert pytest.approx(p.position.y(), rel=0, abs=2) == 496
 
 
 def test_delete_paragraph():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos_del = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_paragraphs(pos_del)[0]
-        assert client.delete(ref) is True
-        pos_del2 = Position.at_page(0).with_text_starts('The Complete')
-        assert client.find_paragraphs(pos_del2) == []
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        paragraph.delete()
+        remaining = pdf.page(0).select_paragraphs_starting_with("The Complete")
+        assert remaining == []
 
 
 def test_move_paragraph():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos_move = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_paragraphs(pos_move)[0]
-        new_pos = Position.at_page_coordinates(0, 0.1, 300)
-        assert client.move(ref, new_pos) is True
-        ref2 = client.find_paragraphs(new_pos)[0]
-        assert ref2 is not None
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        paragraph.move_to(0.1, 300)
+        moved = pdf.page(0).select_paragraphs_at(0.1, 300)[0]
+        assert moved is not None
 
 
-def _assert_new_paragraph_exists(client: ClientV1):
-    # Validate via find_text_lines for text starting with 'Awesomely'
-    pos = Position.at_page(0).with_text_starts('Awesomely')
-    lines = client.find_text_lines(pos)
+def _assert_new_paragraph_exists(pdf: PDFDancer):
+    lines = pdf.page(0).select_text_lines_starting_with("Awesomely")
     assert len(lines) >= 1
 
 
 def test_modify_paragraph():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos_mod = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_paragraphs(pos_mod)[0]
-        new_paragraph = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font(Font('Helvetica', 14)) \
-            .with_line_spacing(0.7) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500)) \
-            .build()
-        assert client.modify_paragraph(ref, new_paragraph) is True
-        _assert_new_paragraph_exists(client)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+
+        paragraph.edit() \
+            .replace("Awesomely\nObvious!") \
+            .font("Helvetica") \
+            .size(14) \
+            .line_spacing(0.7) \
+            .move_to(300.1, 500) \
+            .apply()
+
+        _assert_new_paragraph_exists(pdf)
 
 
 def test_modify_paragraph_simple():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pos_mod2 = Position.at_page(0).with_text_starts('The Complete')
-        ref = client.find_paragraphs(pos_mod2)[0]
-        assert client.modify_paragraph(ref, 'Awesomely\nObvious!') is True
-        _assert_new_paragraph_exists(client)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        paragraph.edit().replace("Awesomely\nObvious!").apply()
+        _assert_new_paragraph_exists(pdf)
 
 
 def test_add_paragraph_with_custom_font1_expect_not_found():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pb = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font(Font('Roboto', 14)) \
-            .with_line_spacing(0.7) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500))
-        with pytest.raises(Exception) as excinfo:
-            assert client.add_paragraph(pb.build()) is True
-        assert 'Font not found' in str(excinfo.value)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with pytest.raises(Exception, match="Font not found"):
+            pdf.new_paragraph() \
+                .text("Awesomely\nObvious!") \
+                .font("Roboto") \
+                .size(14) \
+                .line_spacing(0.7) \
+                .at(0, 300.1, 500) \
+                .add()
 
 
 def test_add_paragraph_with_custom_font1_1():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pb = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font(Font('Roboto-Regular', 14)) \
-            .with_line_spacing(0.7) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500))
-        assert client.add_paragraph(pb.build()) is True
-        _assert_new_paragraph_exists(client)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Awesomely\nObvious!") \
+            .font("Roboto-Regular") \
+            .size(14) \
+            .line_spacing(0.7) \
+            .at(0, 300.1, 500) \
+            .add()
+        _assert_new_paragraph_exists(pdf)
 
 
 def test_add_paragraph_with_custom_font1_2():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        fonts = client.find_fonts('Roboto', 14)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        fonts = pdf.find_fonts("Roboto", 14)
         assert len(fonts) > 0
-        assert fonts[0].name.startswith('Roboto')
+        assert fonts[0].name.startswith("Roboto")
+
         roboto = fonts[0]
-        pb = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font(roboto) \
-            .with_line_spacing(0.7) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500))
-        assert client.add_paragraph(pb.build()) is True
-        _assert_new_paragraph_exists(client)
+        pdf.new_paragraph() \
+            .text("Awesomely\nObvious!") \
+            .font(roboto.name) \
+            .size(roboto.size) \
+            .line_spacing(0.7) \
+            .at(0, 300.1, 500) \
+            .add()
+        _assert_new_paragraph_exists(pdf)
 
 
 def test_add_paragraph_with_custom_font2():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        fonts = client.find_fonts('Asimovian', 14)
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        fonts = pdf.find_fonts("Asimovian", 14)
         assert len(fonts) > 0
-        assert fonts[0].name == 'Asimovian-Regular'
-        asimovian = fonts[0]
-        pb = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font(asimovian) \
-            .with_line_spacing(0.7) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500))
-        assert client.add_paragraph(pb.build()) is True
-        _assert_new_paragraph_exists(client)
+        assert fonts[0].name == "Asimovian-Regular"
+
+        asimov = fonts[0]
+        pdf.new_paragraph() \
+            .text("Awesomely\nObvious!") \
+            .font(asimov.name) \
+            .size(asimov.size) \
+            .line_spacing(0.7) \
+            .at(0, 300.1, 500) \
+            .add()
+        _assert_new_paragraph_exists(pdf)
 
 
 def test_add_paragraph_with_custom_font3():
-    base_url, token, pdf_path = _require_env_and_fixture('ObviouslyAwesome.pdf')
-    # Use DancingScript-Regular.ttf from repo fonts directory
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
     from pathlib import Path
     repo_root = Path(__file__).resolve().parents[2]
-    ttf_path = repo_root / 'tests/fixtures' / 'DancingScript-Regular.ttf'
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
-        pb = client.paragraph_builder() \
-            .from_string('Awesomely\nObvious!') \
-            .with_font_file(str(ttf_path), 24) \
-            .with_line_spacing(1.8) \
-            .with_color(Color(0, 0, 255)) \
-            .with_position(Position.at_page_coordinates(0, 300.1, 500))
-        assert client.add_paragraph(pb.build()) is True
-        _assert_new_paragraph_exists(client)
+    ttf_path = repo_root / "tests/fixtures" / "DancingScript-Regular.ttf"
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Awesomely\nObvious!") \
+            .font_file(str(ttf_path)) \
+            .size(24) \
+            .line_spacing(1.8) \
+            .color(Color(0, 0, 255)) \
+            .at(0, 300.1, 500) \
+            .add()
+        _assert_new_paragraph_exists(pdf)

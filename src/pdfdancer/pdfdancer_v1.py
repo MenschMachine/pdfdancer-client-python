@@ -23,7 +23,7 @@ from .models import (
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
-from .types import PathObject
+from .types import PathObject, ParagraphObject, TextLineObject
 
 
 class PageClient:
@@ -32,7 +32,29 @@ class PageClient:
         self.root = root
 
     def select_paths_at(self, x: float, y: float) -> List[PathObject]:
+        # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root.find_paths(Position.at_page_coordinates(self.page_index, x, y)))
+
+    def select_paragraphs(self) -> List[ParagraphObject]:
+        # noinspection PyProtectedMember
+        return self.root._to_paragraph_objects(self.root.find_paragraphs(Position.at_page(self.page_index)))
+
+    def select_paragraphs_starting_with(self, text: str) -> List[ParagraphObject]:
+        position = Position.at_page(self.page_index)
+        position.with_text_starts(text)
+        # noinspection PyProtectedMember
+        return self.root._to_paragraph_objects(self.root.find_paragraphs(position))
+
+    def select_paragraphs_at(self, x: float, y: float) -> List[ParagraphObject]:
+        position = Position.at_page_coordinates(self.page_index, x, y)
+        # noinspection PyProtectedMember
+        return self.root._to_paragraph_objects(self.root.find_paragraphs(position))
+
+    def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
+        position = Position.at_page(self.page_index)
+        position.with_text_starts(text)
+        # noinspection PyProtectedMember
+        return self.root._to_textline_objects(self.root.find_text_lines(position))
 
 
 class PDFDancer:
@@ -256,6 +278,13 @@ class PDFDancer:
         objects_data = response.json()
         return [self._parse_object_ref(obj_data) for obj_data in objects_data]
 
+    def select_paragraphs(self) -> List[ParagraphObject]:
+        """
+        Searches for paragraph objects at the specified position.
+        """
+        return self._to_paragraph_objects(self.find(ObjectType.PARAGRAPH, None))
+
+    # TODO delete
     def find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for paragraph objects at the specified position.
@@ -722,3 +751,9 @@ class PDFDancer:
 
     def _to_path_objects(self, path_refs: List[ObjectRef]) -> List[PathObject]:
         return [PathObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+
+    def _to_paragraph_objects(self, path_refs: List[ObjectRef]) -> List[ParagraphObject]:
+        return [ParagraphObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+
+    def _to_textline_objects(self, path_refs: List[ObjectRef]) -> List[TextLineObject]:
+        return [TextLineObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]

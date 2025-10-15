@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from e2e import _require_env_and_fixture
 from pdfdancer import ObjectType
 from pdfdancer.pdfdancer_v1 import PDFDancer
+from tests.e2e import _require_env_and_fixture
 
 
 def test_find_images():
@@ -13,7 +13,7 @@ def test_find_images():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         images = pdf.select_images()
         assert len(images) == 3
-        assert images[0].type == ObjectType.IMAGE
+        assert images[0].type() == ObjectType.IMAGE
 
         images_page0 = pdf.page(0).select_images()
         assert len(images_page0) == 2

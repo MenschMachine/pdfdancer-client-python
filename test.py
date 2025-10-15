@@ -22,7 +22,7 @@ def find_operations(client):
     images = client._find_images()
 
     # Find forms
-    forms = client.find_form_x_objects()
+    forms = client._find_form_x_objects()
 
     # Find paths
     paths = client.find_paths()
@@ -197,15 +197,15 @@ def text_line_operations(client):
 def form_operations(client):
     """Test form handling operations."""
     # Find all forms in document
-    all_forms = client.find_form_x_objects()
+    all_forms = client._find_form_x_objects()
 
     # Find forms at specific position
     specific_position = Position.at_page_coordinates(0, 150, 200)
-    forms_at_position = client.find_form_x_objects(specific_position)
+    forms_at_position = client._find_form_x_objects(specific_position)
 
     # Find forms on entire page
     page_position = Position.at_page(0)
-    forms_on_page = client.find_form_x_objects(page_position)
+    forms_on_page = client._find_form_x_objects(page_position)
 
     # Demonstrate form manipulation if forms are found
     manipulated_form = None

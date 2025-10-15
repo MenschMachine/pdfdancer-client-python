@@ -86,7 +86,7 @@ objects = client.find(ObjectType.PARAGRAPH, position)
 # Specific finders (Java: client.findParagraphs(), etc.)
 paragraphs = client._find_paragraphs(position)
 images = client._find_images(position)
-forms = client.find_form_x_objects(position)
+forms = client._find_form_x_objects(position)
 paths = client.find_paths(position)
 text_lines = client.find_text_lines(position)
 

@@ -86,6 +86,10 @@ class ImageObject(PDFObjectBase):
     pass
 
 
+class FormObject(PDFObjectBase):
+    pass
+
+
 def _process_text_lines(text: str) -> list[str]:
     """
     Process text into lines for the paragraph.

@@ -145,8 +145,8 @@ position = Position.at_page(0)
 position = Position.at_page_coordinates(0, 100, 200)
 
 # Coordinate access (Java: position.getX(), position.getY())
-x = position.get_x()
-y = position.get_y()
+x = position.x()
+y = position.y()
 
 # Movement (Java: position.moveX(), position.moveY())
 position.move_x(50.0)

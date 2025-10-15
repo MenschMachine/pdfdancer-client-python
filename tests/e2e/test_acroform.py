@@ -15,7 +15,7 @@ def test_find_form_fields():
         all_forms_at_origin = True
         for form in form_fields:
             pos = form.position
-            if pos.get_x() != 0.0 or pos.get_y() != 0.0:
+            if pos.x() != 0.0 or pos.y() != 0.0:
                 all_forms_at_origin = False
         assert not all_forms_at_origin, "All forms should not be at coordinates (0,0)"
 
@@ -49,8 +49,8 @@ def test_move_form_field():
         form_fields = client.find_form_fields(Position.at_page_coordinates(0, 290, 460))
         assert len(form_fields) == 1
         object_ref = form_fields[0]
-        assert abs(object_ref.position.get_x() - 280) < 0.1
-        assert abs(object_ref.position.get_y() - 455) < 0.1
+        assert abs(object_ref.position.x() - 280) < 0.1
+        assert abs(object_ref.position.y() - 455) < 0.1
 
         client.move(object_ref, Position.at_page_coordinates(0, 30, 40))
 

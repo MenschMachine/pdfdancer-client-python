@@ -54,15 +54,15 @@ class TestPosition:
         """Test get_x() and get_y() methods."""
         position = Position.at_page_coordinates(0, 123.45, 678.90)
 
-        assert position.get_x() == 123.45
-        assert position.get_y() == 678.90
+        assert position.x() == 123.45
+        assert position.y() == 678.90
 
     def test_get_x_y_returns_none_without_bounding_rect(self):
         """Test get_x() and get_y() return None without bounding rect."""
         position = Position()
 
-        assert position.get_x() is None
-        assert position.get_y() is None
+        assert position.x() is None
+        assert position.y() is None
 
     def test_move_x_updates_position(self):
         """Test move_x() updates x coordinate."""
@@ -70,8 +70,8 @@ class TestPosition:
 
         position.move_x(50.0)
 
-        assert position.get_x() == 150.0
-        assert position.get_y() == 200.0  # Unchanged
+        assert position.x() == 150.0
+        assert position.y() == 200.0  # Unchanged
 
     def test_move_y_updates_position(self):
         """Test move_y() updates y coordinate."""
@@ -79,8 +79,8 @@ class TestPosition:
 
         position.move_y(-25.0)
 
-        assert position.get_x() == 100.0  # Unchanged
-        assert position.get_y() == 175.0
+        assert position.x() == 100.0  # Unchanged
+        assert position.y() == 175.0
 
     def test_copy_creates_independent_copy(self):
         """Test copy() creates independent copy of position."""

@@ -125,20 +125,20 @@ class Position:
     def move_x(self, x_offset: float) -> 'Position':
         """Move the position horizontally by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.get_x() + x_offset, self.get_y()))
+            self.at_coordinates(Point(self.x() + x_offset, self.y()))
         return self
 
     def move_y(self, y_offset: float) -> 'Position':
         """Move the position vertically by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.get_x(), self.get_y() + y_offset))
+            self.at_coordinates(Point(self.x(), self.y() + y_offset))
         return self
 
-    def get_x(self) -> Optional[float]:
+    def x(self) -> Optional[float]:
         """Returns the X coordinate of this position."""
         return self.bounding_rect.get_x() if self.bounding_rect else None
 
-    def get_y(self) -> Optional[float]:
+    def y(self) -> Optional[float]:
         """Returns the Y coordinate of this position."""
         return self.bounding_rect.get_y() if self.bounding_rect else None
 

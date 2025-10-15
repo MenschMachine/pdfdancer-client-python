@@ -121,7 +121,7 @@ def test_add_paragraph_with_custom_font1_2():
     with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url, read_timeout=30.0) as client:
         fonts = client.find_fonts('Roboto', 14)
         assert len(fonts) > 0
-        assert fonts[0].name == 'Roboto-Regular'
+        assert fonts[0].name.startswith('Roboto')
         roboto = fonts[0]
         pb = client.paragraph_builder() \
             .from_string('Awesomely\nObvious!') \

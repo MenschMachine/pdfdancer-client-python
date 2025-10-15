@@ -11,6 +11,7 @@ from typing import List, Optional, Union, BinaryIO
 
 import requests
 
+from . import ParagraphBuilder
 from .exceptions import (
     PdfDancerException,
     FontNotFoundException,
@@ -491,8 +492,12 @@ class PDFDancer:
         response = self._make_request('POST', '/pdf/add', data=request_data)
         return response.json()
 
-    # Modify Operations
 
+    def new_paragraph(self) -> ParagraphBuilder:
+        return ParagraphBuilder(self)
+
+    # Modify Operations
+    # TODO remove
     def modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> bool:
         """
         Modifies a paragraph object or its text content.

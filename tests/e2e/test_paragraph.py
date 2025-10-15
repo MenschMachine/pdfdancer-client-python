@@ -97,8 +97,7 @@ def test_add_paragraph_with_custom_font1_expect_not_found():
         with pytest.raises(Exception, match="Font not found"):
             pdf.new_paragraph() \
                 .text("Awesomely\nObvious!") \
-                .font("Roboto") \
-                .size(14) \
+                .font("Roboto", 14) \
                 .line_spacing(0.7) \
                 .at(0, 300.1, 500) \
                 .add()
@@ -110,8 +109,7 @@ def test_add_paragraph_with_custom_font1_1():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         pdf.new_paragraph() \
             .text("Awesomely\nObvious!") \
-            .font("Roboto-Regular") \
-            .size(14) \
+            .font("Roboto-Regular", 14) \
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
@@ -129,8 +127,7 @@ def test_add_paragraph_with_custom_font1_2():
         roboto = fonts[0]
         pdf.new_paragraph() \
             .text("Awesomely\nObvious!") \
-            .font(roboto.name) \
-            .size(roboto.size) \
+            .font(roboto.name, roboto.size) \
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
@@ -148,8 +145,7 @@ def test_add_paragraph_with_custom_font2():
         asimov = fonts[0]
         pdf.new_paragraph() \
             .text("Awesomely\nObvious!") \
-            .font(asimov.name) \
-            .size(asimov.size) \
+            .font(asimov.name, asimov.size) \
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
@@ -165,8 +161,7 @@ def test_add_paragraph_with_custom_font3():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         pdf.new_paragraph() \
             .text("Awesomely\nObvious!") \
-            .font_file(str(ttf_path)) \
-            .size(24) \
+            .font_file(str(ttf_path), 24) \
             .line_spacing(1.8) \
             .color(Color(0, 0, 255)) \
             .at(0, 300.1, 500) \

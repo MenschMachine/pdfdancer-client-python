@@ -4,13 +4,10 @@ Closely mirrors the Java ParagraphBuilder class with Python conventions.
 """
 
 from pathlib import Path
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Union
 
 from .exceptions import ValidationException
 from .models import Paragraph, Font, Color, Position
-
-if TYPE_CHECKING:
-    from .client_v1 import ClientV1
 
 
 class ParagraphBuilder:
@@ -19,7 +16,7 @@ class ParagraphBuilder:
     Mirrors the Java ParagraphBuilder class exactly.
     """
 
-    def __init__(self, client: 'ClientV1'):
+    def __init__(self, client: 'PDFDancer'):
         """
         Initialize the paragraph builder with a client reference.
 
@@ -37,7 +34,7 @@ class ParagraphBuilder:
         self._ttf_file: Optional[Path] = None
         self._font: Optional[Font] = None
 
-    def from_string(self, text: str, color: Optional[Color] = None) -> 'ParagraphBuilder':
+    def text(self, text: str, color: Optional[Color] = None) -> 'ParagraphBuilder':
         """
         Set the text content for the paragraph.
         Equivalent to fromString() methods in Java ParagraphBuilder.
@@ -63,13 +60,14 @@ class ParagraphBuilder:
 
         return self
 
-    def with_font(self, font: Font) -> 'ParagraphBuilder':
+    def font(self, font_name: str, font_size: float) -> 'ParagraphBuilder':
         """
         Set the font for the paragraph using an existing Font object.
         Equivalent to withFont(Font) in Java ParagraphBuilder.
 
         Args:
-            font: The Font object to use
+            font_name: The Font to use
+            font_size: The font size
 
         Returns:
             Self for method chaining
@@ -77,6 +75,7 @@ class ParagraphBuilder:
         Raises:
             ValidationException: If font is None
         """
+        font = Font(font_name, font_size)
         if font is None:
             raise ValidationException("Font cannot be null")
 
@@ -84,7 +83,7 @@ class ParagraphBuilder:
         self._ttf_file = None  # Clear TTF file when using existing font
         return self
 
-    def with_font_file(self, ttf_file: Union[Path, str], font_size: float) -> 'ParagraphBuilder':
+    def font_file(self, ttf_file: Union[Path, str], font_size: float) -> 'ParagraphBuilder':
         """
         Set the font for the paragraph using a TTF file.
         Equivalent to withFont(File, double) in Java ParagraphBuilder.
@@ -125,7 +124,7 @@ class ParagraphBuilder:
         self._font = self._register_ttf(ttf_path, font_size)
         return self
 
-    def with_line_spacing(self, spacing: float) -> 'ParagraphBuilder':
+    def line_spacing(self, spacing: float) -> 'ParagraphBuilder':
         """
         Set the line spacing for the paragraph.
         Equivalent to withLineSpacing() in Java ParagraphBuilder.
@@ -145,7 +144,7 @@ class ParagraphBuilder:
         self._line_spacing = spacing
         return self
 
-    def with_color(self, color: Color) -> 'ParagraphBuilder':
+    def color(self, color: Color) -> 'ParagraphBuilder':
         """
         Set the text color for the paragraph.
         Equivalent to withColor() in Java ParagraphBuilder.
@@ -165,7 +164,7 @@ class ParagraphBuilder:
         self._text_color = color
         return self
 
-    def with_position(self, position: Position) -> 'ParagraphBuilder':
+    def at(self, page_index: int, x: float, y: float) -> 'ParagraphBuilder':
         """
         Set the position for the paragraph.
         Equivalent to withPosition() in Java ParagraphBuilder.
@@ -179,6 +178,7 @@ class ParagraphBuilder:
         Raises:
             ValidationException: If position is None
         """
+        position = Position.at_page_coordinates(page_index, x, y)
         if position is None:
             raise ValidationException("Position cannot be null")
 
@@ -265,3 +265,6 @@ class ParagraphBuilder:
             lines = ['']
 
         return lines
+
+    def add(self):
+        self._client.add_paragraph(self.build())

@@ -38,8 +38,8 @@ The client is a pure manual implementation that closely mirrors the Java client:
 client = ClientV1(token="jwt-token", pdf_data="document.pdf")
 
 # Find operations (mirrors Java findParagraphs, findImages, etc.)
-paragraphs = client.find_paragraphs(position)
-images = client.find_images(position)
+paragraphs = client._find_paragraphs(position)
+images = client._find_images(position)
 
 # Manipulation operations (mirrors Java delete, move, etc.)
 client.delete(paragraphs[0])

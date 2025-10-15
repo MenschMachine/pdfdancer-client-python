@@ -81,8 +81,9 @@ class PathObject(PDFObjectBase):
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
 
-    def __repr__(self) -> str:
-        return f"<PathObject id={self.internal_id} page={self.page_index}>"
+
+class ImageObject(PDFObjectBase):
+    pass
 
 
 def _process_text_lines(text: str) -> list[str]:
@@ -178,7 +179,7 @@ class ParagraphEdit(BaseTextEdit):
                 and self._color is None
         ):
             # noinspection PyProtectedMember
-            return self._target_obj._client.modify_paragraph(self._object_ref, self._new_text)
+            return self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
         else:
             new_paragraph = Paragraph(
                 position=self._position,
@@ -188,7 +189,7 @@ class ParagraphEdit(BaseTextEdit):
                 color=self._color if self._color is not None else DEFAULT_COLOR,
             )
             # noinspection PyProtectedMember
-            return self._target_obj._client.modify_paragraph(self._object_ref, new_paragraph)
+            return self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
 
 
 class TextLineEdit(BaseTextEdit):

@@ -84,8 +84,8 @@ client = ClientV1(token="jwt-token", pdf_data=pdf_file, base_url="https://api.se
 objects = client.find(ObjectType.PARAGRAPH, position)
 
 # Specific finders (Java: client.findParagraphs(), etc.)
-paragraphs = client.find_paragraphs(position)
-images = client.find_images(position)
+paragraphs = client._find_paragraphs(position)
+images = client._find_images(position)
 forms = client.find_form_x_objects(position)
 paths = client.find_paths(position)
 text_lines = client.find_text_lines(position)
@@ -96,6 +96,7 @@ page = client.get_page(1)  # 1-based indexing
 ```
 
 ### Manipulation Operations
+
 ```python
 # Delete (Java: client.delete(), client.deletePage())
 result = client.delete(object_ref)
@@ -109,7 +110,7 @@ result = client.add_image(image, position)
 result = client.add_paragraph(paragraph)
 
 # Modify (Java: client.modifyParagraph(), client.modifyTextLine())
-result = client.modify_paragraph(ref, new_paragraph)
+result = client._modify_paragraph(ref, new_paragraph)
 result = client.modify_text_line(ref, "new text")
 ```
 

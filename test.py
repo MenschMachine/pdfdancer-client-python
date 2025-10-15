@@ -16,10 +16,10 @@ from pdfdancer import (
 def find_operations(client):
     """Test all find operations for different object types."""
     # Find all paragraphs
-    paragraphs = client.find_paragraphs()
+    paragraphs = client._find_paragraphs()
 
     # Find images
-    images = client.find_images()
+    images = client._find_images()
 
     # Find forms
     forms = client.find_form_x_objects()
@@ -146,12 +146,12 @@ def object_manipulation(client, paragraphs, text_lines):
                 font=arial_font,
                 color=red_color
             )
-            client.modify_paragraph(third_paragraph, modified_paragraph)
+            client._modify_paragraph(third_paragraph, modified_paragraph)
 
             # Modify with just text
             if len(paragraphs) > 3:
                 fourth_paragraph = paragraphs[3]
-                client.modify_paragraph(fourth_paragraph, "Simple text modification")
+                client._modify_paragraph(fourth_paragraph, "Simple text modification")
 
     # Text line modification
     if text_lines:
@@ -315,7 +315,7 @@ def image_operations(client):
     client.add_image(logo_image)
 
     # Find images in document
-    found_images = client.find_images()
+    found_images = client._find_images()
 
     # Demonstrate image manipulation if images are found
     if found_images:

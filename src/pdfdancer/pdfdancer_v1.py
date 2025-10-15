@@ -19,12 +19,13 @@ from .exceptions import (
     SessionException,
     ValidationException
 )
+from .image_builder import ImageBuilder
 from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef,
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
-from .types import PathObject, ParagraphObject, TextLineObject
+from .types import PathObject, ParagraphObject, TextLineObject, ImageObject
 
 
 class PageClient:
@@ -38,24 +39,33 @@ class PageClient:
 
     def select_paragraphs(self) -> List[ParagraphObject]:
         # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root.find_paragraphs(Position.at_page(self.page_index)))
+        return self.root._to_paragraph_objects(self.root._find_paragraphs(Position.at_page(self.page_index)))
 
     def select_paragraphs_starting_with(self, text: str) -> List[ParagraphObject]:
         position = Position.at_page(self.page_index)
         position.with_text_starts(text)
         # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root.find_paragraphs(position))
+        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
     def select_paragraphs_at(self, x: float, y: float) -> List[ParagraphObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root.find_paragraphs(position))
+        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
     def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
         position = Position.at_page(self.page_index)
         position.with_text_starts(text)
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root.find_text_lines(position))
+
+    def select_images(self) -> List[ImageObject]:
+        # noinspection PyProtectedMember
+        return self.root._to_image_objects(self.root._find_images(Position.at_page(self.page_index)))
+
+    def select_images_at(self, x: float, y: float) -> List[ImageObject]:
+        position = Position.at_page_coordinates(self.page_index, x, y)
+        # noinspection PyProtectedMember
+        return self.root._to_image_objects(self.root._find_images(position))
 
 
 class PDFDancer:
@@ -285,18 +295,23 @@ class PDFDancer:
         """
         return self._to_paragraph_objects(self.find(ObjectType.PARAGRAPH, None))
 
-    # TODO delete
-    def find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for paragraph objects at the specified position.
         """
         return self.find(ObjectType.PARAGRAPH, position)
 
-    def find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for image objects at the specified position.
         """
         return self.find(ObjectType.IMAGE, position)
+
+    def select_images(self) -> List[ImageObject]:
+        """
+        Searches for image objects in the whole document
+        """
+        return self._to_image_objects(self.find(ObjectType.IMAGE, None))
 
     def find_form_x_objects(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
@@ -501,9 +516,11 @@ class PDFDancer:
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)
 
+    def new_image(self) -> ImageBuilder:
+        return ImageBuilder(self)
+
     # Modify Operations
-    # TODO remove
-    def modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> bool:
+    def _modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> bool:
         """
         Modifies a paragraph object or its text content.
 
@@ -767,3 +784,6 @@ class PDFDancer:
 
     def _to_textline_objects(self, path_refs: List[ObjectRef]) -> List[TextLineObject]:
         return [TextLineObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+
+    def _to_image_objects(self, path_refs: List[ObjectRef]) -> List[ImageObject]:
+        return [ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]

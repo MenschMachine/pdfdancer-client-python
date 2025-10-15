@@ -1,7 +1,7 @@
 import pytest
 
-from e2e import _require_env_and_fixture
 from pdfdancer.pdfdancer_v1 import PDFDancer
+from tests.e2e import _require_env_and_fixture
 
 
 def test_find_lines_by_position():

@@ -25,7 +25,7 @@ from .models import (
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
-from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject
+from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
 
 
 class PageClient:
@@ -75,12 +75,28 @@ class PageClient:
     def select_forms(self) -> List[FormObject]:
         position = Position.at_page(self.page_index)
         # noinspection PyProtectedMember
-        return self.root._to_form_objcts(self.root._find_form_x_objects(position))
+        return self.root._to_form_objects(self.root._find_form_x_objects(position))
 
     def select_forms_at(self, x: float, y: float) -> List[FormObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_form_objcts(self.root._find_form_x_objects(position))
+        return self.root._to_form_objects(self.root._find_form_x_objects(position))
+
+    def select_form_fields(self) -> List[FormFieldObject]:
+        position = Position.at_page(self.page_index)
+        # noinspection PyProtectedMember
+        return self.root._to_form_field_objects(self.root._find_form_fields(position))
+
+    def select_form_fields_by_name(self, field_name: str) -> List[FormFieldObject]:
+        pos = Position.by_name(field_name)
+        pos.page_index = self.page_index
+        # noinspection PyProtectedMember
+        return self.root._to_form_field_objects(self.root._find_form_fields(pos))
+
+    def select_form_fields_at(self, x: float, y: float) -> List[FormFieldObject]:
+        position = Position.at_page_coordinates(self.page_index, x, y)
+        # noinspection PyProtectedMember
+        return self.root._to_form_field_objects(self.root._find_form_fields(position))
 
 
 class PDFDancer:
@@ -332,13 +348,25 @@ class PDFDancer:
         """
         Searches for form field objects in the whole document.
         """
-        return self._to_form_objcts(self.find(ObjectType.FORM_X_OBJECT, None))
+        return self._to_form_objects(self.find(ObjectType.FORM_X_OBJECT, None))
 
     def _find_form_x_objects(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for form field objects at the specified position.
         """
         return self.find(ObjectType.FORM_X_OBJECT, position)
+
+    def select_form_fields(self) -> List[FormFieldObject]:
+        """
+        Searches for form field objects in the whole document.
+        """
+        return self._to_form_field_objects(self._find_form_fields(None))
+
+    def select_form_fields_by_name(self, field_name: str) -> List[FormFieldObject]:
+        """
+        Searches for form field objects in the whole document.
+        """
+        return self._to_form_field_objects(self._find_form_fields(Position.by_name(field_name)))
 
     def _find_form_fields(self, position: Optional[Position] = None) -> List[FormFieldRef]:
         """
@@ -809,5 +837,9 @@ class PDFDancer:
     def _to_image_objects(self, path_refs: List[ObjectRef]) -> List[ImageObject]:
         return [ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
 
-    def _to_form_objcts(self, path_refs: List[ObjectRef]) -> List[FormObject]:
+    def _to_form_objects(self, path_refs: List[ObjectRef]) -> List[FormObject]:
         return [FormObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+
+    def _to_form_field_objects(self, path_refs: List[FormFieldRef]) -> List[FormFieldObject]:
+        return [FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value) for ref in
+                path_refs]

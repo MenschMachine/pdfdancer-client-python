@@ -1,82 +1,83 @@
-from pdfdancer import ClientV1, Position, ObjectType
+from pdfdancer import ObjectType
+from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 
 def test_find_form_fields():
-    """Test findFormFields equivalent functionality."""
-    base_url, token, pdf_path = _require_env_and_fixture('mixed-form-types.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url) as client:
-        form_fields = client.find_form_fields()
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        form_fields = pdf.select_form_fields()
         assert len(form_fields) == 10
-        assert form_fields[0].type == ObjectType.TEXT_FIELD
-        assert form_fields[4].type == ObjectType.CHECK_BOX
-        assert form_fields[6].type == ObjectType.RADIO_BUTTON
+        assert form_fields[0].type() == ObjectType.TEXT_FIELD
+        assert form_fields[4].type() == ObjectType.CHECK_BOX
+        assert form_fields[6].type() == ObjectType.RADIO_BUTTON
 
-        all_forms_at_origin = True
-        for form in form_fields:
-            pos = form.position
-            if pos.x() != 0.0 or pos.y() != 0.0:
-                all_forms_at_origin = False
-        assert not all_forms_at_origin, "All forms should not be at coordinates (0,0)"
+        # Verify not all fields at origin
+        all_at_origin = all(
+            abs(f.position.x()) < 1e-6 and abs(f.position.y()) < 1e-6
+            for f in form_fields
+        )
+        assert not all_at_origin, "All forms should not be at coordinates (0,0)"
 
-        first_page_fields = client.find_form_fields(Position.at_page(0))
+        first_page_fields = pdf.page(0).select_form_fields()
         assert len(first_page_fields) == 10
 
-        first_form = client.find_form_fields(Position.at_page_coordinates(0, 290, 460))
+        first_form = pdf.page(0).select_form_fields_at(290, 460)
         assert len(first_form) == 1
-        assert first_form[0].type == ObjectType.RADIO_BUTTON
-        assert first_form[0].internal_id == "FORM_FIELD_000008"
+        f = first_form[0]
+        assert f.type() == ObjectType.RADIO_BUTTON
+        assert f.internal_id == "FORM_FIELD_000008"
 
 
 def test_delete_form_fields():
-    """Test deleteFormFields equivalent functionality."""
-    base_url, token, pdf_path = _require_env_and_fixture('mixed-form-types.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url) as client:
-        form_fields = client.find_form_fields()
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        form_fields = pdf.select_form_fields()
         assert len(form_fields) == 10
-        object_ref_to_delete = form_fields[5]
-        client.delete(object_ref_to_delete)
-        all_form_fields = client.find_form_fields()
+
+        to_delete = form_fields[5]
+        to_delete.delete()
+
+        all_form_fields = pdf.select_form_fields()
         assert len(all_form_fields) == 9
-        for field_ref in all_form_fields:
-            assert field_ref.internal_id != object_ref_to_delete.internal_id
+        assert all(f.internal_id != to_delete.internal_id for f in all_form_fields)
 
 
 def test_move_form_field():
-    """Test moving form fields."""
-    base_url, token, pdf_path = _require_env_and_fixture('mixed-form-types.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url) as client:
-        form_fields = client.find_form_fields(Position.at_page_coordinates(0, 290, 460))
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        form_fields = pdf.page(0).select_form_fields_at(290, 460)
         assert len(form_fields) == 1
-        object_ref = form_fields[0]
-        assert abs(object_ref.position.x() - 280) < 0.1
-        assert abs(object_ref.position.y() - 455) < 0.1
+        f = form_fields[0]
+        assert abs(f.position.x() - 280) < 0.1
+        assert abs(f.position.y() - 455) < 0.1
 
-        client.move(object_ref, Position.at_page_coordinates(0, 30, 40))
+        f.move_to(30, 40)
 
-        form_fields = client.find_form_fields(Position.at_page_coordinates(0, 290, 460))
-        assert len(form_fields) == 0
+        assert pdf.page(0).select_form_fields_at(290, 460) == []
 
-        form_fields = client.find_form_fields(Position.at_page_coordinates(0, 30, 40))
-        assert len(form_fields) == 1
-        assert form_fields[0].internal_id == object_ref.internal_id
+        moved = pdf.page(0).select_form_fields_at(30, 40)
+        assert len(moved) == 1
+        assert moved[0].internal_id == f.internal_id
 
 
 def test_edit_form_fields():
-    """Test editing form field values."""
-    base_url, token, pdf_path = _require_env_and_fixture('mixed-form-types.pdf')
-    with ClientV1(token=token, pdf_data=str(pdf_path), base_url=base_url) as client:
-        form_fields = client.find_form_fields(Position.by_name("firstName"))
-        assert len(form_fields) == 1
-        object_ref = form_fields[0]
-        assert object_ref.name == "firstName"
-        assert object_ref.value is None
-        assert object_ref.type == ObjectType.TEXT_FIELD
-        assert object_ref.internal_id == "FORM_FIELD_000001"
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
-        assert client.change_form_field(object_ref, "Donald Duck")
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        fields = pdf.select_form_fields_by_name("firstName")
+        assert len(fields) == 1
+        f = fields[0]
+        assert f.name == "firstName"
+        assert f.value is None
+        assert f.type() == ObjectType.TEXT_FIELD
+        assert f.internal_id == "FORM_FIELD_000001"
 
-        form_fields = client.find_form_fields(Position.by_name("firstName"))
-        object_ref = form_fields[0]
-        assert object_ref.name == "firstName"
-        assert object_ref.value == "Donald Duck"
+        f.edit().value("Donald Duck").apply()
+
+        updated = pdf.select_form_fields_by_name("firstName")[0]
+        assert updated.name == "firstName"
+        assert updated.value == "Donald Duck"

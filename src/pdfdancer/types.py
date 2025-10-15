@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color
+from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef
 
 
 @dataclass
@@ -223,3 +223,34 @@ class TextLineObject(PDFObjectBase):
 
     def edit(self) -> TextLineEdit:
         return TextLineEdit(self, self.object_ref())
+
+
+class FormFieldEdit:
+    def __init__(self, form_field: 'FormFieldObject', object_ref: FormFieldRef):
+        self.form_field = form_field
+        self.object_ref = object_ref
+
+    def value(self, new_value: str) -> 'FormFieldEdit':
+        self.form_field.value = new_value
+        return self
+
+    def apply(self) -> bool:
+        # noinspection PyProtectedMember
+        return self.form_field._client._change_form_field(self.object_ref, self.form_field.value)
+
+
+class FormFieldObject(PDFObjectBase):
+    def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position,
+                 field_name: str, field_value: str):
+        super().__init__(client, internal_id, object_type, position)
+        self.name = field_name
+        self.value = field_value
+
+    def edit(self) -> FormFieldEdit:
+        return FormFieldEdit(self, self.object_ref())
+
+    def object_ref(self) -> FormFieldRef:
+        ref = FormFieldRef(self.internal_id, self.position, self.object_type)
+        ref.name = self.name
+        ref.value = self.value
+        return ref

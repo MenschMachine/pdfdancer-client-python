@@ -6,11 +6,12 @@ A tool to bump version and upload to PyPI.
 """
 
 import argparse
+import glob
 import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 
 class ReleaseError(Exception):
@@ -142,7 +143,12 @@ class PyPIUploader:
         if include_e2e:
             test_path = "tests/"
         else:
-            test_path = "tests/test_client_v1.py tests/test_models.py tests/test_paragraph_builder.py"
+            # Collect all test files except those in e2e/
+            test_files = [
+                f for f in glob.glob("tests/**/*.py", recursive=True)
+                if "e2e" not in f
+            ]
+            test_path = " ".join(test_files)
 
         self.run_command([str(self.python_exe), "-m", "pytest"] + test_path.split() + ["-v"])
         print("All tests passed")

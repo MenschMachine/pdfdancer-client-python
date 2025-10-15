@@ -42,8 +42,8 @@ paragraphs = client._find_paragraphs(position)
 images = client._find_images(position)
 
 # Manipulation operations (mirrors Java delete, move, etc.)
-client.delete(paragraphs[0])
-client.move(images[0], new_position)
+client._delete(paragraphs[0])
+client._move(images[0], new_position)
 
 # Builder pattern (mirrors Java ParagraphBuilder)
 paragraph = (client.paragraph_builder()

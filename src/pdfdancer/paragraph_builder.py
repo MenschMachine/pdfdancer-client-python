@@ -267,4 +267,4 @@ class ParagraphBuilder:
         return lines
 
     def add(self):
-        self._client.add_paragraph(self.build())
+        self._client._add_paragraph(self.build())

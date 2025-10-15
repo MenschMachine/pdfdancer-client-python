@@ -33,8 +33,8 @@ paragraphs = client.find_paragraphs(None)
 images = client.find_images(Position.at_page(0))
 
 # Manipulation operations (mirrors Java client methods)
-client.delete(paragraphs[0])
-client.move(images[0], Position.at_page_coordinates(0, 100, 200))
+client._delete(paragraphs[0])
+client._move(images[0], Position.at_page_coordinates(0, 100, 200))
 
 # Builder pattern (mirrors Java ParagraphBuilder)
 paragraph = (client.paragraph_builder()
@@ -44,7 +44,7 @@ paragraph = (client.paragraph_builder()
              .with_position(Position.at_page(0))
              .build())
 
-client.add_paragraph(paragraph)
+client._add_paragraph(paragraph)
 
 # Save result (mirrors Java savePDF)
 client.save_pdf("output.pdf")
@@ -58,7 +58,7 @@ from pdfdancer import ClientV1
 # Automatic resource management
 with ClientV1(token="jwt-token", pdf_data="input.pdf") as client:
     paragraphs = client.find_paragraphs(None)
-    client.delete(paragraphs[0])
+    client._delete(paragraphs[0])
     client.save_pdf("output.pdf")
     # Session automatically cleaned up
 ```
@@ -81,33 +81,33 @@ client = ClientV1(token="jwt-token", pdf_data=pdf_file, base_url="https://api.se
 
 ```python
 # Generic find (Java: client.find())
-objects = client.find(ObjectType.PARAGRAPH, position)
+objects = client._find(ObjectType.PARAGRAPH, position)
 
 # Specific finders (Java: client.findParagraphs(), etc.)
 paragraphs = client._find_paragraphs(position)
 images = client._find_images(position)
 forms = client._find_form_x_objects(position)
-paths = client.find_paths(position)
-text_lines = client.find_text_lines(position)
+paths = client._find_paths(position)
+text_lines = client._find_text_lines(position)
 
 # Page operations (Java: client.getPages(), client.getPage())
 pages = client.get_pages()
-page = client.get_page(1)  # 1-based indexing
+page = client._get_page(1)  # 1-based indexing
 ```
 
 ### Manipulation Operations
 
 ```python
 # Delete (Java: client.delete(), client.deletePage())
-result = client.delete(object_ref)
-result = client.delete_page(page_ref)
+result = client._delete(object_ref)
+result = client._delete_page(page_ref)
 
 # Move (Java: client.move())
-result = client.move(object_ref, new_position)
+result = client._move(object_ref, new_position)
 
 # Add (Java: client.addImage(), client.addParagraph())
-result = client.add_image(image, position)
-result = client.add_paragraph(paragraph)
+result = client._add_image(image, position)
+result = client._add_paragraph(paragraph)
 
 # Modify (Java: client.modifyParagraph(), client.modifyTextLine())
 result = client._modify_paragraph(ref, new_paragraph)

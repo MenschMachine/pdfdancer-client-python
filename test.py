@@ -25,14 +25,14 @@ def find_operations(client):
     forms = client._find_form_x_objects()
 
     # Find paths
-    paths = client.find_paths()
+    paths = client._find_paths()
 
     # Find text lines
-    text_lines = client.find_text_lines()
+    text_lines = client._find_text_lines()
 
     # Find with specific object type and position
     specific_position = Position.at_page_coordinates(0, 100, 100)
-    paragraphs_at_pos = client.find(ObjectType.PARAGRAPH, specific_position)
+    paragraphs_at_pos = client._find(ObjectType.PARAGRAPH, specific_position)
 
     return paragraphs, text_lines  # Keep only what's needed for object_manipulation
 
@@ -46,7 +46,7 @@ def page_management(client):
     # Get specific page
     first_page = None
     if pages:
-        first_page = client.get_page(0)
+        first_page = client._get_page(0)
 
 
 # noinspection PyUnusedLocal
@@ -105,7 +105,7 @@ def paragraph_operations(client):
                        .with_font(arial_font)
                        .with_position(Position.at_page_coordinates(0, 50, 200))
                        .build())
-    client.add_paragraph(basic_paragraph)
+    client._add_paragraph(basic_paragraph)
 
     # Advanced paragraph with all features
     advanced_paragraph = (client.paragraph_builder()
@@ -115,7 +115,7 @@ def paragraph_operations(client):
                           .with_color(blue_color)
                           .with_position(Position.at_page_coordinates(0, 50, 250))
                           .build())
-    client.add_paragraph(advanced_paragraph)
+    client._add_paragraph(advanced_paragraph)
 
 
 # noinspection PyUnusedLocal
@@ -127,13 +127,13 @@ def object_manipulation(client, paragraphs, text_lines):
     if paragraphs:
         # Delete operation
         first_paragraph = paragraphs[0]
-        client.delete(first_paragraph)
+        client._delete(first_paragraph)
 
         # Move operation (if we have more paragraphs)
         if len(paragraphs) > 1:
             second_paragraph = paragraphs[1]
             new_position = Position.at_page_coordinates(0, 100, 300)
-            client.move(second_paragraph, new_position)
+            client._move(second_paragraph, new_position)
 
         # Modify operations
         if len(paragraphs) > 2:
@@ -162,15 +162,15 @@ def object_manipulation(client, paragraphs, text_lines):
 def text_line_operations(client):
     """Test text line specific operations and showcases."""
     # Find all text lines in document
-    all_text_lines = client.find_text_lines()
+    all_text_lines = client._find_text_lines()
 
     # Find text lines at specific position
     specific_position = Position.at_page_coordinates(0, 100, 100)
-    text_lines_at_position = client.find_text_lines(specific_position)
+    text_lines_at_position = client._find_text_lines(specific_position)
 
     # Find text lines on entire page
     page_position = Position.at_page(0)
-    text_lines_on_page = client.find_text_lines(page_position)
+    text_lines_on_page = client._find_text_lines(page_position)
 
     # Demonstrate text line modification if text lines are found
     modified_text_line = None
@@ -190,7 +190,7 @@ def text_line_operations(client):
         if len(all_text_lines) > 1:
             second_text_line = all_text_lines[1]
             new_position = Position.at_page_coordinates(0, 120, 150)
-            client.move(second_text_line, new_position)
+            client._move(second_text_line, new_position)
 
 
 # noinspection PyUnusedLocal
@@ -221,28 +221,28 @@ def form_operations(client):
         if len(all_forms) > 1:
             second_form = all_forms[1]
             new_position = Position.at_page_coordinates(0, 180, 250)
-            client.move(second_form, new_position)
+            client._move(second_form, new_position)
             manipulated_form = second_form
 
         # Demonstrate deletion (use last form to preserve others for testing)
         if len(all_forms) > 2:
             last_form = all_forms[-1]
-            client.delete(last_form)
+            client._delete(last_form)
 
 
 # noinspection PyUnusedLocal
 def path_operations(client):
     """Test path handling operations."""
     # Find all paths in document
-    all_paths = client.find_paths()
+    all_paths = client._find_paths()
 
     # Find paths at specific position
     specific_position = Position.at_page_coordinates(0, 100, 150)
-    paths_at_position = client.find_paths(specific_position)
+    paths_at_position = client._find_paths(specific_position)
 
     # Find paths on entire page
     page_position = Position.at_page(0)
-    paths_on_page = client.find_paths(page_position)
+    paths_on_page = client._find_paths(page_position)
 
     # Demonstrate path manipulation if paths are found
     manipulated_path = None
@@ -258,13 +258,13 @@ def path_operations(client):
         if len(all_paths) > 1:
             second_path = all_paths[1]
             new_position = Position.at_page_coordinates(0, 120, 180)
-            client.move(second_path, new_position)
+            client._move(second_path, new_position)
             manipulated_path = second_path
 
         # Demonstrate deletion (use last path to preserve others for testing)
         if len(all_paths) > 2:
             last_path = all_paths[-1]
-            client.delete(last_path)
+            client._delete(last_path)
 
 
 # noinspection PyUnusedLocal
@@ -283,7 +283,7 @@ def register_font_operations(client):
                                   .with_font(jetbrains_font)
                                   .with_position(Position.at_page_coordinates(0, 50, 450))
                                   .build())
-    client.add_paragraph(paragraph_with_custom_font)
+    client._add_paragraph(paragraph_with_custom_font)
 
     # Register font using bytes (alternative method)
     with open(font_path, 'rb') as f:
@@ -312,7 +312,7 @@ def image_operations(client):
     )
 
     # Add image to PDF
-    client.add_image(logo_image)
+    client._add_image(logo_image)
 
     # Find images in document
     found_images = client._find_images()
@@ -328,7 +328,7 @@ def image_operations(client):
 
         # Move image to a new position
         new_image_position = Position.at_page_coordinates(0, 250, 450)
-        client.move(first_image, new_image_position)
+        client._move(first_image, new_image_position)
 
 
 # noinspection PyUnusedLocal
@@ -400,7 +400,7 @@ def context_management():
                          .with_position(Position.at_page_coordinates(0, 50, 10))
                          .build())
 
-            client.add_paragraph(paragraph)
+            client._add_paragraph(paragraph)
 
             return len(paragraphs)
 

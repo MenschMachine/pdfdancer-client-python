@@ -27,4 +27,4 @@ class ImageBuilder:
         return self
 
     def add(self) -> bool:
-        return self._client.add_image(self._image, self._image.position)
+        return self._client._add_image(self._image, self._image.position)

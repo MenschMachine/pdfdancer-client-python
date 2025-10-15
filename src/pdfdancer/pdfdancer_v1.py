@@ -25,7 +25,7 @@ from .models import (
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
-from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
+from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject, PageObject
 
 
 class PageClient:
@@ -35,7 +35,7 @@ class PageClient:
 
     def select_paths_at(self, x: float, y: float) -> List[PathObject]:
         # noinspection PyProtectedMember
-        return self.root._to_path_objects(self.root.find_paths(Position.at_page_coordinates(self.page_index, x, y)))
+        return self.root._to_path_objects(self.root._find_paths(Position.at_page_coordinates(self.page_index, x, y)))
 
     def select_paragraphs(self) -> List[ParagraphObject]:
         # noinspection PyProtectedMember
@@ -55,13 +55,13 @@ class PageClient:
     def select_text_lines(self) -> List[TextLineObject]:
         position = Position.at_page(self.page_index)
         # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root.find_text_lines(position))
+        return self.root._to_textline_objects(self.root._find_text_lines(position))
 
     def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
         position = Position.at_page(self.page_index)
         position.with_text_starts(text)
         # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root.find_text_lines(position))
+        return self.root._to_textline_objects(self.root._find_text_lines(position))
 
     def select_images(self) -> List[ImageObject]:
         # noinspection PyProtectedMember
@@ -97,6 +97,9 @@ class PageClient:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(self.root._find_form_fields(position))
+
+    def get(self) -> PageObject:
+        return self.root._to_page_object(self.root._get_page(self.page_index))
 
 
 class PDFDancer:
@@ -300,7 +303,7 @@ class PDFDancer:
 
     # Search Operations - matching Java client exactly
 
-    def find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for PDF objects matching the specified criteria.
         This method provides flexible search capabilities across all PDF content,
@@ -324,37 +327,37 @@ class PDFDancer:
         """
         Searches for paragraph objects at the specified position.
         """
-        return self._to_paragraph_objects(self.find(ObjectType.PARAGRAPH, None))
+        return self._to_paragraph_objects(self._find(ObjectType.PARAGRAPH, None))
 
     def _find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for paragraph objects at the specified position.
         """
-        return self.find(ObjectType.PARAGRAPH, position)
+        return self._find(ObjectType.PARAGRAPH, position)
 
     def _find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for image objects at the specified position.
         """
-        return self.find(ObjectType.IMAGE, position)
+        return self._find(ObjectType.IMAGE, position)
 
     def select_images(self) -> List[ImageObject]:
         """
         Searches for image objects in the whole document
         """
-        return self._to_image_objects(self.find(ObjectType.IMAGE, None))
+        return self._to_image_objects(self._find(ObjectType.IMAGE, None))
 
     def select_forms(self) -> List[FormObject]:
         """
         Searches for form field objects in the whole document.
         """
-        return self._to_form_objects(self.find(ObjectType.FORM_X_OBJECT, None))
+        return self._to_form_objects(self._find(ObjectType.FORM_X_OBJECT, None))
 
     def _find_form_x_objects(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for form field objects at the specified position.
         """
-        return self.find(ObjectType.FORM_X_OBJECT, position)
+        return self._find(ObjectType.FORM_X_OBJECT, position)
 
     def select_form_fields(self) -> List[FormFieldObject]:
         """
@@ -395,34 +398,35 @@ class PDFDancer:
         """
         Searches for vector path objects at the specified position.
         """
-        return self.find(ObjectType.PATH, None)
+        return self._find(ObjectType.PATH, None)
 
-    # TODO remove
-    def find_paths(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_paths(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for vector path objects at the specified position.
         """
-        return self.find(ObjectType.PATH, position)
+        return self._find(ObjectType.PATH, position)
 
-    # TODO remove
-    def find_text_lines(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_text_lines(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
         Searches for text line objects at the specified position.
         """
-        return self.find(ObjectType.TEXT_LINE, position)
+        return self._find(ObjectType.TEXT_LINE, position)
 
     def select_text_lines(self) -> List[TextLineObject]:
         """
         Searches for text line objects at the specified position.
         """
-        return self._to_textline_objects(self.find(ObjectType.TEXT_LINE, None))
+        return self._to_textline_objects(self._find(ObjectType.TEXT_LINE, None))
 
     def page(self, page_index: int) -> PageClient:
         return PageClient(page_index, self)
 
     # Page Operations
 
-    def get_pages(self) -> List[ObjectRef]:
+    def pages(self) -> List[PageObject]:
+        return self._to_page_objects(self._get_pages())
+
+    def _get_pages(self) -> List[ObjectRef]:
         """
         Retrieves references to all pages in the PDF document.
         """
@@ -430,7 +434,7 @@ class PDFDancer:
         pages_data = response.json()
         return [self._parse_object_ref(page_data) for page_data in pages_data]
 
-    def get_page(self, page_index: int) -> Optional[ObjectRef]:
+    def _get_page(self, page_index: int) -> Optional[ObjectRef]:
         """
         Retrieves a reference to a specific page by its page index.
 
@@ -452,7 +456,7 @@ class PDFDancer:
 
         return self._parse_object_ref(pages_data[0])
 
-    def delete_page(self, page_ref: ObjectRef) -> bool:
+    def _delete_page(self, page_ref: ObjectRef) -> bool:
         """
         Deletes a page from the PDF document.
 
@@ -472,7 +476,7 @@ class PDFDancer:
 
     # Manipulation Operations
 
-    def delete(self, object_ref: ObjectRef) -> bool:
+    def _delete(self, object_ref: ObjectRef) -> bool:
         """
         Deletes the specified PDF object from the document.
 
@@ -489,7 +493,7 @@ class PDFDancer:
         response = self._make_request('DELETE', '/pdf/delete', data=request_data)
         return response.json()
 
-    def move(self, object_ref: ObjectRef, position: Position) -> bool:
+    def _move(self, object_ref: ObjectRef, position: Position) -> bool:
         """
         Moves a PDF object to a new position within the document.
 
@@ -511,7 +515,7 @@ class PDFDancer:
 
     # Add Operations
 
-    def add_image(self, image: Image, position: Optional[Position] = None) -> bool:
+    def _add_image(self, image: Image, position: Optional[Position] = None) -> bool:
         """
         Adds an image to the PDF document.
 
@@ -533,7 +537,7 @@ class PDFDancer:
 
         return self._add_object(image)
 
-    def add_paragraph(self, paragraph: Paragraph) -> bool:
+    def _add_paragraph(self, paragraph: Paragraph) -> bool:
         """
         Adds a paragraph to the PDF document.
 
@@ -781,7 +785,8 @@ class PDFDancer:
             value=obj_data['value'] if 'value' in obj_data else None,
         )
 
-    def _parse_position(self, pos_data: dict) -> Position:
+    @staticmethod
+    def _parse_position(pos_data: dict) -> Position:
         """Parse JSON position data into Position instance."""
         position = Position()
         position.page_index = pos_data.get('pageIndex')
@@ -843,3 +848,9 @@ class PDFDancer:
     def _to_form_field_objects(self, path_refs: List[FormFieldRef]) -> List[FormFieldObject]:
         return [FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value) for ref in
                 path_refs]
+
+    def _to_page_objects(self, path_refs: List[ObjectRef]) -> List[PageObject]:
+        return [PageObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+
+    def _to_page_object(self, ref: ObjectRef) -> PageObject:
+        return PageObject(self, ref.internal_id, ref.type, ref.position)

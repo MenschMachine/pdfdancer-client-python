@@ -6,7 +6,6 @@ Provides a clean, Pythonic interface for PDF operations that closely
 mirrors the Java client structure and functionality.
 """
 
-from .client_v1 import ClientV1
 from .exceptions import (
     PdfDancerException, FontNotFoundException, ValidationException,
     HttpClientException, SessionException
@@ -19,7 +18,7 @@ from .paragraph_builder import ParagraphBuilder
 
 __version__ = "1.0.0"
 __all__ = [
-    "ClientV1",
+    "PDFDancer",
     "ParagraphBuilder",
     "ObjectRef",
     "Position",
@@ -39,3 +38,5 @@ __all__ = [
     "HttpClientException",
     "SessionException"
 ]
+
+from .pdfdancer_v1 import PDFDancer

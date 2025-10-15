@@ -59,11 +59,11 @@ class PDFObjectBase:
     # --------------------------------------------------------------
     def delete(self) -> bool:
         """Delete this object from the PDF document."""
-        return self._client.delete(self.object_ref())
+        return self._client._delete(self.object_ref())
 
     def move_to(self, x: float, y: float) -> bool:
         """Move this object to a new position."""
-        return self._client.move(
+        return self._client._move(
             self.object_ref(),
             Position.at_page_coordinates(self.position.page_index, x, y)
         )
@@ -254,3 +254,10 @@ class FormFieldObject(PDFObjectBase):
         ref.name = self.name
         ref.value = self.value
         return ref
+
+
+class PageObject(PDFObjectBase):
+
+    def delete(self) -> bool:
+        # noinspection PyProtectedMember
+        return self._client._delete_page(self.object_ref())

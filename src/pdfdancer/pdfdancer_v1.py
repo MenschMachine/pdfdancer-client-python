@@ -26,13 +26,16 @@ from .models import (
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
-from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject, PageObject
+from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
 
 
 class PageClient:
     def __init__(self, page_index: int, root: "PDFDancer"):
         self.page_index = page_index
         self.root = root
+        self.object_type = ObjectType.PAGE
+        self.position = Position.at_page(page_index)
+        self.internal_id = f"PAGE-{page_index}"
 
     def select_paths_at(self, x: float, y: float) -> List[PathObject]:
         # noinspection PyProtectedMember
@@ -99,8 +102,17 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(self.root._find_form_fields(position))
 
-    def get(self) -> PageObject:
-        return self.root._to_page_object(self.root._get_page(self.page_index))
+    @classmethod
+    def from_ref(cls, root: 'PDFDancer', object_ref: ObjectRef) -> 'PageClient':
+        page_client = PageClient(page_index=object_ref.position.page_index, root=root)
+        return page_client
+
+    def delete(self) -> bool:
+        # noinspection PyProtectedMember
+        return self.root._delete_page(self._ref())
+
+    def _ref(self):
+        return ObjectRef(internal_id=self.internal_id, position=self.position, type=self.object_type)
 
 
 class PDFDancer:
@@ -472,7 +484,7 @@ class PDFDancer:
 
     # Page Operations
 
-    def pages(self) -> List[PageObject]:
+    def pages(self) -> List[PageClient]:
         return self._to_page_objects(self._get_pages())
 
     def _get_pages(self) -> List[ObjectRef]:
@@ -898,8 +910,8 @@ class PDFDancer:
         return [FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value) for ref in
                 path_refs]
 
-    def _to_page_objects(self, path_refs: List[ObjectRef]) -> List[PageObject]:
-        return [PageObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_page_objects(self, path_refs: List[ObjectRef]) -> List[PageClient]:
+        return [PageClient.from_ref(self, ref) for ref in path_refs]
 
-    def _to_page_object(self, ref: ObjectRef) -> PageObject:
-        return PageObject(self, ref.internal_id, ref.type, ref.position)
+    def _to_page_object(self, ref: ObjectRef) -> PageClient:
+        return PageClient.from_ref(self, ref)

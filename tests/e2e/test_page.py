@@ -16,7 +16,7 @@ def test_get_page():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        page = pdf.page(2).get()
+        page = pdf.page(2)
         assert page is not None
         assert page.position.page_index == 2
         assert page.internal_id is not None
@@ -26,7 +26,7 @@ def test_delete_page():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        page3 = pdf.page(3).get()
+        page3 = pdf.page(3)
         page3.delete()
 
         pages_after = pdf.pages()

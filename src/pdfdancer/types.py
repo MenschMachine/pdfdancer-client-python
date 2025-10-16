@@ -239,10 +239,3 @@ class FormFieldObject(PDFObjectBase):
         ref.name = self.name
         ref.value = self.value
         return ref
-
-
-class PageObject(PDFObjectBase):
-
-    def delete(self) -> bool:
-        # noinspection PyProtectedMember
-        return self._client._delete_page(self.object_ref())

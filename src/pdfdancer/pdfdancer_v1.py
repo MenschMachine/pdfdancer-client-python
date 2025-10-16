@@ -26,6 +26,7 @@ from .models import (
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
+from .paragraph_builder import ParagraphPageBuilder
 from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
 
 
@@ -113,6 +114,9 @@ class PageClient:
 
     def _ref(self):
         return ObjectRef(internal_id=self.internal_id, position=self.position, type=self.object_type)
+
+    def new_paragraph(self):
+        return ParagraphPageBuilder(self, self.page_index)
 
 
 class PDFDancer:

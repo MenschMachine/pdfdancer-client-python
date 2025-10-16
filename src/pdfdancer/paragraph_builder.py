@@ -268,3 +268,14 @@ class ParagraphBuilder:
 
     def add(self):
         self._client._add_paragraph(self.build())
+
+
+class ParagraphPageBuilder(ParagraphBuilder):
+
+    def __init__(self, client: 'PDFDancer', page_index: int):
+        super().__init__(client)
+        self._page_index: Optional[int] = page_index
+
+    # noinspection PyMethodOverriding
+    def at(self, x: float, y: float) -> 'ParagraphBuilder':
+        return super().at(self._page_index, x, y)

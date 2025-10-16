@@ -116,6 +116,19 @@ def test_add_paragraph_with_custom_font1_1():
         _assert_new_paragraph_exists(pdf)
 
 
+def test_add_paragraph_on_page_with_custom_font1_1():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.page(0).new_paragraph() \
+            .text("Awesomely\nObvious!") \
+            .font("Roboto-Regular", 14) \
+            .line_spacing(0.7) \
+            .at(300.1, 500) \
+            .add()
+        _assert_new_paragraph_exists(pdf)
+
+
 def test_add_paragraph_with_custom_font1_2():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 

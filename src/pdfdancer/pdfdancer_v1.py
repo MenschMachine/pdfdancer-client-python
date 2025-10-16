@@ -116,7 +116,7 @@ class PageClient:
         return ObjectRef(internal_id=self.internal_id, position=self.position, type=self.object_type)
 
     def new_paragraph(self):
-        return ParagraphPageBuilder(self, self.page_index)
+        return ParagraphPageBuilder(self.root, self.page_index)
 
 
 class PDFDancer:

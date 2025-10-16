@@ -8,6 +8,49 @@ from enum import Enum
 from typing import Optional, List, Any
 
 
+class StandardFonts(Enum):
+    """
+    The 14 standard PDF fonts that are guaranteed to be available in all PDF readers.
+    These fonts do not need to be embedded in the PDF document.
+
+    Serif fonts (Times family):
+    - TIMES_ROMAN: Standard Times Roman font
+    - TIMES_BOLD: Bold version of Times Roman
+    - TIMES_ITALIC: Italic version of Times Roman
+    - TIMES_BOLD_ITALIC: Bold and italic version of Times Roman
+
+    Sans-serif fonts (Helvetica family):
+    - HELVETICA: Standard Helvetica font
+    - HELVETICA_BOLD: Bold version of Helvetica
+    - HELVETICA_OBLIQUE: Oblique (italic) version of Helvetica
+    - HELVETICA_BOLD_OBLIQUE: Bold and oblique version of Helvetica
+
+    Monospace fonts (Courier family):
+    - COURIER: Standard Courier font
+    - COURIER_BOLD: Bold version of Courier
+    - COURIER_OBLIQUE: Oblique (italic) version of Courier
+    - COURIER_BOLD_OBLIQUE: Bold and oblique version of Courier
+
+    Symbol and decorative fonts:
+    - SYMBOL: Symbol font for mathematical and special characters
+    - ZAPF_DINGBATS: Zapf Dingbats font for decorative symbols
+    """
+    TIMES_ROMAN = "Times-Roman"
+    TIMES_BOLD = "Times-Bold"
+    TIMES_ITALIC = "Times-Italic"
+    TIMES_BOLD_ITALIC = "Times-BoldItalic"
+    HELVETICA = "Helvetica"
+    HELVETICA_BOLD = "Helvetica-Bold"
+    HELVETICA_OBLIQUE = "Helvetica-Oblique"
+    HELVETICA_BOLD_OBLIQUE = "Helvetica-BoldOblique"
+    COURIER = "Courier"
+    COURIER_BOLD = "Courier-Bold"
+    COURIER_OBLIQUE = "Courier-Oblique"
+    COURIER_BOLD_OBLIQUE = "Courier-BoldOblique"
+    SYMBOL = "Symbol"
+    ZAPF_DINGBATS = "ZapfDingbats"
+
+
 class ObjectType(Enum):
     """Object type enumeration matching the Java ObjectType."""
     FORM_FIELD = "FORM_FIELD"

@@ -1,6 +1,6 @@
 import pytest
 
-from pdfdancer import Color
+from pdfdancer import Color, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 
@@ -180,3 +180,48 @@ def test_add_paragraph_with_custom_font3():
             .at(0, 300.1, 500) \
             .add()
         _assert_new_paragraph_exists(pdf)
+
+
+def test_add_paragraph_with_standard_font_helvetica():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Standard Font Test\nHelvetica Bold") \
+            .font(StandardFonts.HELVETICA_BOLD.value, 16) \
+            .line_spacing(1.2) \
+            .color(Color(255, 0, 0)) \
+            .at(0, 100, 100) \
+            .add()
+
+        lines = pdf.page(0).select_text_lines_starting_with("Standard Font Test")
+        assert len(lines) >= 1
+
+
+def test_add_paragraph_with_standard_font_times():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Times Roman Test") \
+            .font(StandardFonts.TIMES_ROMAN.value, 14) \
+            .at(0, 150, 150) \
+            .add()
+
+        lines = pdf.page(0).select_text_lines_starting_with("Times Roman Test")
+        assert len(lines) >= 1
+
+
+def test_add_paragraph_with_standard_font_courier():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Courier Monospace\nCode Example") \
+            .font(StandardFonts.COURIER_BOLD.value, 12) \
+            .line_spacing(1.5) \
+            .at(0, 200, 200) \
+            .add()
+
+        lines = pdf.page(0).select_text_lines_starting_with("Courier Monospace")
+        assert len(lines) >= 1

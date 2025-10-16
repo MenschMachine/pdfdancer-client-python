@@ -779,7 +779,7 @@ class PDFDancer:
 
     # Document Operations
 
-    def get_pdf_file(self) -> bytes:
+    def get_bytes(self) -> bytes:
         """
         Downloads the current state of the PDF document with all modifications applied.
 
@@ -804,7 +804,7 @@ class PDFDancer:
             raise ValidationException("File path cannot be null or empty")
 
         try:
-            pdf_data = self.get_pdf_file()
+            pdf_data = self.get_bytes()
             output_path = Path(file_path)
 
             # Create parent directories if they don't exist

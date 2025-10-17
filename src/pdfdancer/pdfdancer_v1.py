@@ -347,7 +347,7 @@ class PDFDancer:
                 timeout=self._read_timeout if self._read_timeout > 0 else None
             )
 
-            # Handle FontNotFoundException specifically like Java client
+            # Handle FontNotFoundException
             if response.status_code == 404:
                 try:
                     error_data = response.json()
@@ -475,17 +475,21 @@ class PDFDancer:
         """
         return self._find(ObjectType.PATH, position)
 
-    def _find_text_lines(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_text_lines(self, position: Optional[Position] = None) -> List[TextObjectRef]:
         """
-        Searches for text line objects at the specified position.
+        Searches for text line objects returning TextObjectRef with hierarchical structure.
         """
-        return self._find(ObjectType.TEXT_LINE, position)
+        request_data = FindRequest(ObjectType.TEXT_LINE, position).to_dict()
+        response = self._make_request('POST', '/pdf/find', data=request_data)
+
+        objects_data = response.json()
+        return [self._parse_text_object_ref(obj_data) for obj_data in objects_data]
 
     def select_text_lines(self) -> List[TextLineObject]:
         """
-        Searches for text line objects at the specified position.
+        Searches for text line objects returning TextLineObject wrappers.
         """
-        return self._to_textline_objects(self._find(ObjectType.TEXT_LINE, None))
+        return self._to_textline_objects(self._find_text_lines(None))
 
     def page(self, page_index: int) -> PageClient:
         return PageClient(page_index, self)

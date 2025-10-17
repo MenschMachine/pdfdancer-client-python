@@ -86,6 +86,8 @@ def test_modify_paragraph_without_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        original_x = paragraph.position.x()
+        original_y = paragraph.position.y()
 
         paragraph.edit() \
             .replace("Awesomely\nObvious!") \
@@ -93,7 +95,10 @@ def test_modify_paragraph_without_position():
             .line_spacing(0.7) \
             .apply()
 
-        _assert_new_paragraph_exists(pdf)
+        [new_para] = pdf.page(0).select_paragraphs_starting_with("Awesomely")
+        assert new_para
+        assert new_para.position.x() == original_x
+        assert new_para.position.y() == original_y
 
 
 def test_modify_paragraph_without_position_and_spacing():
@@ -101,12 +106,20 @@ def test_modify_paragraph_without_position_and_spacing():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        original_x = paragraph.position.x()
+        original_y = paragraph.position.y()
 
         paragraph.edit() \
             .replace("Awesomely\nObvious!") \
             .font("Helvetica", 12) \
             .apply()
-        _assert_new_paragraph_exists(pdf)
+
+        [new_para] = pdf.page(0).select_paragraphs_starting_with("Awesomely")
+        assert new_para
+        assert new_para.position.x() == original_x
+        assert new_para.position.y() == original_y
+
+        pdf.save("/tmp/test3.pdf")  # TODO also wrong! does not handle lines at all
 
 
 def test_modify_paragraph_only_font():
@@ -124,6 +137,8 @@ def test_modify_paragraph_only_font():
         assert line.object_ref().font_name == "Helvetica"
         assert line.object_ref().font_size == 28
 
+        pdf.save("/tmp/test2.pdf")  # TODO check result, thats not how it should look / cached session?
+
 
 def test_modify_paragraph_only_move():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
@@ -134,7 +149,13 @@ def test_modify_paragraph_only_move():
         paragraph.edit() \
             .move_to(1, 1) \
             .apply()
-        _assert_new_paragraph_exists(pdf)
+
+        [new_para] = pdf.page(0).select_paragraphs_starting_with("The Complete")
+        assert new_para
+        assert new_para.position.x() == 1
+        assert new_para.position.y() == 1
+
+        pdf.save("/tmp/test.pdf")  # TODO not visible, fontSize 1?
 
 
 def test_modify_paragraph_simple():

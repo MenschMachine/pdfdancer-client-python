@@ -82,24 +82,6 @@ class TestPosition:
         assert position.x() == 100.0  # Unchanged
         assert position.y() == 175.0
 
-    def test_copy_creates_independent_copy(self):
-        """Test copy() creates independent copy of position."""
-        original = Position.at_page_coordinates(1, 50.0, 75.0)
-        original = original.with_text_starts("Test")
-
-        copy = original.copy()
-
-        # Verify copy has same values
-        assert copy.page_index == original.page_index
-        assert copy.mode == original.mode
-        assert copy.shape == original.shape
-        assert copy.text_starts_with == original.text_starts_with
-        assert copy.bounding_rect.x == original.bounding_rect.x
-
-        # Verify they are independent objects
-        assert copy is not original
-        assert copy.bounding_rect is not original.bounding_rect
-
 
 class TestObjectRef:
     """Test ObjectRef class functionality."""

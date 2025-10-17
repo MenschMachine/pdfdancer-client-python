@@ -121,6 +121,7 @@ class Position:
     mode: Optional[PositionMode] = None
     bounding_rect: Optional[BoundingRect] = None
     text_starts_with: Optional[str] = None
+    text_pattern: Optional[str] = None
     name: Optional[str] = None
 
     @staticmethod
@@ -184,21 +185,6 @@ class Position:
     def y(self) -> Optional[float]:
         """Returns the Y coordinate of this position."""
         return self.bounding_rect.get_y() if self.bounding_rect else None
-
-    def copy(self) -> 'Position':
-        """Creates a copy of this position."""
-        # Create deep copy of bounding_rect if it exists
-        bounding_rect_copy = None
-        if self.bounding_rect:
-            bounding_rect_copy = BoundingRect(
-                self.bounding_rect.x,
-                self.bounding_rect.y,
-                self.bounding_rect.width,
-                self.bounding_rect.height
-            )
-
-        pos = Position(self.page_index, self.shape, self.mode, bounding_rect_copy, self.text_starts_with)
-        return pos
 
 
 @dataclass
@@ -325,7 +311,8 @@ class FindRequest:
         """Convert Position to dictionary for JSON serialization."""
         result = {
             "pageIndex": position.page_index,
-            "textStartsWith": position.text_starts_with
+            "textStartsWith": position.text_starts_with,
+            "textPattern": position.text_pattern
         }
         if position.name:
             result["name"] = position.name
@@ -419,7 +406,8 @@ class AddRequest:
                     text_element = {
                         "text": line,
                         "font": {"name": obj.font.name, "size": obj.font.size} if obj.font else None,
-                        "color": {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b, "alpha": obj.color.a} if obj.color else None,
+                        "color": {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b,
+                                  "alpha": obj.color.a} if obj.color else None,
                         "position": FindRequest._position_to_dict(obj.position) if obj.position else None
                     }
                     text_line = {
@@ -427,7 +415,8 @@ class AddRequest:
                     }
                     # TextLine has color and position
                     if obj.color:
-                        text_line["color"] = {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b, "alpha": obj.color.a}
+                        text_line["color"] = {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b,
+                                              "alpha": obj.color.a}
                     if obj.position:
                         text_line["position"] = FindRequest._position_to_dict(obj.position)
                     lines.append(text_line)
@@ -522,6 +511,7 @@ class TextObjectRef(ObjectRef):
     Represents a text object reference with additional text-specific properties.
     Extends ObjectRef to include text content, font information, and hierarchical structure.
     """
+
     def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
                  text: Optional[str] = None, font_name: Optional[str] = None,
                  font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None,

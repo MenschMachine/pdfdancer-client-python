@@ -52,6 +52,12 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
+    def select_paragraphs_matching(self, pattern):
+        position = Position.at_page(self.page_index)
+        position.text_pattern = pattern
+        # noinspection PyProtectedMember
+        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
+
     def select_paragraphs_at(self, x: float, y: float) -> List[ParagraphObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
@@ -65,6 +71,11 @@ class PageClient:
     def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
         position = Position.at_page(self.page_index)
         position.with_text_starts(text)
+        # noinspection PyProtectedMember
+        return self.root._to_textline_objects(self.root._find_text_lines(position))
+
+    def select_text_lines_at(self, x, y) -> List[TextLineObject]:
+        position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
@@ -365,8 +376,6 @@ class PDFDancer:
             error_message = self._extract_error_message(getattr(e, 'response', None))
             raise HttpClientException(f"API request failed: {error_message}", response=getattr(e, 'response', None),
                                       cause=e) from None
-
-    # Search Operations - matching Java client exactly
 
     def _find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None) -> List[ObjectRef]:
         """

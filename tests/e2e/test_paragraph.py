@@ -1,5 +1,6 @@
 import pytest
 
+from e2e.pdf_assertions import PDFAssertions
 from pdfdancer import Color, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
@@ -301,8 +302,8 @@ def test_add_paragraph_with_standard_font_courier():
             .at(0, 200, 200) \
             .add()
 
-        lines = pdf.page(0).select_text_lines_starting_with("Courier Monospace")
-        assert len(lines) >= 1
+        PDFAssertions(pdf).assert_text_has_font("Courier Monospace", StandardFonts.COURIER_BOLD.value, 12, page=0)
+        PDFAssertions(pdf).assert_text_is_at("Courier Monospace", 200, 200, page=0)
 
 
 def test_paragraph_color_reading():
@@ -323,20 +324,5 @@ def test_paragraph_color_reading():
             .at(0, 100, 120) \
             .add()
 
-        red_lines = pdf.page(0).select_text_lines_starting_with("Red Color Test")
-        assert len(red_lines) >= 1
-        red_ref = red_lines[0].object_ref()
-        red_color = red_ref.get_color()
-        assert red_color is not None
-        assert red_color.r == 255
-        assert red_color.g == 0
-        assert red_color.b == 0
-
-        blue_lines = pdf.page(0).select_text_lines_starting_with("Blue Color Test")
-        assert len(blue_lines) >= 1
-        blue_ref = blue_lines[0].object_ref()
-        blue_color = blue_ref.get_color()
-        assert blue_color is not None
-        assert blue_color.r == 0
-        assert blue_color.g == 0
-        assert blue_color.b == 255
+        PDFAssertions(pdf).assert_text_has_color("Red Color Test", Color(255, 0, 0), page=0)
+        PDFAssertions(pdf).assert_text_has_color("Blue Color Test", Color(0, 0, 255), page=0)

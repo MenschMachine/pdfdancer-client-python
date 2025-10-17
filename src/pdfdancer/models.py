@@ -419,7 +419,7 @@ class AddRequest:
                     text_element = {
                         "text": line,
                         "font": {"name": obj.font.name, "size": obj.font.size} if obj.font else None,
-                        "color": {"r": obj.color.r, "g": obj.color.g, "b": obj.color.b} if obj.color else None,
+                        "color": {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b, "alpha": obj.color.a} if obj.color else None,
                         "position": FindRequest._position_to_dict(obj.position) if obj.position else None
                     }
                     text_line = {
@@ -427,7 +427,7 @@ class AddRequest:
                     }
                     # TextLine has color and position
                     if obj.color:
-                        text_line["color"] = {"r": obj.color.r, "g": obj.color.g, "b": obj.color.b}
+                        text_line["color"] = {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b, "alpha": obj.color.a}
                     if obj.position:
                         text_line["position"] = FindRequest._position_to_dict(obj.position)
                     lines.append(text_line)
@@ -524,12 +524,14 @@ class TextObjectRef(ObjectRef):
     """
     def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
                  text: Optional[str] = None, font_name: Optional[str] = None,
-                 font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None):
+                 font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None,
+                 color: Optional[Color] = None):
         super().__init__(internal_id, position, object_type)
         self.text = text
         self.font_name = font_name
         self.font_size = font_size
         self.line_spacings = line_spacings
+        self.color = color
         self.children: List['TextObjectRef'] = []
 
     def get_text(self) -> Optional[str]:
@@ -547,6 +549,10 @@ class TextObjectRef(ObjectRef):
     def get_line_spacings(self) -> Optional[List[float]]:
         """Get the line spacings."""
         return self.line_spacings
+
+    def get_color(self) -> Optional[Color]:
+        """Get the color."""
+        return self.color
 
     def get_children(self) -> List['TextObjectRef']:
         """Get the child text objects."""

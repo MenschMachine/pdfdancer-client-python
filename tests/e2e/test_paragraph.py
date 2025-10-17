@@ -119,7 +119,7 @@ def test_modify_paragraph_without_position_and_spacing():
         assert new_para.position.x() == original_x
         assert new_para.position.y() == original_y
 
-        pdf.save("/tmp/test3.pdf")  # TODO also wrong! does not handle lines at all
+        pdf.save("/tmp/test3.pdf")
 
 
 def test_modify_paragraph_only_font():
@@ -131,13 +131,14 @@ def test_modify_paragraph_only_font():
         paragraph.edit() \
             .font("Helvetica", 28) \
             .apply()
+        # TODO does not preserve color and fucks up line spacings
 
         [line] = pdf.page(0).select_text_lines_starting_with("The Complete")
         assert line
         assert line.object_ref().font_name == "Helvetica"
         assert line.object_ref().font_size == 28
 
-        pdf.save("/tmp/test2.pdf")  # TODO check result, thats not how it should look / cached session?
+        pdf.save("/tmp/test2.pdf")
 
 
 def test_modify_paragraph_only_move():
@@ -302,3 +303,40 @@ def test_add_paragraph_with_standard_font_courier():
 
         lines = pdf.page(0).select_text_lines_starting_with("Courier Monospace")
         assert len(lines) >= 1
+
+
+def test_paragraph_color_reading():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph() \
+            .text("Red Color Test") \
+            .font(StandardFonts.HELVETICA.value, 14) \
+            .color(Color(255, 0, 0)) \
+            .at(0, 100, 100) \
+            .add()
+
+        pdf.new_paragraph() \
+            .text("Blue Color Test") \
+            .font(StandardFonts.HELVETICA.value, 14) \
+            .color(Color(0, 0, 255)) \
+            .at(0, 100, 120) \
+            .add()
+
+        red_lines = pdf.page(0).select_text_lines_starting_with("Red Color Test")
+        assert len(red_lines) >= 1
+        red_ref = red_lines[0].object_ref()
+        red_color = red_ref.get_color()
+        assert red_color is not None
+        assert red_color.r == 255
+        assert red_color.g == 0
+        assert red_color.b == 0
+
+        blue_lines = pdf.page(0).select_text_lines_starting_with("Blue Color Test")
+        assert len(blue_lines) >= 1
+        blue_ref = blue_lines[0].object_ref()
+        blue_color = blue_ref.get_color()
+        assert blue_color is not None
+        assert blue_color.r == 0
+        assert blue_color.g == 0
+        assert blue_color.b == 255

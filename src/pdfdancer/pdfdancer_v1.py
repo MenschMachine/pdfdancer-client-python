@@ -891,6 +891,17 @@ class PDFDancer:
         line_spacings = obj_data.get('lineSpacings') if isinstance(obj_data.get('lineSpacings'), list) else None
         internal_id = obj_data.get('internalId', fallback_id or '')
 
+        color = None
+        color_data = obj_data.get('color')
+        if isinstance(color_data, dict):
+            from .models import Color
+            red = color_data.get('red')
+            green = color_data.get('green')
+            blue = color_data.get('blue')
+            alpha = color_data.get('alpha', 255)
+            if all(isinstance(v, int) for v in [red, green, blue]):
+                color = Color(red, green, blue, alpha)
+
         text_object = TextObjectRef(
             internal_id=internal_id,
             position=position,
@@ -898,7 +909,8 @@ class PDFDancer:
             text=obj_data.get('text') if isinstance(obj_data.get('text'), str) else None,
             font_name=obj_data.get('fontName') if isinstance(obj_data.get('fontName'), str) else None,
             font_size=obj_data.get('fontSize') if isinstance(obj_data.get('fontSize'), (int, float)) else None,
-            line_spacings=line_spacings
+            line_spacings=line_spacings,
+            color=color
         )
 
         if isinstance(obj_data.get('children'), list) and len(obj_data['children']) > 0:

@@ -115,7 +115,7 @@ class BaseTextEdit:
 
     def __init__(self, target_obj, object_ref):
         self._color = None
-        self._position = None
+        self._position = object_ref.position
         self._line_spacing = None
         self._font_size = None
         self._font_name = None

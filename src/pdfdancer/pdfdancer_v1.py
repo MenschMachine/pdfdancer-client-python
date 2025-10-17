@@ -22,7 +22,7 @@ from .exceptions import (
 )
 from .image_builder import ImageBuilder
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef,
+    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef,
     FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
     ShapeType, PositionMode
 )
@@ -388,17 +388,21 @@ class PDFDancer:
         objects_data = response.json()
         return [self._parse_object_ref(obj_data) for obj_data in objects_data]
 
-    def select_paragraphs(self) -> List[ParagraphObject]:
+    def select_paragraphs(self) -> List[TextObjectRef]:
         """
-        Searches for paragraph objects at the specified position.
+        Searches for paragraph objects returning TextObjectRef with hierarchical structure.
         """
-        return self._to_paragraph_objects(self._find(ObjectType.PARAGRAPH, None))
+        return self._find_paragraphs(None)
 
-    def _find_paragraphs(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_paragraphs(self, position: Optional[Position] = None) -> List[TextObjectRef]:
         """
-        Searches for paragraph objects at the specified position.
+        Searches for paragraph objects returning TextObjectRef with hierarchical structure.
         """
-        return self._find(ObjectType.PARAGRAPH, position)
+        request_data = FindRequest(ObjectType.PARAGRAPH, position).to_dict()
+        response = self._make_request('POST', '/pdf/find', data=request_data)
+
+        objects_data = response.json()
+        return [self._parse_text_object_ref(obj_data) for obj_data in objects_data]
 
     def _find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
         """
@@ -835,7 +839,7 @@ class PDFDancer:
             type=object_type
         )
 
-    def _parse_form_field_ref(self, obj_data: dict) -> ObjectRef:
+    def _parse_form_field_ref(self, obj_data: dict) -> FormFieldRef:
         """Parse JSON object data into ObjectRef instance."""
         position_data = obj_data.get('position', {})
         position = self._parse_position(position_data) if position_data else None
@@ -874,6 +878,33 @@ class PDFDancer:
 
         return position
 
+    def _parse_text_object_ref(self, obj_data: dict, fallback_id: Optional[str] = None) -> TextObjectRef:
+        """Parse JSON object data into TextObjectRef instance with hierarchical structure."""
+        position_data = obj_data.get('position', {})
+        position = self._parse_position(position_data) if position_data else Position()
+
+        object_type = ObjectType(obj_data.get('type', 'TEXT_LINE'))
+        line_spacings = obj_data.get('lineSpacings') if isinstance(obj_data.get('lineSpacings'), list) else None
+        internal_id = obj_data.get('internalId', fallback_id or '')
+
+        text_object = TextObjectRef(
+            internal_id=internal_id,
+            position=position,
+            object_type=object_type,
+            text=obj_data.get('text') if isinstance(obj_data.get('text'), str) else None,
+            font_name=obj_data.get('fontName') if isinstance(obj_data.get('fontName'), str) else None,
+            font_size=obj_data.get('fontSize') if isinstance(obj_data.get('fontSize'), (int, float)) else None,
+            line_spacings=line_spacings
+        )
+
+        if isinstance(obj_data.get('children'), list) and len(obj_data['children']) > 0:
+            text_object.children = [
+                self._parse_text_object_ref(child_data, f"{internal_id or 'child'}-{index}")
+                for index, child_data in enumerate(obj_data['children'])
+            ]
+
+        return text_object
+
     # Builder Pattern Support
 
     def _paragraph_builder(self) -> 'ParagraphBuilder':
@@ -895,27 +926,27 @@ class PDFDancer:
         # Could add session cleanup here if API supports it
         pass
 
-    def _to_path_objects(self, path_refs: List[ObjectRef]) -> List[PathObject]:
-        return [PathObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
+        return [PathObject(self, ref.internal_id, ref.type, ref.position) for ref in refs]
 
-    def _to_paragraph_objects(self, path_refs: List[ObjectRef]) -> List[ParagraphObject]:
-        return [ParagraphObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_paragraph_objects(self, refs: List[TextObjectRef]) -> List[ParagraphObject]:
+        return [ParagraphObject(self, ref) for ref in refs]
 
-    def _to_textline_objects(self, path_refs: List[ObjectRef]) -> List[TextLineObject]:
-        return [TextLineObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_textline_objects(self, refs: List[TextObjectRef]) -> List[TextLineObject]:
+        return [TextLineObject(self, ref) for ref in refs]
 
-    def _to_image_objects(self, path_refs: List[ObjectRef]) -> List[ImageObject]:
-        return [ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_image_objects(self, refs: List[ObjectRef]) -> List[ImageObject]:
+        return [ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in refs]
 
-    def _to_form_objects(self, path_refs: List[ObjectRef]) -> List[FormObject]:
-        return [FormObject(self, ref.internal_id, ref.type, ref.position) for ref in path_refs]
+    def _to_form_objects(self, refs: List[ObjectRef]) -> List[FormObject]:
+        return [FormObject(self, ref.internal_id, ref.type, ref.position) for ref in refs]
 
-    def _to_form_field_objects(self, path_refs: List[FormFieldRef]) -> List[FormFieldObject]:
+    def _to_form_field_objects(self, refs: List[FormFieldRef]) -> List[FormFieldObject]:
         return [FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value) for ref in
-                path_refs]
+                refs]
 
-    def _to_page_objects(self, path_refs: List[ObjectRef]) -> List[PageClient]:
-        return [PageClient.from_ref(self, ref) for ref in path_refs]
+    def _to_page_objects(self, refs: List[ObjectRef]) -> List[PageClient]:
+        return [PageClient.from_ref(self, ref) for ref in refs]
 
     def _to_page_object(self, ref: ObjectRef) -> PageClient:
         return PageClient.from_ref(self, ref)

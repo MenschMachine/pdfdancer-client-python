@@ -118,6 +118,22 @@ def test_modify_paragraph_only_font():
         paragraph.edit() \
             .font("Helvetica", 28) \
             .apply()
+
+        [line] = pdf.page(0).select_text_lines_starting_with("The Complete")
+        assert line
+        assert line.object_ref().font_name == "Helvetica"
+        assert line.object_ref().font_size == 28
+
+
+def test_modify_paragraph_only_move():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+
+        paragraph.edit() \
+            .move_to(1, 1) \
+            .apply()
         _assert_new_paragraph_exists(pdf)
 
 

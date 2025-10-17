@@ -515,3 +515,39 @@ class FormFieldRef(ObjectRef):
     def get_value(self) -> Optional[str]:
         """Get the form field value."""
         return self.value
+
+
+class TextObjectRef(ObjectRef):
+    """
+    Represents a text object reference with additional text-specific properties.
+    Extends ObjectRef to include text content, font information, and hierarchical structure.
+    """
+    def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
+                 text: Optional[str] = None, font_name: Optional[str] = None,
+                 font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None):
+        super().__init__(internal_id, position, object_type)
+        self.text = text
+        self.font_name = font_name
+        self.font_size = font_size
+        self.line_spacings = line_spacings
+        self.children: List['TextObjectRef'] = []
+
+    def get_text(self) -> Optional[str]:
+        """Get the text content."""
+        return self.text
+
+    def get_font_name(self) -> Optional[str]:
+        """Get the font name."""
+        return self.font_name
+
+    def get_font_size(self) -> Optional[float]:
+        """Get the font size."""
+        return self.font_size
+
+    def get_line_spacings(self) -> Optional[List[float]]:
+        """Get the line spacings."""
+        return self.line_spacings
+
+    def get_children(self) -> List['TextObjectRef']:
+        """Get the child text objects."""
+        return self.children

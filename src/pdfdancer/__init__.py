@@ -11,7 +11,7 @@ from .exceptions import (
     HttpClientException, SessionException
 )
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Color, Image, BoundingRect, Paragraph, FormFieldRef,
+    ObjectRef, Position, ObjectType, Font, Color, Image, BoundingRect, Paragraph, FormFieldRef, TextObjectRef,
     PositionMode, ShapeType, Point, StandardFonts
 )
 from .paragraph_builder import ParagraphBuilder
@@ -29,6 +29,7 @@ __all__ = [
     "BoundingRect",
     "Paragraph",
     "FormFieldRef",
+    "TextObjectRef",
     "PositionMode",
     "ShapeType",
     "Point",

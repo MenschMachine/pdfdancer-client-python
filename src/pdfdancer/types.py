@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import statistics
 from dataclasses import dataclass
 from typing import Optional
 
-from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef
+from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef, TextObjectRef
 
 
 @dataclass
@@ -115,7 +116,7 @@ class BaseTextEdit:
 
     def __init__(self, target_obj, object_ref):
         self._color = None
-        self._position = object_ref.position
+        self._position = None
         self._line_spacing = None
         self._font_size = None
         self._font_name = None
@@ -171,21 +172,53 @@ class ParagraphEdit(BaseTextEdit):
             return self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
         else:
             new_paragraph = Paragraph(
-                position=self._position,
-                line_spacing=self._line_spacing if self._line_spacing is not None else DEFAULT_LINE_SPACING,
-                font=Font(name=self._font_name, size=self._font_size),
-                text_lines=_process_text_lines(self._new_text),
-                color=self._color if self._color is not None else DEFAULT_COLOR,
+                position=self._position if self._position is not None else self._object_ref.position,
+                line_spacing=self._get_line_spacing(),
+                font=self._get_font(),
+                text_lines=self._get_text_lines(),
+                color=self._get_color(),
             )
             # noinspection PyProtectedMember
             return self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
+
+    def _get_line_spacing(self) -> float:
+        if self._line_spacing is not None:
+            return self._line_spacing
+        elif self._object_ref.line_spacings is not None:
+            return statistics.mean(self._object_ref.line_spacings)
+        else:
+            return DEFAULT_LINE_SPACING
+
+    def _get_font(self):
+        if self._font_name is not None and self._font_size is not None:
+            return Font(name=self._font_name, size=self._font_size)
+        elif self._object_ref.font_name is not None and self._object_ref.font_size is not None:
+            return Font(name=self._object_ref.font_name, size=self._object_ref.font_size)
+        else:
+            raise Exception("Font is none")
+
+    def _get_text_lines(self):
+        if self._new_text is not None:
+            return _process_text_lines(self._new_text)
+        elif self._object_ref.text is not None:
+            # TODO this actually messes up existing text line internals
+            return _process_text_lines(self._object_ref.text)
+        else:
+            raise Exception("Paragraph has no text")
+
+    def _get_color(self):
+        if self._color is not None:
+            return self._color
+        elif False and self._object_ref.color is not None:  # TODO color is missing from backend payload
+            return self._object_ref.color
+        else:
+            return DEFAULT_COLOR
 
 
 class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
         if (
-                self._position is None
-                and self._line_spacing is None
+                self._line_spacing is None
                 and self._font_size is None
                 and self._font_name is None
                 and self._color is None
@@ -199,15 +232,29 @@ class TextLineEdit(BaseTextEdit):
 class ParagraphObject(PDFObjectBase):
     """Represents a paragraph text block inside a PDF page."""
 
+    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
+        super().__init__(client, object_ref.internal_id, object_ref.type, object_ref.position)
+        self._object_ref = object_ref
+
     def edit(self) -> ParagraphEdit:
         return ParagraphEdit(self, self.object_ref())
+
+    def object_ref(self) -> TextObjectRef:
+        return self._object_ref
 
 
 class TextLineObject(PDFObjectBase):
     """Represents a single line of text inside a PDF page."""
 
+    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
+        super().__init__(client, object_ref.internal_id, object_ref.type, object_ref.position)
+        self._object_ref = object_ref
+
     def edit(self) -> TextLineEdit:
         return TextLineEdit(self, self.object_ref())
+
+    def object_ref(self) -> TextObjectRef:
+        return self._object_ref
 
 
 class FormFieldEdit:

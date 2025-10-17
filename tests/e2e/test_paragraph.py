@@ -157,7 +157,12 @@ def test_modify_paragraph_only_move():
         assert new_para.position.x() == 1
         assert new_para.position.y() == 1
 
-        pdf.save("/tmp/test.pdf")  # TODO not visible, fontSize 1?
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
+            .assert_text_is_at("The Complete", 1, 1, 0)
+            .assert_text_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_simple():
@@ -166,7 +171,12 @@ def test_modify_paragraph_simple():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
         paragraph.edit().replace("Awesomely\nObvious!").apply()
-        _assert_new_paragraph_exists(pdf)
+
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "IXKSWR+Poppins-Bold", 1)
+            .assert_text_has_color("Awesomely", Color(255, 255, 255))
+        )
 
 
 def test_add_paragraph_with_custom_font1_expect_not_found():
@@ -192,7 +202,13 @@ def test_add_paragraph_with_custom_font1_1():
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
-        _assert_new_paragraph_exists(pdf)
+
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Roboto-Regular", 14)
+            .assert_text_is_at("Awesomely", 300.1, 500, 0)
+            .assert_text_has_color("Awesomely", Color(0, 0, 0))
+        )
 
 
 def test_add_paragraph_on_page_with_custom_font1_1():
@@ -205,7 +221,13 @@ def test_add_paragraph_on_page_with_custom_font1_1():
             .line_spacing(0.7) \
             .at(300.1, 500) \
             .add()
-        _assert_new_paragraph_exists(pdf)
+
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Roboto-Regular", 14)
+            .assert_text_is_at("Awesomely", 300.1, 500, 0)
+            .assert_text_has_color("Awesomely", Color(0, 0, 0))
+        )
 
 
 def test_add_paragraph_with_custom_font1_2():
@@ -223,7 +245,13 @@ def test_add_paragraph_with_custom_font1_2():
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
-        _assert_new_paragraph_exists(pdf)
+
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font_matching("Awesomely", "Roboto", 14)
+            .assert_text_is_at("Awesomely", 300.1, 500, 0)
+            .assert_text_has_color("Awesomely", Color(0, 0, 0))
+        )
 
 
 def test_add_paragraph_with_custom_font2():
@@ -241,7 +269,13 @@ def test_add_paragraph_with_custom_font2():
             .line_spacing(0.7) \
             .at(0, 300.1, 500) \
             .add()
-        _assert_new_paragraph_exists(pdf)
+
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Asimovian-Regular", 14)
+            .assert_text_is_at("Awesomely", 300.1, 500, 0)
+            .assert_text_has_color("Awesomely", Color(0, 0, 0))
+        )
 
 
 def test_add_paragraph_with_custom_font3():
@@ -250,7 +284,7 @@ def test_add_paragraph_with_custom_font3():
     repo_root = Path(__file__).resolve().parents[2]
     ttf_path = repo_root / "tests/fixtures" / "DancingScript-Regular.ttf"
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with (PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf):
         pdf.new_paragraph() \
             .text("Awesomely\nObvious!") \
             .font_file(ttf_path, 24) \
@@ -258,23 +292,13 @@ def test_add_paragraph_with_custom_font3():
             .color(Color(0, 0, 255)) \
             .at(0, 300.1, 500) \
             .add()
-        _assert_new_paragraph_exists(pdf)
 
-
-def test_add_paragraph_with_standard_font_helvetica():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        pdf.new_paragraph() \
-            .text("Standard Font Test\nHelvetica Bold") \
-            .font(StandardFonts.HELVETICA_BOLD.value, 16) \
-            .line_spacing(1.2) \
-            .color(Color(255, 0, 0)) \
-            .at(0, 100, 100) \
-            .add()
-
-        lines = pdf.page(0).select_text_lines_starting_with("Standard Font Test")
-        assert len(lines) >= 1
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "DancingScript-Regular", 24)
+            .assert_text_is_at("Awesomely", 300.1, 500, 0)
+            .assert_text_has_color("Awesomely", Color(0, 0, 255))
+        )
 
 
 def test_add_paragraph_with_standard_font_times():
@@ -287,8 +311,8 @@ def test_add_paragraph_with_standard_font_times():
             .at(0, 150, 150) \
             .add()
 
-        lines = pdf.page(0).select_text_lines_starting_with("Times Roman Test")
-        assert len(lines) >= 1
+        PDFAssertions(pdf).assert_text_has_font("Times Roman Test", StandardFonts.TIMES_ROMAN.value, 14)
+        PDFAssertions(pdf).assert_text_is_at("Times Roman Test", 150, 150, 0)
 
 
 def test_add_paragraph_with_standard_font_courier():

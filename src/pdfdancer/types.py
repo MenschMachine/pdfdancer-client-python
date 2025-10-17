@@ -67,13 +67,30 @@ class PathObject(PDFObjectBase):
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
 
+    def __eq__(self, other):
+        if not isinstance(other, PathObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position)
+
 
 class ImageObject(PDFObjectBase):
-    pass
+    def __eq__(self, other):
+        if not isinstance(other, ImageObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position)
 
 
 class FormObject(PDFObjectBase):
-    pass
+    def __eq__(self, other):
+        if not isinstance(other, FormObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position)
 
 
 def _process_text_lines(text: str) -> list[str]:
@@ -242,6 +259,19 @@ class ParagraphObject(PDFObjectBase):
     def object_ref(self) -> TextObjectRef:
         return self._object_ref
 
+    def __eq__(self, other):
+        if not isinstance(other, ParagraphObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position and
+                self._object_ref.text == other._object_ref.text and
+                self._object_ref.font_name == other._object_ref.font_name and
+                self._object_ref.font_size == other._object_ref.font_size and
+                self._object_ref.line_spacings == other._object_ref.line_spacings and
+                self._object_ref.color == other._object_ref.color and
+                self._object_ref.children == other._object_ref.children)
+
 
 class TextLineObject(PDFObjectBase):
     """Represents a single line of text inside a PDF page."""
@@ -255,6 +285,19 @@ class TextLineObject(PDFObjectBase):
 
     def object_ref(self) -> TextObjectRef:
         return self._object_ref
+
+    def __eq__(self, other):
+        if not isinstance(other, TextLineObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position and
+                self._object_ref.text == other._object_ref.text and
+                self._object_ref.font_name == other._object_ref.font_name and
+                self._object_ref.font_size == other._object_ref.font_size and
+                self._object_ref.line_spacings == other._object_ref.line_spacings and
+                self._object_ref.color == other._object_ref.color and
+                self._object_ref.children == other._object_ref.children)
 
 
 class FormFieldEdit:
@@ -286,3 +329,12 @@ class FormFieldObject(PDFObjectBase):
         ref.name = self.name
         ref.value = self.value
         return ref
+
+    def __eq__(self, other):
+        if not isinstance(other, FormFieldObject):
+            return False
+        return (self.internal_id == other.internal_id and
+                self.object_type == other.object_type and
+                self.position == other.position and
+                self.name == other.name and
+                self.value == other.value)

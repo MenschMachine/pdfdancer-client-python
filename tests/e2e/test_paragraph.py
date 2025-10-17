@@ -61,11 +61,6 @@ def test_move_paragraph():
         assert moved is not None
 
 
-def _assert_new_paragraph_exists(pdf: PDFDancer):
-    lines = pdf.page(0).select_text_lines_starting_with("Awesomely")
-    assert len(lines) >= 1
-
-
 def test_modify_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
@@ -79,7 +74,12 @@ def test_modify_paragraph():
             .move_to(300.1, 500) \
             .apply()
 
-        _assert_new_paragraph_exists(pdf)
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Helvetica", 12)
+            .assert_text_has_color("The Complete", Color(255, 255, 255))
+            .assert_text_is_at("Awesomely", 300.1, 500)
+        )
 
 
 def test_modify_paragraph_without_position():
@@ -96,10 +96,12 @@ def test_modify_paragraph_without_position():
             .line_spacing(0.7) \
             .apply()
 
-        [new_para] = pdf.page(0).select_paragraphs_starting_with("Awesomely")
-        assert new_para
-        assert new_para.position.x() == original_x
-        assert new_para.position.y() == original_y
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Helvetica", 12)
+            .assert_text_has_color("The Complete", Color(255, 255, 255))
+            .assert_text_is_at("Awesomely", original_x, original_y)
+        )
 
 
 def test_modify_paragraph_without_position_and_spacing():
@@ -115,12 +117,12 @@ def test_modify_paragraph_without_position_and_spacing():
             .font("Helvetica", 12) \
             .apply()
 
-        [new_para] = pdf.page(0).select_paragraphs_starting_with("Awesomely")
-        assert new_para
-        assert new_para.position.x() == original_x
-        assert new_para.position.y() == original_y
-
-        pdf.save("/tmp/test3.pdf")
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Awesomely", "Helvetica", 12)
+            .assert_text_has_color("The Complete", Color(255, 255, 255))
+            .assert_text_is_at("Awesomely", original_x, original_y)
+        )
 
 
 def test_modify_paragraph_only_font():
@@ -132,14 +134,13 @@ def test_modify_paragraph_only_font():
         paragraph.edit() \
             .font("Helvetica", 28) \
             .apply()
+
         # TODO does not preserve color and fucks up line spacings
-
-        [line] = pdf.page(0).select_text_lines_starting_with("The Complete")
-        assert line
-        assert line.object_ref().font_name == "Helvetica"
-        assert line.object_ref().font_size == 28
-
-        pdf.save("/tmp/test2.pdf")
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("The Complete", "Helvetica", 28)
+            .assert_text_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_only_move():
@@ -151,11 +152,6 @@ def test_modify_paragraph_only_move():
         paragraph.edit() \
             .move_to(1, 1) \
             .apply()
-
-        [new_para] = pdf.page(0).select_paragraphs_starting_with("The Complete")
-        assert new_para
-        assert new_para.position.x() == 1
-        assert new_para.position.y() == 1
 
         (
             PDFAssertions(pdf)

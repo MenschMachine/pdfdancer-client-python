@@ -86,7 +86,7 @@ class PDFAssertions(object):
         assert font_size == reference.get_font_size()
         return self
 
-    def assert_textline_is_at(self, text: str, x: int, y: int, page=0, epsilon=1e-6):
+    def assert_textline_is_at(self, text: str, x: float, y: float, page=0, epsilon=1e-6):
         lines = self.pdf.page(page).select_text_lines_starting_with(text)
         assert len(lines) == 1
         reference = lines[0].object_ref()
@@ -97,4 +97,19 @@ class PDFAssertions(object):
 
         by_position = self.pdf.page(page).select_text_lines_at(x, y)
         assert lines[0] == by_position[0]
+        return self
+
+    def assert_textline_does_not_exist(self, text, page=0):
+        lines = self.pdf.page(page).select_text_lines_starting_with(text)
+        assert len(lines) == 0
+        return self
+
+    def assert_textline_exists(self, text, page=0):
+        lines = self.pdf.page(page).select_text_lines_starting_with(text)
+        assert len(lines) == 1
+        return self
+
+    def assert_paragraph_exists(self, text, page=0):
+        lines = self.pdf.page(page).select_paragraphs_starting_with(text)
+        assert len(lines) == 1
         return self

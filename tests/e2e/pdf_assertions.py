@@ -113,3 +113,7 @@ class PDFAssertions(object):
         lines = self.pdf.page(page).select_paragraphs_starting_with(text)
         assert len(lines) == 1
         return self
+
+    def assert_number_of_pages(self, page_count: int):
+        assert len(self.pdf.pages()) == page_count, f"Expected {page_count} pages, but got {len(self.pdf.pages())}"
+        return self

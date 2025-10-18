@@ -117,3 +117,25 @@ class PDFAssertions(object):
     def assert_number_of_pages(self, page_count: int):
         assert len(self.pdf.pages()) == page_count, f"Expected {page_count} pages, but got {len(self.pdf.pages())}"
         return self
+
+    def assert_path_is_at(self, internal_id: str, x: float, y: float, page=0, epsilon=1e-6):
+        paths = self.pdf.page(page).select_paths_at(x, y)
+        assert len(paths) == 1
+        reference = paths[0].object_ref()
+        assert reference.internal_id == internal_id, f"{internal_id} != {reference.internal_id}"
+        assert reference.get_position().x() == pytest.approx(x, rel=epsilon,
+                                                             abs=epsilon), f"{x} != {reference.get_position().x()}"
+        assert reference.get_position().y() == pytest.approx(y, rel=epsilon,
+                                                             abs=epsilon), f"{y} != {reference.get_position().y()}"
+
+        return self
+
+    def assert_no_path_at(self, x: float, y: float, page=0):
+        paths = self.pdf.page(page).select_paths_at(x, y)
+        assert len(paths) == 0
+        return self
+
+    def assert_number_of_paths(self, path_count: int, page=0):
+        paths = self.pdf.page(page).select_paths()
+        assert len(paths) == path_count, f"Expected {path_count} paths, but got {len(paths)}"
+        return self

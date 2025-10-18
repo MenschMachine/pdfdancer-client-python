@@ -3,6 +3,7 @@ import pytest
 from pdfdancer import ObjectType
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
+from tests.e2e.pdf_assertions import PDFAssertions
 
 
 def test_find_paths():
@@ -19,6 +20,11 @@ def test_find_paths():
         assert pytest.approx(p1.position.x(), rel=0, abs=1) == 80
         assert pytest.approx(p1.position.y(), rel=0, abs=1) == 720
 
+    (
+        PDFAssertions(pdf)
+        .assert_path_is_at("PATH_000001", 80, 720)
+    )
+
 
 def test_find_paths_by_position():
     base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
@@ -33,6 +39,7 @@ def test_delete_path():
     base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        assert len(pdf.select_paths()) == 9
         paths = pdf.page(0).select_paths_at(80, 720)
         assert len(paths) == 1
         path = paths[0]
@@ -45,6 +52,12 @@ def test_delete_path():
 
         # Remaining paths should be 8 total
         assert len(pdf.select_paths()) == 8
+
+    (
+        PDFAssertions(pdf)
+        .assert_no_path_at(80, 720)
+        .assert_number_of_paths(8)
+    )
 
 
 def test_move_path():
@@ -67,3 +80,9 @@ def test_move_path():
         new_pos = new_path.position
         assert pytest.approx(new_pos.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_pos.y(), rel=0, abs=0.05) == 100
+
+    (
+        PDFAssertions(pdf)
+        .assert_no_path_at(80, 720)
+        .assert_path_is_at("PATH_000001", 50.1, 100)
+    )

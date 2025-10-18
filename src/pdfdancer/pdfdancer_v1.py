@@ -135,6 +135,10 @@ class PageClient:
     def new_paragraph(self):
         return ParagraphPageBuilder(self.root, self.page_index)
 
+    def select_paths(self):
+        # noinspection PyProtectedMember
+        return self.root._to_path_objects(self.root._find_paths(Position.at_page(self.page_index)))
+
 
 class PDFDancer:
     """

@@ -34,13 +34,18 @@ def _server_up(base_url: str) -> bool:
 
 
 def _require_env_and_fixture(pdf_filename: str) -> tuple[str, str, Path]:
+    base_url, token = _require_env()
+    pdf_path = Path(__file__).resolve().parent.parent / 'fixtures' / pdf_filename
+    if not pdf_path.exists():
+        pytest.fail(f"{pdf_filename} fixture not found")
+    return base_url, token, pdf_path
+
+
+def _require_env() -> tuple[str, str | None]:
     base_url = _get_base_url()
     token = _read_token()
     if not _server_up(base_url):
         pytest.fail(f"PDFDancer server not reachable at {base_url}; set PDFDANCER_BASE_URL or start server")
     if not token:
         pytest.fail("PDFDANCER_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo")
-    pdf_path = Path(__file__).resolve().parent.parent / 'fixtures' / pdf_filename
-    if not pdf_path.exists():
-        pytest.fail(f"{pdf_filename} fixture not found")
-    return base_url, token, pdf_path
+    return base_url, token

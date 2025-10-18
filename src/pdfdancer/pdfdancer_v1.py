@@ -58,6 +58,12 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
+    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
+        position = Position.at_page(self.page_index)
+        position.text_pattern = pattern
+        # noinspection PyProtectedMember
+        return self.root._to_textline_objects(self.root._find_text_lines(position))
+
     def select_paragraphs_at(self, x: float, y: float) -> List[ParagraphObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
@@ -160,6 +166,21 @@ class PDFDancer:
         Returns:
             A ready-to-use `PDFDancer` client instance.
         """
+        resolved_token = cls._resolve_token(token)
+        resolved_base_url = cls._resolve_base_url(base_url)
+
+        return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
+
+    @classmethod
+    def _resolve_base_url(cls, base_url: str | None) -> str | None:
+        env_base_url = os.getenv("PDFDANCER_BASE_URL")
+        resolved_base_url = base_url or (env_base_url.strip() if env_base_url and env_base_url.strip() else None)
+        if resolved_base_url is None:
+            resolved_base_url = "https://api.pdfdancer.com"
+        return resolved_base_url
+
+    @classmethod
+    def _resolve_token(cls, token: str | None) -> str | None:
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             env_token = os.getenv("PDFDANCER_TOKEN")
@@ -170,13 +191,18 @@ class PDFDancer:
                 "Missing PDFDancer API token. Pass a token via the `token` argument "
                 "or set the PDFDANCER_TOKEN environment variable."
             )
+        return resolved_token
 
-        env_base_url = os.getenv("PDFDANCER_BASE_URL")
-        resolved_base_url = base_url or (env_base_url.strip() if env_base_url and env_base_url.strip() else None)
-        if resolved_base_url is None:
-            resolved_base_url = "https://api.pdfdancer.com"
+    @classmethod
+    def new(cls,
+            token: Optional[str] = None,
+            base_url: Optional[str] = None,
+            timeout: float = 30.0) -> "PDFDancer":
 
-        return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
+        resolved_token = cls._resolve_token(token)
+        resolved_base_url = cls._resolve_base_url(base_url)
+
+        raise Exception("Unsupported Operation Exception: TODO")
 
     def __init__(self, token: str, pdf_data: Union[bytes, Path, str, BinaryIO],
                  base_url: str, read_timeout: float = 0):
@@ -216,7 +242,8 @@ class PDFDancer:
         # Create session - equivalent to Java constructor behavior
         self._session_id = self._create_session()
 
-    def _process_pdf_data(self, pdf_data: Union[bytes, Path, str, BinaryIO]) -> bytes:
+    @staticmethod
+    def _process_pdf_data(pdf_data: Union[bytes, Path, str, BinaryIO]) -> bytes:
         """
         Process PDF data from various input types with strict validation.
         """

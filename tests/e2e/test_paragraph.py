@@ -82,7 +82,7 @@ def test_modify_paragraph():
         .assert_textline_has_font("Obvious!", "Helvetica", 12)
         .assert_textline_has_color("Awesomely", Color(255, 255, 255))
         .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_textline_is_at("Awesomely", 300.1, 500)
+        .assert_paragraph_is_at("Awesomely", 300.1, 500)
     )
 
 
@@ -108,7 +108,7 @@ def test_modify_paragraph_without_position():
         .assert_textline_has_font("Obvious!", "Helvetica", 12)
         .assert_textline_has_color("Awesomely", Color(255, 255, 255))
         .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_text_is_at("Awesomely", original_x, original_y)
+        .assert_paragraph_is_at("Awesomely", original_x, original_y)
     )
 
 
@@ -132,7 +132,7 @@ def test_modify_paragraph_without_position_and_spacing():
         .assert_textline_has_font("Obvious!", "Helvetica", 12)
         .assert_textline_has_color("Awesomely", Color(255, 255, 255))
         .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_text_is_at("Awesomely", original_x, original_y)
+        .assert_paragraph_is_at("Awesomely", original_x, original_y)
     )
 
 

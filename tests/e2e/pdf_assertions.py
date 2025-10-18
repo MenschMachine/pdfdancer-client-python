@@ -38,13 +38,15 @@ class PDFAssertions(object):
 
         return self
 
-    def assert_paragraph_is_at(self, text, x, y, page):
+    def assert_paragraph_is_at(self, text, x, y, page=0, epsilon=1e-6):
         paragraphs = self.pdf.page(page).select_paragraphs_matching(f".*{text}.*")
         assert len(paragraphs) == 1, f"Expected 1 paragraph but got {len(paragraphs)}"
         reference = paragraphs[0].object_ref()
-        assert reference.get_position().x() == pytest.approx(x, rel=1e-6,
-                                                             abs=1e-9), f"{x} != {reference.get_position().x()}"
-        assert y == reference.get_position().y(), f"Expected {y} but got {reference.get_position().y()}"
+
+        assert reference.get_position().x() == pytest.approx(x, rel=epsilon,
+                                                             abs=epsilon), f"{x} != {reference.get_position().x()}"
+        assert reference.get_position().y() == pytest.approx(y, rel=epsilon,
+                                                             abs=epsilon), f"{y} != {reference.get_position().y()}"
 
         paragraph_by_position = self.pdf.page(page).select_paragraphs_at(x, y)
         assert paragraphs[0] == paragraph_by_position[0]

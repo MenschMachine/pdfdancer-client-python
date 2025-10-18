@@ -975,7 +975,7 @@ class PDFDancer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - cleanup if needed."""
-        # Could add session cleanup here if API supports it
+        # TODO Could add session cleanup here if API supports it. Cleanup on the server
         pass
 
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:

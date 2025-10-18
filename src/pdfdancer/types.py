@@ -226,7 +226,7 @@ class ParagraphEdit(BaseTextEdit):
     def _get_color(self):
         if self._color is not None:
             return self._color
-        elif False and self._object_ref.color is not None:  # TODO color is missing from backend payload
+        elif self._object_ref.color is not None:
             return self._object_ref.color
         else:
             return DEFAULT_COLOR

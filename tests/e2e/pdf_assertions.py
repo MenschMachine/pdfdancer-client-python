@@ -139,3 +139,24 @@ class PDFAssertions(object):
         paths = self.pdf.page(page).select_paths()
         assert len(paths) == path_count, f"Expected {path_count} paths, but got {len(paths)}"
         return self
+
+    def assert_number_of_images(self, image_count, page=0):
+        images = self.pdf.page(page).select_images()
+        assert len(images) == image_count, f"Expected {image_count} image but got {len(images)}"
+        return self
+
+    def assert_image_at(self, x: float, y: float, page=0):
+        images = self.pdf.page(page).select_images_at(x, y)
+        assert len(images) == 1, f"Expected 1 image but got {len(images)}"
+        return self
+
+    def assert_no_image_at(self, x: float, y: float, page=0):
+        images = self.pdf.page(page).select_images_at(x, y)
+        assert len(images) == 0, f"Expected 0 image at {x}/{y} but got {len(images)}, {images[0].internal_id}"
+        return self
+
+    def assert_image_with_id_at(self, internal_id: str, x: float, y: float, page=0):
+        images = self.pdf.page(page).select_images_at(x, y)
+        assert len(images) == 1, f"Expected 1 image but got {len(images)}"
+        assert images[0].internal_id == internal_id, f"{internal_id} != {images[0].internal_id}"
+        return self

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef, TextObjectRef
 
@@ -93,7 +93,7 @@ class FormObject(PDFObjectBase):
                 self.position == other.position)
 
 
-def _process_text_lines(text: str) -> list[str]:
+def _process_text_lines(text: str) -> List[str]:
     """
     Process text into lines for the paragraph.
     This is a simplified version - the full implementation would handle

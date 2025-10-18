@@ -172,7 +172,7 @@ class PDFDancer:
         return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
 
     @classmethod
-    def _resolve_base_url(cls, base_url: str | None) -> str | None:
+    def _resolve_base_url(cls, base_url: Optional[str]) -> Optional[str]:
         env_base_url = os.getenv("PDFDANCER_BASE_URL")
         resolved_base_url = base_url or (env_base_url.strip() if env_base_url and env_base_url.strip() else None)
         if resolved_base_url is None:
@@ -180,7 +180,7 @@ class PDFDancer:
         return resolved_base_url
 
     @classmethod
-    def _resolve_token(cls, token: str | None) -> str | None:
+    def _resolve_token(cls, token: Optional[str]) -> Optional[str]:
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             env_token = os.getenv("PDFDANCER_TOKEN")

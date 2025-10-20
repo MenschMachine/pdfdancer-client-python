@@ -1,3 +1,4 @@
+from e2e.pdf_assertions import PDFAssertions
 from pdfdancer import ObjectType
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
@@ -44,11 +45,16 @@ def test_delete_form_fields():
         assert len(all_form_fields) == 9
         assert all(f.internal_id != to_delete.internal_id for f in all_form_fields)
 
+    (
+        PDFAssertions(pdf).assert_number_of_form_fields(9)
+    )
+
 
 def test_move_form_field():
     base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        assert 10 == len(pdf.page(0).select_form_fields())
         form_fields = pdf.page(0).select_form_fields_at(290, 460)
         assert len(form_fields) == 1
         f = form_fields[0]
@@ -62,6 +68,13 @@ def test_move_form_field():
         moved = pdf.page(0).select_form_fields_at(30, 40)
         assert len(moved) == 1
         assert moved[0].internal_id == f.internal_id
+
+    (
+        PDFAssertions(pdf)
+        .assert_number_of_form_fields(10)
+        .assert_form_field_at(30, 40)
+        .assert_form_field_not_at(290, 460)
+    )
 
 
 def test_edit_form_fields():
@@ -81,3 +94,9 @@ def test_edit_form_fields():
         updated = pdf.select_form_fields_by_name("firstName")[0]
         assert updated.name == "firstName"
         assert updated.value == "Donald Duck"
+
+    (
+        PDFAssertions(pdf)
+        .assert_form_field_exists("firstName")
+        .assert_form_field_has_value("firstName", "Donald Duck")
+    )

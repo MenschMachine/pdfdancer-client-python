@@ -169,6 +169,8 @@ class PDFAssertions(object):
         if page_index is None:
             for page in self.pdf.pages():
                 total = total + len(page.select_elements())
+                for e in page.select_elements():
+                    print(e)
         else:
             total = len(self.pdf.page(page_index).select_elements())
         assert total == nr_of_elements, f"Total number of elements differ, actual {total} != expected {nr_of_elements}"
@@ -191,4 +193,38 @@ class PDFAssertions(object):
                 except ValueError:
                     pass
             assert orientation == actual_orientation, f"{orientation} != {actual_orientation}"
+        return self
+
+    def assert_number_of_formxobjects(self, nr_of_formxobjects, page_index=0) -> 'PDFAssertions':
+        assert nr_of_formxobjects == len(self.pdf.page(
+            page_index).select_forms()), f"Expected nr of formxobjects {nr_of_formxobjects} but got {len(self.pdf.page(page_index).select_forms())}"
+        return self
+
+    def assert_number_of_form_fields(self, nr_of_form_fields, page_index=0) -> 'PDFAssertions':
+        assert nr_of_form_fields == len(self.pdf.page(
+            page_index).select_form_fields()), f"Expected nr of form fields {nr_of_form_fields} but got {len(self.pdf.page(page_index).select_form_fields())}"
+        return self
+
+    def assert_form_field_at(self, x: float, y: float, page=0) -> 'PDFAssertions':
+        form_fields = self.pdf.page(page).select_form_fields_at(x, y)
+        all_form_fields = self.pdf.page(page).select_form_fields()
+        assert len(
+            form_fields) == 1, f"Expected 1 form field but got {len(form_fields)}, total form_fields: {len(all_form_fields)}, first pos: {all_form_fields[0].position}"
+        return self
+
+    def assert_form_field_not_at(self, x: float, y: float, page=0) -> 'PDFAssertions':
+        form_fields = self.pdf.page(page).select_form_fields_at(x, y)
+        assert len(
+            form_fields) == 0, f"Expected 0 form fields at {x}/{y} but got {len(form_fields)}, {form_fields[0].internal_id}"
+        return self
+
+    def assert_form_field_exists(self, field_name: str, page_index=0) -> 'PDFAssertions':
+        form_fields = self.pdf.page(page_index).select_form_fields_by_name(field_name)
+        assert len(form_fields) == 1, f"Expected 1 form field but got {len(form_fields)}"
+        return self
+
+    def assert_form_field_has_value(self, field_name: str, field_value: str, page_index=0) -> 'PDFAssertions':
+        form_fields = self.pdf.page(page_index).select_form_fields_by_name(field_name)
+        assert len(form_fields) == 1, f"Expected 1 form field but got {len(form_fields)}"
+        assert form_fields[0].value == field_value, f"{form_fields[0].value} != {field_value}"
         return self

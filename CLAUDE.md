@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Project Overview
 
-This is a **Python client library** for the PDFDancer PDF manipulation API. It uses a **100% manual implementation** that:
+This is a **Python client library** for the PDFDancer PDF manipulation API. It uses a **100% manual implementation**
+that:
 
 - **Mirrors Java client structure exactly** - Same methods, validation, and patterns
 - **Pure Python implementation** - Uses `requests` for HTTP calls, no code generation
@@ -14,16 +15,19 @@ This is a **Python client library** for the PDFDancer PDF manipulation API. It u
 ## Essential Commands
 
 ### Development
+
 - `python -m venv venv` - Create virtual environment
 - `venv/bin/pip install -e .` - Install in development mode
 - `venv/bin/pip install -r requirements-dev.txt` - Install dev dependencies
 
 ### Testing
+
 - `venv/bin/python -m pytest tests/ -v` - Run all tests (123 tests)
 - `venv/bin/python -m pytest tests/e2e/ -v` - Run end-to-end tests
 - `venv/bin/python -m pytest tests/test_models.py -v` - Run model tests
 
 ### Building & Publishing
+
 - `venv/bin/python -m build` - Build distribution packages
 - `venv/bin/python -m twine check dist/*` - Validate packages
 - `venv/bin/python -m twine upload dist/*` - Publish to PyPI
@@ -31,6 +35,7 @@ This is a **Python client library** for the PDFDancer PDF manipulation API. It u
 ## Architecture
 
 ### Manual Implementation
+
 The client is a pure manual implementation that closely mirrors the Java client:
 
 ```python
@@ -53,10 +58,10 @@ page_paragraphs = page.select_paragraphs()
 page.delete()
 
 # Builder pattern for new content
-pdf.new_paragraph() \
-    .from_string("Text content") \
-    .with_font(Font("Arial", 12)) \
-    .at_page_coordinates(0, 100, 200) \
+pdf.new_paragraph()
+    .from_string("Text content")
+    .with_font(Font("Arial", 12))
+    .at_page_coordinates(0, 100, 200)
     .add()
 
 # Save modified PDF
@@ -64,15 +69,17 @@ pdf.save("output.pdf")
 ```
 
 ### Package Structure
+
 - `src/pdfdancer/` - Main package
-  - `pdfdancer_v1.py` - Main PDFDancer class and PageClient
-  - `paragraph_builder.py` - ParagraphBuilder and ParagraphPageBuilder for fluent construction
-  - `image_builder.py` - ImageBuilder for fluent image construction
-  - `models.py` - Model classes (ObjectRef, Position, Font, Color, etc.)
-  - `types.py` - Object wrapper types (ParagraphObject, ImageObject, etc.)
-  - `exceptions.py` - Exception hierarchy
+    - `pdfdancer_v1.py` - Main PDFDancer class and PageClient
+    - `paragraph_builder.py` - ParagraphBuilder and ParagraphPageBuilder for fluent construction
+    - `image_builder.py` - ImageBuilder for fluent image construction
+    - `models.py` - Model classes (ObjectRef, Position, Font, Color, etc.)
+    - `types.py` - Object wrapper types (ParagraphObject, ImageObject, etc.)
+    - `exceptions.py` - Exception hierarchy
 
 ### Key Features
+
 - **Dual initialization**: `PDFDancer.open()` for existing PDFs, `PDFDancer.new()` for blank PDFs
 - **Session-based operations**: All constructors create server session automatically
 - **Object-oriented API**: Selected objects (paragraphs, images, etc.) have methods like `.delete()`, `.move()`
@@ -86,6 +93,7 @@ pdf.save("output.pdf")
 ## API Patterns
 
 ### Initialization
+
 ```python
 # Open existing PDF with token from env var PDFDANCER_TOKEN
 pdf = PDFDancer.open(pdf_data="document.pdf")
@@ -102,6 +110,7 @@ pdf = PDFDancer.new(
 ```
 
 ### Selection and Manipulation
+
 ```python
 # Document-level selections
 paragraphs = pdf.select_paragraphs()
@@ -124,31 +133,33 @@ text_lines = page.select_text_lines_matching(r"Total: \$\d+")
 ```
 
 ### Building New Content
+
 ```python
 # Add paragraph to document
-pdf.new_paragraph() \
-    .from_string("Hello World") \
-    .with_font(Font("Helvetica", 12)) \
-    .with_color(Color(255, 0, 0)) \
-    .at_page_coordinates(0, 100, 200) \
+pdf.new_paragraph()
+    .from_string("Hello World")
+    .with_font(Font("Helvetica", 12))
+    .with_color(Color(255, 0, 0))
+    .at_page_coordinates(0, 100, 200)
     .add()
 
 # Add paragraph to specific page
-page.new_paragraph() \
-    .from_string("Page-specific text") \
-    .with_font(Font("Arial", 14)) \
-    .at_coordinates(50, 50) \
+page.new_paragraph()
+    .from_string("Page-specific text")
+    .with_font(Font("Arial", 14))
+    .at_coordinates(50, 50)
     .add()
 
 # Add image
-pdf.new_image() \
-    .from_file("logo.png") \
-    .with_width(100) \
-    .at_page_coordinates(0, 50, 50) \
+pdf.new_image()
+    .from_file("logo.png")
+    .with_width(100)
+    .at_page_coordinates(0, 50, 50)
     .add()
 ```
 
 ### Document Operations
+
 ```python
 # Get PDF bytes
 pdf_bytes = pdf.get_bytes()
@@ -164,7 +175,7 @@ page.delete()
 
 ## Development Notes
 
-- **Python 3.8+ compatibility**
+- **Python 3.10+ compatibility** (Python 3.9 has SSL issues with large file uploads)
 - **Uses `requests` library** for all HTTP communication
 - **No code generation** - pure manual implementation
 - **Virtual environment auto-setup** via parent Makefile
@@ -175,17 +186,20 @@ page.delete()
 ## Important Instructions
 
 ### API Design
+
 - **Use object-oriented patterns**: Selected objects should have methods (`.delete()`, `.move()`, etc.)
 - **Provide page-level operations**: `pdf.page(index)` for page-scoped selections
 - **Support fluent builders**: `new_paragraph()` and `new_image()` return builder instances
 - **Use snake_case for methods**: `select_paragraphs()`, `select_images_at()`, etc.
 
 ### Validation and Exceptions
+
 - **Maintain strict validation**: Don't be more lenient than Java client
 - **Preserve exception hierarchy**: ValidationException, FontNotFoundException, HttpClientException, etc.
 - **Validate early**: Check parameters in Python before making API calls
 
 ### Testing
+
 - **Follow e2e test patterns**: Use PDFAssertions for comprehensive validation
 - **Test both document and page operations**: Cover both `pdf.select_*()` and `page.select_*()` patterns
 - **Test builder patterns**: Verify fluent interfaces work correctly

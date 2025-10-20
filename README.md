@@ -26,7 +26,7 @@ Latest schema version available at https://bucket.pdfdancer.com/api-doc/developm
 
 ## Requirements
 
-- Python 3.9 or newer
+- Python 3.10 or newer
 - A PDFDancer API token (set `PDFDANCER_TOKEN` or pass `token=...`)
 - Network access to a PDFDancer service (defaults to `https://api.pdfdancer.com`; override with `PDFDANCER_BASE_URL`)
 

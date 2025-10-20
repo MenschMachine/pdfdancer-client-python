@@ -155,8 +155,7 @@ Wrap complex workflows in `try/except` blocks to surface actionable errors to yo
 ```bash
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -e .
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 
 pytest -q          # run the fast unit suite
 pytest tests/e2e   # integration tests (requires live API + fixtures)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdfdancer-client-python"
-version = "0.2.12"
+version = "0.2.13"
 description = "Python client for PDFDancer API"
 readme = "README.md"
 authors = [
@@ -24,7 +24,8 @@ requires-python = ">=3.10"
 dependencies = [
     "requests>=2.25.0",
     "pydantic>=1.8.0",
-    "typing-extensions>=4.0.0"
+    "typing-extensions>=4.0.0",
+    "python-dotenv>=0.19.0"
 ]
 
 [project.optional-dependencies]

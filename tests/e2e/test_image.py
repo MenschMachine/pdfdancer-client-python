@@ -50,6 +50,7 @@ def test_move_image():
         original_x = pos.x()
         original_y = pos.y()
 
+        assert pos.page_index == 11
         assert pytest.approx(original_x, rel=0, abs=0.5) == 54
         assert pytest.approx(original_y, rel=0, abs=1) == 300
 
@@ -84,6 +85,7 @@ def test_add_image():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         images = pdf.select_images()
         assert len(images) == 3
+        assert len(pdf.page(6).select_images()) == 0
 
         img_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
 
@@ -107,4 +109,5 @@ def test_add_image():
     (
         PDFAssertions(pdf)
         .assert_image_at(50.1, 98, 6)
+        .assert_number_of_images(1, 6)
     )

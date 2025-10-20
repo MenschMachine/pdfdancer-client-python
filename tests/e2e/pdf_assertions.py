@@ -147,7 +147,9 @@ class PDFAssertions(object):
 
     def assert_image_at(self, x: float, y: float, page=0):
         images = self.pdf.page(page).select_images_at(x, y)
-        assert len(images) == 1, f"Expected 1 image but got {len(images)}"
+        all_images = self.pdf.page(page).select_images()
+        assert len(
+            images) == 1, f"Expected 1 image but got {len(images)}, total images: {len(all_images)}, first pos: {all_images[0].position}"
         return self
 
     def assert_no_image_at(self, x: float, y: float, page=0):

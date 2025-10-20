@@ -6,6 +6,7 @@ Closely mirrors the Java ParagraphBuilder class with Python conventions.
 from pathlib import Path
 from typing import Optional, Union
 
+from . import StandardFonts
 from .exceptions import ValidationException
 from .models import Paragraph, Font, Color, Position
 
@@ -60,7 +61,7 @@ class ParagraphBuilder:
 
         return self
 
-    def font(self, font_name: str, font_size: float) -> 'ParagraphBuilder':
+    def font(self, font_name: str | StandardFonts, font_size: float) -> 'ParagraphBuilder':
         """
         Set the font for the paragraph using an existing Font object.
         Equivalent to withFont(Font) in Java ParagraphBuilder.
@@ -75,6 +76,10 @@ class ParagraphBuilder:
         Raises:
             ValidationException: If font is None
         """
+        # If font_name is an enum member, use its value
+        if isinstance(font_name, StandardFonts):
+            font_name = font_name.value
+
         font = Font(font_name, font_size)
         if font is None:
             raise ValidationException("Font cannot be null")
@@ -185,7 +190,7 @@ class ParagraphBuilder:
         self._paragraph.set_position(position)
         return self
 
-    def build(self) -> Paragraph:
+    def _build(self) -> Paragraph:
         """
         Build and return the final Paragraph object.
         Equivalent to build() in Java ParagraphBuilder.
@@ -267,7 +272,7 @@ class ParagraphBuilder:
         return lines
 
     def add(self):
-        self._client._add_paragraph(self.build())
+        self._client._add_paragraph(self._build())
 
 
 class ParagraphPageBuilder(ParagraphBuilder):

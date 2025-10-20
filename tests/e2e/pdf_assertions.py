@@ -1,8 +1,9 @@
 import tempfile
+from typing import Optional
 
 import pytest
 
-from pdfdancer import PDFDancer, Color
+from pdfdancer import PDFDancer, Color, Orientation
 
 
 class PDFAssertions(object):
@@ -111,7 +112,7 @@ class PDFAssertions(object):
 
     def assert_paragraph_exists(self, text, page=0):
         lines = self.pdf.page(page).select_paragraphs_starting_with(text)
-        assert len(lines) == 1
+        assert len(lines) == 1, f"No paragraphs starting with {text} found on page {page}"
         return self
 
     def assert_number_of_pages(self, page_count: int):
@@ -152,13 +153,42 @@ class PDFAssertions(object):
             images) == 1, f"Expected 1 image but got {len(images)}, total images: {len(all_images)}, first pos: {all_images[0].position}"
         return self
 
-    def assert_no_image_at(self, x: float, y: float, page=0):
+    def assert_no_image_at(self, x: float, y: float, page=0) -> 'PDFAssertions':
         images = self.pdf.page(page).select_images_at(x, y)
         assert len(images) == 0, f"Expected 0 image at {x}/{y} but got {len(images)}, {images[0].internal_id}"
         return self
 
-    def assert_image_with_id_at(self, internal_id: str, x: float, y: float, page=0):
+    def assert_image_with_id_at(self, internal_id: str, x: float, y: float, page=0) -> 'PDFAssertions':
         images = self.pdf.page(page).select_images_at(x, y)
         assert len(images) == 1, f"Expected 1 image but got {len(images)}"
         assert images[0].internal_id == internal_id, f"{internal_id} != {images[0].internal_id}"
+        return self
+
+    def assert_total_number_of_elements(self, nr_of_elements, page_index=None) -> 'PDFAssertions':
+        total = 0
+        if page_index is None:
+            for page in self.pdf.pages():
+                total = total + len(page.select_elements())
+        else:
+            total = len(self.pdf.page(page_index).select_elements())
+        assert total == nr_of_elements, f"Total number of elements differ, actual {total} != expected {nr_of_elements}"
+        return self
+
+    def assert_page_count(self, page_count: int) -> 'PDFAssertions':
+        assert page_count == len(self.pdf.pages())
+        return self
+
+    def assert_page_dimension(self, width: float, height: float, orientation: Optional[Orientation] = None,
+                              page_index=0) -> 'PDFAssertions':
+        page = self.pdf.page(page_index)
+        assert width == page.size.width, f"{width} != {page.size.width}"
+        assert height == page.size.height, f"{height} != {page.size.height}"
+        if orientation is not None:
+            actual_orientation = page.orientation
+            if isinstance(actual_orientation, str):
+                try:
+                    actual_orientation = Orientation(actual_orientation.strip().upper())
+                except ValueError:
+                    pass
+            assert orientation == actual_orientation, f"{orientation} != {actual_orientation}"
         return self

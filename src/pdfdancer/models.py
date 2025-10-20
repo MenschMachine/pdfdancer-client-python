@@ -1,11 +1,113 @@
 """
 Model classes for the PDFDancer Python client.
-Closely mirrors the Java model classes with Python conventions.
 """
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict, Mapping, Tuple, ClassVar, Union
+
+
+@dataclass(frozen=True)
+class PageSize:
+    """Represents a page size specification, covering both standard and custom dimensions."""
+
+    name: Optional[str]
+    width: float
+    height: float
+
+    _STANDARD_SIZES: ClassVar[Dict[str, Tuple[float, float]]] = {
+        "A4": (595.0, 842.0),
+        "LETTER": (612.0, 792.0),
+        "LEGAL": (612.0, 1008.0),
+        "TABLOID": (792.0, 1224.0),
+        "A3": (842.0, 1191.0),
+        "A5": (420.0, 595.0),
+    }
+
+    # Convenience aliases populated after class definition; annotated for type checkers.
+    A4: ClassVar['PageSize']
+    LETTER: ClassVar['PageSize']
+    LEGAL: ClassVar['PageSize']
+    TABLOID: ClassVar['PageSize']
+    A3: ClassVar['PageSize']
+    A5: ClassVar['PageSize']
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.width, (int, float)) or not isinstance(self.height, (int, float)):
+            raise TypeError("Page width and height must be numeric")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Page width and height must be positive values")
+
+        width = float(self.width)
+        height = float(self.height)
+        object.__setattr__(self, 'width', width)
+        object.__setattr__(self, 'height', height)
+
+        if self.name is not None:
+            if not isinstance(self.name, str):
+                raise TypeError("Page size name must be a string when provided")
+            normalized_name = self.name.strip().upper()
+            object.__setattr__(self, 'name', normalized_name if normalized_name else None)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "name": self.name,
+            "width": self.width,
+            "height": self.height,
+        }
+
+    @classmethod
+    def from_name(cls, name: str) -> 'PageSize':
+        """Create a page size from a known standard name."""
+        if not name or not isinstance(name, str):
+            raise ValueError("Page size name must be a non-empty string")
+        normalized = name.strip().upper()
+        if normalized not in cls._STANDARD_SIZES:
+            raise ValueError(f"Unknown page size name: {name}")
+        width, height = cls._STANDARD_SIZES[normalized]
+        return cls(name=normalized, width=width, height=height)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> 'PageSize':
+        """Create a page size from a dictionary-like object."""
+        width = data.get('width') if isinstance(data, Mapping) else None
+        height = data.get('height') if isinstance(data, Mapping) else None
+        if width is None or height is None:
+            raise ValueError("Page size dictionary must contain 'width' and 'height'")
+        name = data.get('name') if isinstance(data, Mapping) else None
+        return cls(name=name, width=width, height=height)
+
+    @classmethod
+    def coerce(cls, value: Union['PageSize', str, Mapping[str, Any]]) -> 'PageSize':
+        """Normalize various page size inputs into a PageSize instance."""
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, str):
+            return cls.from_name(value)
+        if isinstance(value, Mapping):
+            return cls.from_dict(value)
+        raise TypeError(f"Cannot convert type {type(value)} to PageSize")
+
+    @classmethod
+    def standard_names(cls) -> List[str]:
+        """Return a list of supported standard page size names."""
+        return sorted(cls._STANDARD_SIZES.keys())
+
+
+# Populate convenience constants for standard sizes.
+PageSize.A4 = PageSize.from_name("A4")
+PageSize.LETTER = PageSize.from_name("LETTER")
+PageSize.LEGAL = PageSize.from_name("LEGAL")
+PageSize.TABLOID = PageSize.from_name("TABLOID")
+PageSize.A3 = PageSize.from_name("A3")
+PageSize.A5 = PageSize.from_name("A5")
+
+
+class Orientation(Enum):
+    """Page orientation options."""
+    PORTRAIT = "PORTRAIT"
+    LANDSCAPE = "LANDSCAPE"
 
 
 class StandardFonts(Enum):
@@ -366,6 +468,19 @@ class MoveRequest:
 
 
 @dataclass
+class PageMoveRequest:
+    """Request object for moving pages within the document."""
+    from_page_index: int
+    to_page_index: int
+
+    def to_dict(self) -> dict:
+        return {
+            "fromPageIndex": self.from_page_index,
+            "toPageIndex": self.to_page_index
+        }
+
+
+@dataclass
 class AddRequest:
     """Request object for add operations."""
     pdf_object: Any  # Can be Image, Paragraph, etc.
@@ -547,3 +662,21 @@ class TextObjectRef(ObjectRef):
     def get_children(self) -> List['TextObjectRef']:
         """Get the child text objects."""
         return self.children
+
+
+@dataclass
+class PageRef(ObjectRef):
+    """
+    Represents a page reference with additional page-specific properties.
+    Extends ObjectRef to include page size and orientation.
+    """
+    page_size: Optional[PageSize]
+    orientation: Optional[Orientation]
+
+    def get_page_size(self) -> Optional[PageSize]:
+        """Get the page size."""
+        return self.page_size
+
+    def get_orientation(self) -> Optional[Orientation]:
+        """Get the page orientation."""
+        return self.orientation

@@ -1,10 +1,15 @@
 # PDFDancer Python Client
 
-Automate PDF clean-up, redaction, form filling, and content injection against the PDFDancer API from Python. The client gives you page-scoped selectors, fluent editors, and builders so you can read, modify, and export PDFs programmatically in just a few lines.
+Automate PDF clean-up, redaction, form filling, and content injection against the PDFDancer API from Python. The client
+gives you page-scoped selectors, fluent editors, and builders so you can read, modify, and export PDFs programmatically
+in just a few lines.
+
+Latest schema version available at https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
 
 ## Highlights
 
-- Locate anything inside a PDF—paragraphs, text lines, images, vector paths, pages, AcroForm fields—by page, coordinates, or text prefixes
+- Locate anything inside a PDF—paragraphs, text lines, images, vector paths, pages, AcroForm fields—by page,
+  coordinates, or text prefixes
 - Edit or delete existing content with fluent paragraph/text editors and safe apply-on-exit context managers
 - Fill or update form fields and propagate the changes back to the document instantly
 - Add brand-new content with paragraph/image builders, custom fonts, and precise page positioning
@@ -41,21 +46,21 @@ from pathlib import Path
 from pdfdancer import Color, PDFDancer
 
 with PDFDancer.open(
-    pdf_data=Path("input.pdf"),
-    token="your-api-token",  # optional when PDFDANCER_TOKEN is set
-    base_url="https://api.pdfdancer.com",
+        pdf_data=Path("input.pdf"),
+        token="your-api-token",  # optional when PDFDANCER_TOKEN is set
+        base_url="https://api.pdfdancer.com",
 ) as pdf:
     # Locate existing content
     heading = pdf.page(0).select_paragraphs_starting_with("Executive Summary")[0]
     heading.edit().replace("Overview").apply()
 
     # Add a new paragraph using the fluent builder
-    pdf.new_paragraph() \
-        .text("Generated with PDFDancer") \
-        .font("Helvetica", 12) \
-        .color(Color(70, 70, 70)) \
-        .line_spacing(1.4) \
-        .at(page_index=0, x=72, y=520) \
+    pdf.new_paragraph()
+        .text("Generated with PDFDancer")
+        .font("Helvetica", 12)
+        .color(Color(70, 70, 70))
+        .line_spacing(1.4)
+        .at(page_index=0, x=72, y=520)
         .add()
 
     # Persist the modified document
@@ -81,7 +86,8 @@ with PDFDancer.open("report.pdf") as pdf:  # environment variables provide token
     print(page.internal_id, page.position.bounding_rect)
 ```
 
-Selectors return rich objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, etc.) with helpers such as `delete()`, `move_to(x, y)`, or `edit()` depending on the object type.
+Selectors return rich objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, etc.) with helpers
+such as `delete()`, `move_to(x, y)`, or `edit()` depending on the object type.
 
 ## Editing Text and Forms
 
@@ -90,11 +96,11 @@ with PDFDancer.open("report.pdf") as pdf:
     paragraph = pdf.page(0).select_paragraphs_starting_with("Disclaimer")[0]
 
     # Chain updates explicitly…
-    paragraph.edit() \
-        .replace("Updated disclaimer text") \
-        .font("Roboto-Regular", 11) \
-        .line_spacing(1.1) \
-        .move_to(72, 140) \
+    paragraph.edit()
+        .replace("Updated disclaimer text")
+        .font("Roboto-Regular", 11)
+        .line_spacing(1.1)
+        .move_to(72, 140)
         .apply()
 
     # …or use the context manager to auto-apply on success
@@ -115,16 +121,16 @@ with PDFDancer.open("report.pdf") as pdf:
     pdf.register_font("/path/to/custom.ttf")
 
     # Paragraphs
-    pdf.new_paragraph() \
-        .text("Greetings from PDFDancer!") \
-        .font(fonts[0].name, fonts[0].size) \
-        .at(page_index=0, x=220, y=480) \
+    pdf.new_paragraph()
+        .text("Greetings from PDFDancer!")
+        .font(fonts[0].name, fonts[0].size)
+        .at(page_index=0, x=220, y=480)
         .add()
 
     # Raster images
-    pdf.new_image() \
-        .from_file(Path("logo.png")) \
-        .at(page=0, x=48, y=700) \
+    pdf.new_image()
+        .from_file(Path("logo.png"))
+        .at(page=0, x=48, y=700)
         .add()
 ```
 

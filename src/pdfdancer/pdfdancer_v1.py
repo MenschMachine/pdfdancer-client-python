@@ -8,7 +8,7 @@ Provides session-based PDF manipulation operations with strict validation.
 import json
 import os
 from pathlib import Path
-from typing import List, Optional, Union, BinaryIO
+from typing import List, Optional, Union, BinaryIO, Mapping, Any
 
 import requests
 
@@ -22,21 +22,32 @@ from .exceptions import (
 )
 from .image_builder import ImageBuilder
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef,
-    FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest, ChangeFormFieldRequest,
-    ShapeType, PositionMode
+    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
+    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddRequest, ModifyRequest, ModifyTextRequest,
+    ChangeFormFieldRequest,
+    ShapeType, PositionMode, PageSize, Orientation
 )
 from .paragraph_builder import ParagraphPageBuilder
 from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
 
 
 class PageClient:
-    def __init__(self, page_index: int, root: "PDFDancer"):
+    def __init__(self, page_index: int, root: "PDFDancer", page_size: Optional[PageSize] = None,
+                 orientation: Optional[Union[Orientation, str]] = Orientation.PORTRAIT):
         self.page_index = page_index
         self.root = root
         self.object_type = ObjectType.PAGE
         self.position = Position.at_page(page_index)
         self.internal_id = f"PAGE-{page_index}"
+        self.page_size = page_size
+        if isinstance(orientation, str):
+            normalized = orientation.strip().upper()
+            try:
+                self.orientation = Orientation(normalized)
+            except ValueError:
+                self.orientation = normalized
+        else:
+            self.orientation = orientation
 
     def select_paths_at(self, x: float, y: float) -> List[PathObject]:
         # noinspection PyProtectedMember
@@ -121,13 +132,34 @@ class PageClient:
         return self.root._to_form_field_objects(self.root._find_form_fields(position))
 
     @classmethod
-    def from_ref(cls, root: 'PDFDancer', object_ref: ObjectRef) -> 'PageClient':
-        page_client = PageClient(page_index=object_ref.position.page_index, root=root)
+    def from_ref(cls, root: 'PDFDancer', page_ref: PageRef) -> 'PageClient':
+        page_client = PageClient(
+            page_index=page_ref.position.page_index,
+            root=root,
+            page_size=page_ref.page_size,
+            orientation=page_ref.orientation
+        )
+        page_client.internal_id = page_ref.internal_id
+        if page_ref.position is not None:
+            page_client.position = page_ref.position
+            page_client.page_index = page_ref.position.page_index
         return page_client
 
     def delete(self) -> bool:
         # noinspection PyProtectedMember
         return self.root._delete_page(self._ref())
+
+    def move_to(self, target_page_index: int) -> bool:
+        """Move this page to a different index within the document."""
+        if target_page_index is None or target_page_index < 0:
+            raise ValidationException(f"Target page index must be >= 0, got {target_page_index}")
+
+        # noinspection PyProtectedMember
+        moved = self.root._move_page(self.page_index, target_page_index)
+        if moved:
+            self.page_index = target_page_index
+            self.position = Position.at_page(target_page_index)
+        return moved
 
     def _ref(self):
         return ObjectRef(internal_id=self.internal_id, position=self.position, type=self.object_type)
@@ -138,6 +170,32 @@ class PageClient:
     def select_paths(self):
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(Position.at_page(self.page_index)))
+
+    def select_elements(self):
+        """
+        Select all elements (paragraphs, images, paths, forms) on this page.
+
+        Returns:
+            List of all PDF objects on this page
+        """
+        result = []
+        result.extend(self.select_paragraphs())
+        result.extend(self.select_text_lines())
+        result.extend(self.select_images())
+        result.extend(self.select_paths())
+        result.extend(self.select_forms())
+        result.extend(self.select_form_fields())
+        return result
+
+    @property
+    def size(self):
+        """Property alias for page size."""
+        return self.page_size
+
+    @property
+    def page_orientation(self):
+        """Property alias for orientation."""
+        return self.orientation
 
 
 class PDFDancer:
@@ -201,12 +259,57 @@ class PDFDancer:
     def new(cls,
             token: Optional[str] = None,
             base_url: Optional[str] = None,
-            timeout: float = 30.0) -> "PDFDancer":
+            timeout: float = 30.0,
+            page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
+            orientation: Optional[Union[Orientation, str]] = None,
+            initial_page_count: int = 1) -> "PDFDancer":
+        """
+        Create a new blank PDF document with optional configuration.
 
+        Args:
+            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable.
+            base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
+                or defaults to `https://api.pdfdancer.com`.
+            timeout: HTTP read timeout in seconds.
+            page_size: Page size for the PDF (default: A4). Accepts `PageSize`, a standard name string, or a
+                mapping with `width`/`height` values.
+            orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
+            initial_page_count: Number of initial blank pages (default: 1).
+
+        Returns:
+            A ready-to-use `PDFDancer` client instance with a blank PDF.
+        """
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
 
-        raise Exception("Unsupported Operation Exception: TODO")
+        # Create a new instance that will call _create_blank_pdf_session
+        instance = object.__new__(cls)
+
+        # Initialize instance variables
+        if not resolved_token or not resolved_token.strip():
+            raise ValidationException("Authentication token cannot be null or empty")
+
+        instance._token = resolved_token.strip()
+        instance._base_url = resolved_base_url.rstrip('/')
+        instance._read_timeout = timeout
+
+        # Create HTTP session for connection reuse
+        instance._session = requests.Session()
+        instance._session.headers.update({
+            'Authorization': f'Bearer {instance._token}'
+        })
+
+        # Create blank PDF session
+        instance._session_id = instance._create_blank_pdf_session(
+            page_size=page_size,
+            orientation=orientation,
+            initial_page_count=initial_page_count
+        )
+
+        # Set pdf_bytes to None since we don't have the PDF bytes yet
+        instance._pdf_bytes = None
+
+        return instance
 
     def __init__(self, token: str, pdf_data: Union[bytes, Path, str, BinaryIO],
                  base_url: str, read_timeout: float = 0):
@@ -339,6 +442,22 @@ class PDFDancer:
                 f"Server response: {details}"
             )
 
+    @staticmethod
+    def _cleanup_url_path(base_url: str, path: str) -> str:
+        """
+        Combine base_url and path, ensuring no double slashes.
+
+        Args:
+            base_url: Base URL (may or may not have trailing slash)
+            path: Path segment (may or may not have leading slash)
+
+        Returns:
+            Combined URL with no double slashes
+        """
+        base = base_url.rstrip('/')
+        path = path.lstrip('/')
+        return f"{base}/{path}"
+
     def _create_session(self) -> str:
         """
         Creates a new PDF processing session by uploading the PDF data.
@@ -349,7 +468,7 @@ class PDFDancer:
             }
 
             response = self._session.post(
-                f"{self._base_url}/session/create",
+                self._cleanup_url_path(self._base_url, "/session/create"),
                 files=files,
                 timeout=self._read_timeout if self._read_timeout > 0 else None
             )
@@ -369,6 +488,76 @@ class PDFDancer:
             raise HttpClientException(f"Failed to create session: {error_message}",
                                       response=getattr(e, 'response', None), cause=e) from None
 
+    def _create_blank_pdf_session(self,
+                                  page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
+                                  orientation: Optional[Union[Orientation, str]] = None,
+                                  initial_page_count: int = 1) -> str:
+        """
+        Creates a new PDF processing session with a blank PDF document.
+
+        Args:
+            page_size: Page size (default: A4). Accepts `PageSize`, a standard name string, or a
+                mapping with `width`/`height` values.
+            orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
+            initial_page_count: Number of initial pages (default: 1)
+
+        Returns:
+            Session ID for the newly created blank PDF
+
+        Raises:
+            SessionException: If session creation fails
+            HttpClientException: If HTTP communication fails
+        """
+        try:
+            # Build request payload
+            request_data = {}
+
+            # Handle page_size - convert to type-safe object with dimensions
+            if page_size is not None:
+                try:
+                    request_data['pageSize'] = PageSize.coerce(page_size).to_dict()
+                except ValueError as exc:
+                    raise ValidationException(str(exc)) from exc
+                except TypeError:
+                    raise ValidationException(f"Invalid page_size type: {type(page_size)}")
+
+            # Handle orientation
+            if orientation is not None:
+                if isinstance(orientation, Orientation):
+                    request_data['orientation'] = orientation.value
+                elif isinstance(orientation, str):
+                    request_data['orientation'] = orientation
+                else:
+                    raise ValidationException(f"Invalid orientation type: {type(orientation)}")
+
+            # Handle initial_page_count with validation
+            if initial_page_count < 1:
+                raise ValidationException(f"Initial page count must be at least 1, got {initial_page_count}")
+            request_data['initialPageCount'] = initial_page_count
+
+            headers = {'Content-Type': 'application/json'}
+            response = self._session.post(
+                self._cleanup_url_path(self._base_url, "/session/new"),
+                json=request_data,
+                headers=headers,
+                timeout=self._read_timeout if self._read_timeout > 0 else None
+            )
+
+            self._handle_authentication_error(response)
+            response.raise_for_status()
+            session_id = response.text.strip()
+
+            if not session_id:
+                raise SessionException("Server returned empty session ID")
+
+            return session_id
+
+        except requests.exceptions.RequestException as e:
+            self._handle_authentication_error(getattr(e, 'response', None))
+            error_message = self._extract_error_message(getattr(e, 'response', None))
+            raise HttpClientException(f"Failed to create blank PDF session: {error_message}",
+                                      response=getattr(e, 'response', None), cause=e) from None
+
     def _make_request(self, method: str, path: str, data: Optional[dict] = None,
                       params: Optional[dict] = None) -> requests.Response:
         """
@@ -382,7 +571,7 @@ class PDFDancer:
         try:
             response = self._session.request(
                 method=method,
-                url=f"{self._base_url}{path}",
+                url=self._cleanup_url_path(self._base_url, path),
                 json=data,
                 params=params,
                 headers=headers,
@@ -532,22 +721,36 @@ class PDFDancer:
         return self._to_textline_objects(self._find_text_lines(None))
 
     def page(self, page_index: int) -> PageClient:
-        return PageClient(page_index, self)
+        """
+        Get a specific page by index, fetching page properties from the server.
+
+        Args:
+            page_index: The 0-based page index
+
+        Returns:
+            PageClient with page properties populated
+        """
+        page_ref = self._get_page(page_index)
+        if page_ref:
+            return PageClient.from_ref(self, page_ref)
+        else:
+            # Fallback to basic PageClient if page not found
+            return PageClient(page_index, self)
 
     # Page Operations
 
     def pages(self) -> List[PageClient]:
         return self._to_page_objects(self._get_pages())
 
-    def _get_pages(self) -> List[ObjectRef]:
+    def _get_pages(self) -> List[PageRef]:
         """
         Retrieves references to all pages in the PDF document.
         """
         response = self._make_request('POST', '/pdf/page/find')
         pages_data = response.json()
-        return [self._parse_object_ref(page_data) for page_data in pages_data]
+        return [self._parse_page_ref(page_data) for page_data in pages_data]
 
-    def _get_page(self, page_index: int) -> Optional[ObjectRef]:
+    def _get_page(self, page_index: int) -> Optional[PageRef]:
         """
         Retrieves a reference to a specific page by its page index.
 
@@ -555,7 +758,7 @@ class PDFDancer:
             page_index: The page index to retrieve (1-based indexing)
 
         Returns:
-            Object reference for the specified page, or None if not found
+            Page reference for the specified page, or None if not found
         """
         if page_index < 0:
             raise ValidationException(f"Page index must be >= 0, got {page_index}")
@@ -567,7 +770,7 @@ class PDFDancer:
         if not pages_data:
             return None
 
-        return self._parse_object_ref(pages_data[0])
+        return self._parse_page_ref(pages_data[0])
 
     def _delete_page(self, page_ref: ObjectRef) -> bool:
         """
@@ -586,6 +789,25 @@ class PDFDancer:
 
         response = self._make_request('DELETE', '/pdf/page/delete', data=request_data)
         return response.json()
+
+    def move_page(self, from_page_index: int, to_page_index: int) -> bool:
+        """Move a page to a different index within the document."""
+        return self._move_page(from_page_index, to_page_index)
+
+    def _move_page(self, from_page_index: int, to_page_index: int) -> bool:
+        """Internal helper to perform the page move operation."""
+        for value, label in ((from_page_index, "from_page_index"), (to_page_index, "to_page_index")):
+            if value is None:
+                raise ValidationException(f"{label} cannot be null")
+            if not isinstance(value, int):
+                raise ValidationException(f"{label} must be an integer, got {type(value)}")
+            if value < 0:
+                raise ValidationException(f"{label} must be >= 0, got {value}")
+
+        request_data = PageMoveRequest(from_page_index, to_page_index).to_dict()
+        response = self._make_request('PUT', '/pdf/page/move', data=request_data)
+        result = response.json()
+        return bool(result)
 
     # Manipulation Operations
 
@@ -681,6 +903,10 @@ class PDFDancer:
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)
+
+    def new_page(self):
+        response = self._make_request('POST', '/pdf/page/add', data=None)
+        return self._parse_page_ref(response.json())
 
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)
@@ -813,7 +1039,7 @@ class PDFDancer:
 
             headers = {'X-Session-Id': self._session_id}
             response = self._session.post(
-                f"{self._base_url}/font/register",
+                self._cleanup_url_path(self._base_url, "/font/register"),
                 files=files,
                 headers=headers,
                 timeout=30
@@ -961,6 +1187,42 @@ class PDFDancer:
 
         return text_object
 
+    def _parse_page_ref(self, obj_data: dict) -> PageRef:
+        """Parse JSON object data into PageRef instance with page-specific properties."""
+        position_data = obj_data.get('position', {})
+        position = self._parse_position(position_data) if position_data else None
+
+        object_type = ObjectType(obj_data['type'])
+
+        # Parse page size if present
+        page_size = None
+        if 'pageSize' in obj_data and isinstance(obj_data['pageSize'], dict):
+            page_size_data = obj_data['pageSize']
+            try:
+                page_size = PageSize.from_dict(page_size_data)
+            except ValueError:
+                page_size = None
+
+        # Parse orientation if present
+        orientation_value = obj_data.get('orientation')
+        orientation = None
+        if isinstance(orientation_value, str):
+            normalized = orientation_value.strip().upper()
+            try:
+                orientation = Orientation(normalized)
+            except ValueError:
+                orientation = None
+        elif isinstance(orientation_value, Orientation):
+            orientation = orientation_value
+
+        return PageRef(
+            internal_id=obj_data.get('internalId'),
+            position=position,
+            type=object_type,
+            page_size=page_size,
+            orientation=orientation
+        )
+
     # Builder Pattern Support
 
     def _paragraph_builder(self) -> 'ParagraphBuilder':
@@ -1001,8 +1263,59 @@ class PDFDancer:
         return [FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value) for ref in
                 refs]
 
-    def _to_page_objects(self, refs: List[ObjectRef]) -> List[PageClient]:
+    def _to_page_objects(self, refs: List[PageRef]) -> List[PageClient]:
         return [PageClient.from_ref(self, ref) for ref in refs]
 
-    def _to_page_object(self, ref: ObjectRef) -> PageClient:
+    def _to_page_object(self, ref: PageRef) -> PageClient:
         return PageClient.from_ref(self, ref)
+
+    def _to_mixed_objects(self, refs: List[ObjectRef]) -> List:
+        """
+        Convert a list of ObjectRefs to their appropriate object types.
+        Handles mixed object types by checking the type of each ref.
+        """
+        result = []
+        for ref in refs:
+            if ref.type == ObjectType.PARAGRAPH:
+                # Need to convert to TextObjectRef first
+                if isinstance(ref, TextObjectRef):
+                    result.append(ParagraphObject(self, ref))
+                else:
+                    # Re-fetch with proper type
+                    text_refs = self._find_paragraphs(ref.position)
+                    result.extend(self._to_paragraph_objects(text_refs))
+            elif ref.type == ObjectType.TEXT_LINE:
+                if isinstance(ref, TextObjectRef):
+                    result.append(TextLineObject(self, ref))
+                else:
+                    text_refs = self._find_text_lines(ref.position)
+                    result.extend(self._to_textline_objects(text_refs))
+            elif ref.type == ObjectType.IMAGE:
+                result.append(ImageObject(self, ref.internal_id, ref.type, ref.position))
+            elif ref.type == ObjectType.PATH:
+                result.append(PathObject(self, ref.internal_id, ref.type, ref.position))
+            elif ref.type == ObjectType.FORM_X_OBJECT:
+                result.append(FormObject(self, ref.internal_id, ref.type, ref.position))
+            elif ref.type == ObjectType.FORM_FIELD:
+                if isinstance(ref, FormFieldRef):
+                    result.append(FormFieldObject(self, ref.internal_id, ref.type, ref.position, ref.name, ref.value))
+                else:
+                    form_refs = self._find_form_fields(ref.position)
+                    result.extend(self._to_form_field_objects(form_refs))
+        return result
+
+    def select_elements(self):
+        """
+        Select all elements (paragraphs, images, paths, forms) in the document.
+
+        Returns:
+            List of all PDF objects in the document
+        """
+        result = []
+        result.extend(self.select_paragraphs())
+        result.extend(self.select_text_lines())
+        result.extend(self.select_images())
+        result.extend(self.select_paths())
+        result.extend(self.select_forms())
+        result.extend(self.select_form_fields())
+        return result

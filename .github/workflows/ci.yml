@@ -31,7 +31,7 @@ jobs:
           venv/bin/pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: PDFDANCER_BASE_URL=api.staging.pdfdancer.com venv/bin/python -m pytest tests/ -v --ignore=tests/e2e/
+        run: PDFDANCER_BASE_URL=https://api.staging.pdfdancer.com venv/bin/python -m pytest tests/ -v --ignore=tests/e2e/
 
       - name: Build distribution packages
         run: venv/bin/python -m build

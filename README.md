@@ -1,34 +1,30 @@
 # PDFDancer Python Client
 
-Automate PDF clean-up, redaction, form filling, and content injection against the PDFDancer API from Python. The client
-gives you page-scoped selectors, fluent editors, and builders so you can read, modify, and export PDFs programmatically
-in just a few lines.
+**Getting Started with PDFDancer**
 
-Latest schema version available at https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
+PDFDancer gives you pixel-perfect programmatic control over any PDF document from Python. Locate existing elements by
+coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. The
+same API is also available for TypeScript and Java, so teams can orchestrate identical PDF workflows across stacks.
+
+> Need the raw API schema? The latest OpenAPI description lives in `docs/openapi.yml` and is published at
+> https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
 
 ## Highlights
 
-- Locate anything inside a PDF—paragraphs, text lines, images, vector paths, pages, AcroForm fields—by page,
-  coordinates, or text prefixes
-- Edit or delete existing content with fluent paragraph/text editors and safe apply-on-exit context managers
-- Fill or update form fields and propagate the changes back to the document instantly
-- Add brand-new content with paragraph/image builders, custom fonts, and precise page positioning
-- Download results as bytes for downstream processing or save directly to disk with one method call
+- Locate paragraphs, text lines, images, vector paths, form fields, and pages by index, coordinates, or text prefixes.
+- Edit existing content in place with fluent editors and context managers that apply changes safely.
+- Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
+- Add content with precise XY positioning using paragraph and image builders, custom fonts, and color helpers.
+- Export results as bytes for downstream processing or save directly to disk with one call.
 
-## Core Capabilities
+## What Makes PDFDancer Different
 
-- Clean up layout by moving or deleting paragraphs, text lines, or shapes on specific pages
-- Search and filter content (e.g., paragraphs starting with "Invoice") to drive custom workflows
-- Redact or replace text in bulk with chained editor operations
-- Populate AcroForms for contract generation or onboarding flows
-- Insert logos, signatures, and generated paragraphs at deterministic coordinates
-- Export modified PDFs as bytes for APIs, S3 uploads, or direct file saves
-
-## Requirements
-
-- Python 3.10 or newer
-- A PDFDancer API token (set `PDFDANCER_TOKEN` or pass `token=...`)
-- Network access to a PDFDancer service (defaults to `https://api.pdfdancer.com`; override with `PDFDANCER_BASE_URL`)
+- **Edit any PDF**: Work with documents from customers, governments, or vendors—not just ones you generated.
+- **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
+- **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
+- **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.
+- **Coordinate-based selection**: Select objects by position, bounding box, or text patterns.
+- **Real PDF editing**: Modify the underlying PDF structure instead of merely stamping overlays.
 
 ## Installation
 
@@ -39,129 +35,123 @@ pip install pdfdancer-client-python
 pip install -e .
 ```
 
-## Getting Started
+Requires Python 3.10+ and a PDFDancer API token.
+
+## Quick Start — Edit an Existing PDF
 
 ```python
 from pathlib import Path
-from pdfdancer import Color, PDFDancer
+from pdfdancer import Color, PDFDancer, StandardFonts
 
 with PDFDancer.open(
-        pdf_data=Path("input.pdf"),
-        token="your-api-token",  # optional when PDFDANCER_TOKEN is set
-        base_url="https://api.pdfdancer.com",
+    pdf_data=Path("input.pdf"),
+    token="your-api-token",             # optional when PDFDANCER_TOKEN is set
+    base_url="https://api.pdfdancer.com",
 ) as pdf:
-    # Locate existing content
+    # Locate and update an existing paragraph
     heading = pdf.page(0).select_paragraphs_starting_with("Executive Summary")[0]
-    heading.edit().replace("Overview").apply()
+    heading.move_to(72, 680)
+    with heading.edit() as editor:
+        editor.replace("Overview")
 
-    # Add a new paragraph using the fluent builder
-    pdf.new_paragraph()
-        .text("Generated with PDFDancer")
-        .font("Helvetica", 12)
-        .color(Color(70, 70, 70))
-        .line_spacing(1.4)
-        .at(page_index=0, x=72, y=520)
+    # Add a new paragraph with precise placement
+    pdf.new_paragraph() \
+        .text("Generated with PDFDancer") \
+        .font(StandardFonts.HELVETICA, 12) \
+        .color(Color(70, 70, 70)) \
+        .line_spacing(1.4) \
+        .at(page_index=0, x=72, y=520) \
         .add()
 
     # Persist the modified document
     pdf.save("output.pdf")
+    # or keep it in memory
+    pdf_bytes = pdf.get_bytes()
 ```
 
-### Authentication Tips
-
-- Prefer setting `PDFDANCER_TOKEN` in your environment for local development.
-- Override the API host by setting `PDFDANCER_BASE_URL` or passing `base_url="https://sandbox.pdfdancer.com"`.
-- Use the `timeout` parameter on `PDFDancer.open()` to adjust HTTP read timeouts.
-
-## Selecting PDF Content
+## Create a Blank PDF
 
 ```python
-with PDFDancer.open("report.pdf") as pdf:  # environment variables provide token/URL
-    all_paragraphs = pdf.select_paragraphs()
-    page_zero_images = pdf.page(0).select_images()
-    form_fields = pdf.page(2).select_form_fields()
-    paths_at_cursor = pdf.page(3).select_paths_at(x=150, y=320)
+from pathlib import Path
+from pdfdancer import Color, PDFDancer, StandardFonts
 
-    page = pdf.page(0).get()
-    print(page.internal_id, page.position.bounding_rect)
-```
-
-Selectors return rich objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, etc.) with helpers
-such as `delete()`, `move_to(x, y)`, or `edit()` depending on the object type.
-
-## Editing Text and Forms
-
-```python
-with PDFDancer.open("report.pdf") as pdf:
-    paragraph = pdf.page(0).select_paragraphs_starting_with("Disclaimer")[0]
-
-    # Chain updates explicitly…
-    paragraph.edit()
-        .replace("Updated disclaimer text")
-        .font("Roboto-Regular", 11)
-        .line_spacing(1.1)
-        .move_to(72, 140)
-        .apply()
-
-    # …or use the context manager to auto-apply on success
-    with paragraph.edit() as edit:
-        edit.replace("Context-managed update").color(Color(120, 0, 0))
-
-    # Update an AcroForm field
-    field = pdf.page(1).select_form_fields_by_name("signature")[0]
-    field.edit().value("Signed by Jane Doe").apply()
-```
-
-## Adding New Content
-
-```python
-with PDFDancer.open("report.pdf") as pdf:
-    # Register fonts from the service
-    fonts = pdf.find_fonts("Roboto", 12)
-    pdf.register_font("/path/to/custom.ttf")
-
-    # Paragraphs
-    pdf.new_paragraph()
-        .text("Greetings from PDFDancer!")
-        .font(fonts[0].name, fonts[0].size)
-        .at(page_index=0, x=220, y=480)
+with PDFDancer.new(token="your-api-token") as pdf:
+    pdf.new_paragraph() \
+        .text("Quarterly Summary") \
+        .font(StandardFonts.TIMES_BOLD, 18) \
+        .color(Color(10, 10, 80)) \
+        .line_spacing(1.2) \
+        .at(page_index=0, x=72, y=730) \
         .add()
 
-    # Raster images
-    pdf.new_image()
-        .from_file(Path("logo.png"))
-        .at(page=0, x=48, y=700)
+    pdf.new_image() \
+        .from_file(Path("logo.png")) \
+        .at(page=0, x=420, y=710) \
         .add()
+
+    pdf.save("summary.pdf")
 ```
 
-## Downloading Results
+## Work with Forms and Layout
 
-- `pdf.get_pdf_file()` returns the modified PDF as `bytes` (ideal for storage services or HTTP responses).
-- `pdf.save("output.pdf")` writes directly to disk, creating directories when needed.
+```python
+from pdfdancer import PDFDancer
+
+with PDFDancer.open("contract.pdf") as pdf:
+    # Inspect global document structure
+    pages = pdf.pages()
+    print("Total pages:", len(pages))
+
+    # Update form fields
+    signature = pdf.select_form_fields_by_name("signature")[0]
+    signature.edit().value("Signed by Jane Doe").apply()
+
+    # Trim or move content at specific coordinates
+    images = pdf.page(1).select_images()
+    for image in images:
+        x = image.position.x()
+        if x is not None and x < 100:
+            image.delete()
+```
+
+Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageClient`, …)
+with helpers such as `delete()`, `move_to(x, y)`, or `edit()` depending on the object type.
+
+## Configuration
+
+- Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
+- Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
+- Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
 
 ## Error Handling
 
-Most operations raise subclasses of `PdfDancerException`:
+Operations raise subclasses of `PdfDancerException`:
 
-- `ValidationException` for client-side validation issues (missing token, invalid coordinates, etc.).
-- `FontNotFoundException` when the service cannot locate a requested font.
-- `HttpClientException` for transport or server errors with detailed messages.
-- `SessionException` when session creation fails.
+- `ValidationException`: input validation problems (missing token, invalid coordinates, etc.).
+- `FontNotFoundException`: requested font unavailable on the service.
+- `HttpClientException`: transport or server errors with detailed context.
+- `SessionException`: session creation and lifecycle failures.
 
-Wrap complex workflows in `try/except` blocks to surface actionable errors to your users.
+Wrap automated workflows in `try/except` blocks to surface actionable errors to your users.
 
-## Local Development
+## Development
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate            # Windows: venv\Scripts\activate
 pip install -e ".[dev]"
 
-pytest -q          # run the fast unit suite
-pytest tests/e2e   # integration tests (requires live API + fixtures)
+pytest -q                           # unit suite
+pytest tests/e2e                    # integration tests (requires live API + fixtures)
+python -m build                     # produce distribution artifacts
 ```
 
-Package builds are handled by `python -m build`, and release artifacts are published via `python release.py`.
+Releases are published with `python release.py`. Contributions are welcome via pull request.
+
+## Related SDKs
+
+- TypeScript client: https://github.com/MenschMachine/pdfdancer-client-js
+- Java client: https://github.com/MenschMachine/pdfdancer-client-java
 
 ## License
 

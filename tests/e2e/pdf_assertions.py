@@ -169,8 +169,6 @@ class PDFAssertions(object):
         if page_index is None:
             for page in self.pdf.pages():
                 total = total + len(page.select_elements())
-                for e in page.select_elements():
-                    print(e)
         else:
             total = len(self.pdf.page(page_index).select_elements())
         assert total == nr_of_elements, f"Total number of elements differ, actual {total} != expected {nr_of_elements}"

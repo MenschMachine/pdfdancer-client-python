@@ -726,3 +726,30 @@ class PageRef(ObjectRef):
     def get_orientation(self) -> Optional[Orientation]:
         """Get the page orientation."""
         return self.orientation
+
+
+@dataclass
+class CommandResult:
+    """
+    Result object returned by certain API endpoints indicating the outcome of an operation.
+    """
+    command_name: str
+    element_id: str | None
+    message: str | None
+    success: bool
+    warning: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'CommandResult':
+        """Create a CommandResult from a dictionary response."""
+        return cls(
+            command_name=data.get('commandName', ''),
+            element_id=data.get('elementId', ''),
+            message=data.get('message', ''),
+            success=data.get('success', False),
+            warning=data.get('warning', '')
+        )
+
+    @classmethod
+    def empty(cls, command_name: str, element_id: str | None) -> 'CommandResult':
+        return CommandResult(command_name=command_name, element_id=element_id, message=None, success=True, warning=None)

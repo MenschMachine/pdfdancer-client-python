@@ -21,8 +21,6 @@ def test_delete_form(tmp_path: Path):
 
         assert pdf.select_forms() == []
         assert len(pdf.select_elements()) == len(all_elements) - 17
-        for e in pdf.select_elements():
-            print(e)
         pdf.save("/tmp/delete-form1.pdf")
 
     (

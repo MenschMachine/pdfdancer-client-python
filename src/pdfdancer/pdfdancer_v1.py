@@ -27,7 +27,7 @@ from .image_builder import ImageBuilder
 from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
     FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddRequest, ModifyRequest, ModifyTextRequest,
-    ChangeFormFieldRequest,
+    ChangeFormFieldRequest, CommandResult,
     ShapeType, PositionMode, PageSize, Orientation
 )
 from .paragraph_builder import ParagraphPageBuilder
@@ -915,7 +915,7 @@ class PDFDancer:
         return ImageBuilder(self)
 
     # Modify Operations
-    def _modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> bool:
+    def _modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> CommandResult:
         """
         Modifies a paragraph object or its text content.
 
@@ -929,20 +929,20 @@ class PDFDancer:
         if object_ref is None:
             raise ValidationException("Object reference cannot be null")
         if new_paragraph is None:
-            return False
+            return CommandResult.empty("ModifyParagraph", object_ref.internal_id)
 
         if isinstance(new_paragraph, str):
-            # Text modification
+            # Text modification - returns CommandResult
             request_data = ModifyTextRequest(object_ref, new_paragraph).to_dict()
             response = self._make_request('PUT', '/pdf/text/paragraph', data=request_data)
+            return CommandResult.from_dict(response.json())
         else:
             # Object modification
             request_data = ModifyRequest(object_ref, new_paragraph).to_dict()
             response = self._make_request('PUT', '/pdf/modify', data=request_data)
+            return CommandResult.from_dict(response.json())
 
-        return response.json()
-
-    def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> bool:
+    def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> CommandResult:
         """
         Modifies a text line object.
 
@@ -960,7 +960,7 @@ class PDFDancer:
 
         request_data = ModifyTextRequest(object_ref, new_text).to_dict()
         response = self._make_request('PUT', '/pdf/text/line', data=request_data)
-        return response.json()
+        return CommandResult.from_dict(response.json())
 
     # Font Operations
 

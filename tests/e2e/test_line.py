@@ -25,7 +25,7 @@ def test_find_lines_by_position():
         assert len(lines) == 340
 
         first = lines[0]
-        assert first.internal_id == "LINE_000001"
+        assert first.internal_id == "TEXTLINE_000001"
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 326
         assert pytest.approx(first.position.y(), rel=0, abs=1) == 706
@@ -34,7 +34,7 @@ def test_find_lines_by_position():
         assert first.object_ref().status.is_encodable()
 
         last = lines[-1]
-        assert last.internal_id == "LINE_000340"
+        assert last.internal_id == "TEXTLINE_000340"
         assert last.position is not None
         assert pytest.approx(last.position.x(), rel=0, abs=2) == 548
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 35
@@ -51,7 +51,7 @@ def test_find_lines_by_text():
         assert len(lines) == 1
 
         line = lines[0]
-        assert line.internal_id == "LINE_000002"
+        assert line.internal_id == "TEXTLINE_000002"
         assert pytest.approx(line.position.x(), rel=0, abs=1) == 54
         assert pytest.approx(line.position.y(), rel=0, abs=2) == 606
 
@@ -100,7 +100,12 @@ def test_modify_line():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
-        line.edit().replace(" replaced ").apply()
+        result = line.edit().replace(" replaced ").apply()
+
+        # this should issue a warning about an modified text with an embedded font
+        # the information is right now only available when selecting the paragraph again, that's bad
+        assert result.warning is not None
+        assert "You are using an embedded font and modified the text." in result.warning
 
         # Validate replacements
         assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
@@ -130,7 +135,6 @@ def test_modify_line_multi():
             line_text = f"{i} The Complete C"
             # line.edit().replace(line_text).color(Color(255, 0, 0)).apply()
             assert line.edit().replace(line_text).apply()
-            print(line_text)
         pdf.save("/tmp/test_modify_line_multi.pdf")
 
     (

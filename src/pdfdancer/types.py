@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import statistics
+import sys
 from dataclasses import dataclass
 from typing import Optional, List
 
 from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef, TextObjectRef
+from .models import CommandResult
 
 
 @dataclass
@@ -177,7 +179,7 @@ class BaseTextEdit:
 
 
 class ParagraphEdit(BaseTextEdit):
-    def apply(self) -> bool:
+    def apply(self) -> CommandResult:
         if (
                 self._position is None
                 and self._line_spacing is None
@@ -186,7 +188,10 @@ class ParagraphEdit(BaseTextEdit):
                 and self._color is None
         ):
             # noinspection PyProtectedMember
-            return self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
+            result = self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
+            if result.warning is not None:
+                print(f"WARNING: {result.warning}", file=sys.stderr)
+            return result
         else:
             new_paragraph = Paragraph(
                 position=self._position if self._position is not None else self._object_ref.position,
@@ -196,7 +201,10 @@ class ParagraphEdit(BaseTextEdit):
                 color=self._get_color(),
             )
             # noinspection PyProtectedMember
-            return self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
+            result = self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
+            if result.warning is not None:
+                print(f"WARNING: {result.warning}", file=sys.stderr)
+            return result
 
     def _get_line_spacing(self) -> float:
         if self._line_spacing is not None:
@@ -241,9 +249,11 @@ class TextLineEdit(BaseTextEdit):
                 and self._color is None
         ):
             # noinspection PyProtectedMember
-            return self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
+            result = self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
+            if result.warning is not None:
+                print(f"WARNING: {result.warning}", file=sys.stderr)
+            return result
         else:
-
             # noinspection PyProtectedMember
             # return self._target_obj._client._modify_text_line(self._object_ref, new_textline)
             raise UnsupportedOperation("Full TextLineEdit not implemented - TODO")

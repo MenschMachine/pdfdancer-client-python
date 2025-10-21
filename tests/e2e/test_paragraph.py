@@ -179,11 +179,17 @@ def test_modify_paragraph_only_text():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
-        (
+        result = (
             paragraph.edit()
             .replace("lorem\nipsum\nCaesar")
             .apply()
         )
+
+        # this should issue a warning about an modified text with an embedded font
+        # the information is right now only available when selecting the paragraph again, that's bad
+        assert result.warning is not None
+        assert "You are using an embedded font and modified the text." in result.warning
+
         paragraph = pdf.page(0).select_paragraphs_starting_with("lorem")[0]
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()

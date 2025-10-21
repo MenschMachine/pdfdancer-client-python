@@ -136,6 +136,43 @@ def test_modify_paragraph_without_position_and_spacing():
     )
 
 
+def test_modify_paragraph_noop():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+    (
+        paragraph.edit()
+        .apply()
+    )
+
+    (
+        PDFAssertions(pdf)
+        .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
+        .assert_textline_has_color("The Complete", Color(255, 255, 255))
+    )
+
+
+def test_modify_paragraph_only_text():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+    (
+        paragraph.edit()
+        .replace("lorem\nipsum\nCaesar")
+        .apply()
+    )
+
+    (
+        PDFAssertions(pdf)
+        .assert_textline_does_not_exist("The Complete")
+        .assert_textline_has_color("lorem", Color(255, 255, 255))
+        .assert_textline_has_color("ipsum", Color(255, 255, 255))
+        .assert_textline_has_color("Caesar", Color(255, 255, 255))
+    )
+
+
 def test_modify_paragraph_only_font():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 

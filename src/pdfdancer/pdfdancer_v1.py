@@ -929,7 +929,7 @@ class PDFDancer:
         if object_ref is None:
             raise ValidationException("Object reference cannot be null")
         if new_paragraph is None:
-            raise ValidationException("New paragraph cannot be null")
+            return False
 
         if isinstance(new_paragraph, str):
             # Text modification

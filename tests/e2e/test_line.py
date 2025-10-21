@@ -5,6 +5,14 @@ from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
 
+def test_find_lines_by_position_multi():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        for i in range(0, 10):
+            pdf.select_text_lines()
+
+
 def test_find_lines_by_position():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
@@ -90,4 +98,23 @@ def test_modify_line():
         .assert_textline_does_not_exist("The Complete")
         .assert_textline_exists(" replaced ")
         .assert_paragraph_exists(" replaced ")
+    )
+
+
+def test_modify_line_multi():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        line_text = "The Complete"
+        for i in range(0, 10):
+            line = pdf.page(0).select_text_lines_starting_with(line_text)[0]
+            line_text = f"{i} The Complete C"
+            # line.edit().replace(line_text).color(Color(255, 0, 0)).apply()
+            assert line.edit().replace(line_text).apply()
+            print(line_text)
+        pdf.save("/tmp/test_modify_line_multi.pdf")
+
+    (
+        PDFAssertions(pdf)
+        .assert_textline_exists("9 The Complete C")
     )

@@ -1,6 +1,6 @@
 import pytest
 
-from pdfdancer import Color, StandardFonts
+from pdfdancer import Color, StandardFonts, FontType
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -27,6 +27,11 @@ def test_find_paragraphs_by_position():
         assert last.position is not None
         assert pytest.approx(last.position.x(), rel=0, abs=1) == 54
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 496
+
+        assert last.object_ref().status is not None
+        assert last.object_ref().status.is_encodable()
+        assert last.object_ref().status.font_type == FontType.EMBEDDED
+        assert not last.object_ref().status.is_modified()
 
 
 def test_find_paragraphs_by_text():
@@ -60,6 +65,11 @@ def test_move_paragraph():
         moved = pdf.page(0).select_paragraphs_at(0.1, 300)[0]
         assert moved is not None
 
+        assert moved.object_ref().status is not None
+        assert moved.object_ref().status.is_encodable()
+        assert moved.object_ref().status.font_type == FontType.EMBEDDED
+        assert not moved.object_ref().status.is_modified()
+
 
 def test_modify_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
@@ -75,6 +85,12 @@ def test_modify_paragraph():
             .move_to(300.1, 500)
             .apply()
         )
+
+        moved = pdf.page(0).select_paragraphs_at(300.1, 500)[0]
+        assert moved.object_ref().status is not None
+        assert moved.object_ref().status.is_encodable()
+        assert moved.object_ref().status.font_type == FontType.STANDARD
+        assert moved.object_ref().status.is_modified()
 
     (
         PDFAssertions(pdf)
@@ -141,10 +157,15 @@ def test_modify_paragraph_noop():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
-    (
-        paragraph.edit()
-        .apply()
-    )
+        (
+            paragraph.edit()
+            .apply()
+        )
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        assert paragraph.object_ref().status is not None
+        assert paragraph.object_ref().status.is_encodable()
+        assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
+        assert not paragraph.object_ref().status.is_modified()
 
     (
         PDFAssertions(pdf)
@@ -158,11 +179,16 @@ def test_modify_paragraph_only_text():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
-    (
-        paragraph.edit()
-        .replace("lorem\nipsum\nCaesar")
-        .apply()
-    )
+        (
+            paragraph.edit()
+            .replace("lorem\nipsum\nCaesar")
+            .apply()
+        )
+        paragraph = pdf.page(0).select_paragraphs_starting_with("lorem")[0]
+        assert paragraph.object_ref().status is not None
+        assert paragraph.object_ref().status.is_encodable()
+        assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
+        assert paragraph.object_ref().status.is_modified()
 
     (
         PDFAssertions(pdf)
@@ -178,11 +204,16 @@ def test_modify_paragraph_only_font():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
-    (
-        paragraph.edit()
-        .font("Helvetica", 28)
-        .apply()
-    )
+        (
+            paragraph.edit()
+            .font("Helvetica", 28)
+            .apply()
+        )
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        assert paragraph.object_ref().status is not None
+        assert paragraph.object_ref().status.is_encodable()
+        assert paragraph.object_ref().status.font_type == FontType.STANDARD
+        assert paragraph.object_ref().status.is_modified()
 
     # TODO does not preserve color and fucks up line spacings
     (
@@ -204,6 +235,12 @@ def test_modify_paragraph_only_move():
             .apply()
         )
 
+        paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
+        assert paragraph.object_ref().status is not None
+        assert paragraph.object_ref().status.is_encodable()
+        assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
+        assert not paragraph.object_ref().status.is_modified()
+
     (
         PDFAssertions(pdf)
         .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
@@ -219,13 +256,19 @@ def test_modify_paragraph_simple():
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
         paragraph.edit().replace("Awesomely\nObvious!").apply()
 
-        (
-            PDFAssertions(pdf)
-            .assert_textline_has_font("Awesomely", "IXKSWR+Poppins-Bold", 1)
-            .assert_textline_has_font("Obvious!", "IXKSWR+Poppins-Bold", 1)
-            .assert_textline_has_color("Awesomely", Color(255, 255, 255))
-            .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        )
+        paragraph = pdf.page(0).select_paragraphs_starting_with("Awesomely")[0]
+        assert paragraph.object_ref().status is not None
+        assert paragraph.object_ref().status.is_encodable()
+        assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
+        assert paragraph.object_ref().status.is_modified()
+
+    (
+        PDFAssertions(pdf)
+        .assert_textline_has_font("Awesomely", "IXKSWR+Poppins-Bold", 1)
+        .assert_textline_has_font("Obvious!", "IXKSWR+Poppins-Bold", 1)
+        .assert_textline_has_color("Awesomely", Color(255, 255, 255))
+        .assert_textline_has_color("Obvious!", Color(255, 255, 255))
+    )
 
 
 def test_add_paragraph_with_custom_font1_expect_not_found():

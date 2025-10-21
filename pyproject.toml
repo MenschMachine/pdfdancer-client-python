@@ -10,11 +10,11 @@ readme = "README.md"
 authors = [
     { name = "The Famous Cat Ltd.", email = "hi@thefamouscat.com" }
 ]
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

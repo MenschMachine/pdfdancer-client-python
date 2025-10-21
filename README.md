@@ -155,4 +155,4 @@ Releases are published with `python release.py`. Contributions are welcome via p
 
 ## License
 
-MIT © The Famous Cat Ltd.
+Apache License 2.0 © 2025 The Famous Cat Ltd. See `LICENSE` and `NOTICE` for details.

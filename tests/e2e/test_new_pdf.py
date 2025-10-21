@@ -1,6 +1,6 @@
 import pytest
 
-from pdfdancer import PDFDancer, PageSize, Orientation, StandardFonts, Color
+from pdfdancer import PDFDancer, PageSize, Orientation, StandardFonts, Color, ValidationException
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -89,6 +89,30 @@ def test_create_blank_pdf_add_content():
     )
 
 
+def test_create_blank_pdf_add_and_modify_content():
+    """Test creating a blank PDF and adding content"""
+    base_url, token = _require_env()
+
+    with PDFDancer.new(token=token, base_url=base_url) as pdf:
+        (
+            pdf.new_paragraph()
+            .text("Hello from blank PDF")
+            .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)
+            .color(Color(128, 56, 127))
+            .at(0, 100, 201.5)
+            .add()
+        )
+        assert pdf.page(0).select_text_lines()[0].internal_id
+        pdf.save("/tmp/test_create_blank_pdf_add_and_modify_content.pdf")
+
+        with PDFDancer.open("/tmp/test_create_blank_pdf_add_and_modify_content.pdf", token=token,
+                            base_url=base_url) as pdf2:
+            for i in range(0, 10):
+                line = pdf2.page(0).select_text_lines()[0]
+                assert line.edit().replace(f"hello {i}").apply()
+            pdf2.save("/tmp/test_create_blank_pdf_add_and_modify_content2.pdf")
+
+
 def test_create_blank_pdf_add_page():
     base_url, token = _require_env()
 
@@ -108,8 +132,6 @@ def test_create_blank_pdf_add_page():
 def test_create_blank_pdf_invalid_page_count():
     """Test that invalid page count raises validation error"""
     base_url, token = _require_env()
-
-    from pdfdancer import ValidationException
 
     with pytest.raises(ValidationException) as exc_info:
         PDFDancer.new(

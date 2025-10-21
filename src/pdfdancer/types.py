@@ -243,7 +243,10 @@ class TextLineEdit(BaseTextEdit):
             # noinspection PyProtectedMember
             return self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
         else:
-            raise UnsupportedOperation("TextLineEdit cannot be applied to text lines")
+
+            # noinspection PyProtectedMember
+            # return self._target_obj._client._modify_text_line(self._object_ref, new_textline)
+            raise UnsupportedOperation("Full TextLineEdit not implemented - TODO")
 
 
 class ParagraphObject(PDFObjectBase):

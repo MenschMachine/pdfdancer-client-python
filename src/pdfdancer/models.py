@@ -154,7 +154,6 @@ class StandardFonts(Enum):
 
 
 class ObjectType(Enum):
-    """Object type enumeration matching the Java ObjectType."""
     FORM_FIELD = "FORM_FIELD"
     IMAGE = "IMAGE"
     FORM_X_OBJECT = "FORM_X_OBJECT"
@@ -192,7 +191,6 @@ class Point:
 class BoundingRect:
     """
     Represents a bounding rectangle with position and dimensions.
-    Matches the Java BoundingRect class.
     """
     x: float
     y: float
@@ -216,7 +214,6 @@ class BoundingRect:
 class Position:
     """
     Represents spatial positioning and location information for PDF objects.
-    Closely mirrors the Java Position class with Python conventions.
     """
     page_index: Optional[int] = None
     shape: Optional[ShapeType] = None
@@ -230,7 +227,6 @@ class Position:
     def at_page(page_index: int) -> 'Position':
         """
         Creates a position specification for an entire page.
-        Equivalent to Position.fromPageIndex() in Java.
         """
         return Position(page_index=page_index, mode=PositionMode.CONTAINS)
 
@@ -238,7 +234,6 @@ class Position:
     def at_page_coordinates(page_index: int, x: float, y: float) -> 'Position':
         """
         Creates a position specification for specific coordinates on a page.
-        Equivalent to Position.onPageCoordinates() in Java.
         """
         position = Position.at_page(page_index)
         position.at_coordinates(Point(x, y))
@@ -248,7 +243,6 @@ class Position:
     def by_name(name: str) -> 'Position':
         """
         Creates a position specification for finding objects by name.
-        Equivalent to Position.byName() in Java.
         """
         position = Position()
         position.name = name
@@ -257,7 +251,6 @@ class Position:
     def at_coordinates(self, point: Point) -> 'Position':
         """
         Sets the position to a specific point location.
-        Equivalent to Position.set() in Java.
         """
         self.mode = PositionMode.CONTAINS
         self.shape = ShapeType.POINT
@@ -293,7 +286,6 @@ class Position:
 class ObjectRef:
     """
     Lightweight reference to a PDF object providing identity and type information.
-    Mirrors the Java ObjectRef class exactly.
     """
     internal_id: str
     position: Position
@@ -333,7 +325,6 @@ class Color:
     a: int = 255  # Alpha channel, default fully opaque
 
     def __post_init__(self):
-        # Validation similar to Java client
         for component in [self.r, self.g, self.b, self.a]:
             if not 0 <= component <= 255:
                 raise ValueError(f"Color component must be between 0 and 255, got {component}")
@@ -354,7 +345,6 @@ class Font:
 class Image:
     """
     Represents an image object in a PDF document.
-    Matches the Java Image class structure.
     """
     position: Optional[Position] = None
     format: Optional[str] = None
@@ -375,7 +365,6 @@ class Image:
 class Paragraph:
     """
     Represents a paragraph of text in a PDF document.
-    Structure mirrors the Java Paragraph class.
     """
     position: Optional[Position] = None
     text_lines: Optional[List[str]] = None
@@ -456,7 +445,7 @@ class MoveRequest:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        # Server API expects the new coordinates under 'newPosition' (see Java MoveRequest)
+        # Server API expects the new coordinates under 'newPosition'
         return {
             "objectRef": {
                 "internalId": self.object_ref.internal_id,
@@ -488,7 +477,7 @@ class AddRequest:
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization matching server API.
         Server expects an AddRequest with a nested 'object' containing the PDFObject
-        (with a 'type' discriminator), mirroring Java AddRequest(PDFObject object).
+        (with a 'type' discriminator).
         """
         obj = self.pdf_object
         return {

@@ -12,7 +12,8 @@ from .exceptions import (
 )
 from .models import (
     ObjectRef, Position, ObjectType, Font, Color, Image, BoundingRect, Paragraph, FormFieldRef, TextObjectRef,
-    PageRef, PositionMode, ShapeType, Point, StandardFonts, PageSize, Orientation
+    PageRef, PositionMode, ShapeType, Point, StandardFonts, PageSize, Orientation, TextStatus, FontRecommendation,
+    FontType
 )
 from .paragraph_builder import ParagraphBuilder
 
@@ -37,6 +38,9 @@ __all__ = [
     "StandardFonts",
     "PageSize",
     "Orientation",
+    "TextStatus",
+    "FontRecommendation",
+    "FontType",
     "PdfDancerException",
     "FontNotFoundException",
     "ValidationException",

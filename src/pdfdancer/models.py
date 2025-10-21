@@ -610,6 +610,58 @@ class FormFieldRef(ObjectRef):
         return self.value
 
 
+class FontType(Enum):
+    """Font type classification from the PDF."""
+    SYSTEM = "SYSTEM"
+    STANDARD = "STANDARD"
+    EMBEDDED = "EMBEDDED"
+
+
+@dataclass
+class FontRecommendation:
+    """Represents a font recommendation with similarity score."""
+    font_name: str
+    font_type: 'FontType'
+    similarity_score: float
+
+    def get_font_name(self) -> str:
+        """Get the recommended font name."""
+        return self.font_name
+
+    def get_font_type(self) -> 'FontType':
+        """Get the recommended font type."""
+        return self.font_type
+
+    def get_similarity_score(self) -> float:
+        """Get the similarity score."""
+        return self.similarity_score
+
+
+@dataclass
+class TextStatus:
+    """Status information for text objects."""
+    modified: bool
+    encodable: bool
+    font_type: FontType
+    font_recommendation: FontRecommendation
+
+    def is_modified(self) -> bool:
+        """Check if the text has been modified."""
+        return self.modified
+
+    def is_encodable(self) -> bool:
+        """Check if the text is encodable."""
+        return self.encodable
+
+    def get_font_type(self) -> FontType:
+        """Get the font type."""
+        return self.font_type
+
+    def get_font_recommendation(self) -> FontRecommendation:
+        """Get the font recommendation."""
+        return self.font_recommendation
+
+
 class TextObjectRef(ObjectRef):
     """
     Represents a text object reference with additional text-specific properties.
@@ -619,13 +671,14 @@ class TextObjectRef(ObjectRef):
     def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
                  text: Optional[str] = None, font_name: Optional[str] = None,
                  font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None,
-                 color: Optional[Color] = None):
+                 color: Optional[Color] = None, status: Optional[TextStatus] = None):
         super().__init__(internal_id, position, object_type)
         self.text = text
         self.font_name = font_name
         self.font_size = font_size
         self.line_spacings = line_spacings
         self.color = color
+        self.status = status
         self.children: List['TextObjectRef'] = []
 
     def get_text(self) -> Optional[str]:
@@ -651,6 +704,10 @@ class TextObjectRef(ObjectRef):
     def get_children(self) -> List['TextObjectRef']:
         """Get the child text objects."""
         return self.children
+
+    def get_status(self) -> Optional[TextStatus]:
+        """Get the status information."""
+        return self.status
 
 
 @dataclass

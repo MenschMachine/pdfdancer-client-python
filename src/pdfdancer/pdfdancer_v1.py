@@ -1171,6 +1171,29 @@ class PDFDancer:
             if all(isinstance(v, int) for v in [red, green, blue]):
                 color = Color(red, green, blue, alpha)
 
+        # Parse status if present
+        status = None
+        status_data = obj_data.get('status')
+        if isinstance(status_data, dict):
+            from .models import TextStatus, FontRecommendation, FontType
+
+            # Parse font recommendation
+            font_rec_data = status_data.get('fontRecommendation')
+            font_rec = None
+            if isinstance(font_rec_data, dict):
+                font_rec = FontRecommendation(
+                    font_name=font_rec_data.get('fontName', ''),
+                    font_type=FontType(font_rec_data.get('fontType', 'SYSTEM')),
+                    similarity_score=font_rec_data.get('similarityScore', 0.0)
+                )
+
+            status = TextStatus(
+                modified=status_data.get('modified', False),
+                encodable=status_data.get('encodable', True),
+                font_type=FontType(status_data.get('fontType', 'UNKNOWN')),
+                font_recommendation=font_rec
+            )
+
         text_object = TextObjectRef(
             internal_id=internal_id,
             position=position,
@@ -1179,7 +1202,8 @@ class PDFDancer:
             font_name=obj_data.get('fontName') if isinstance(obj_data.get('fontName'), str) else None,
             font_size=obj_data.get('fontSize') if isinstance(obj_data.get('fontSize'), (int, float)) else None,
             line_spacings=line_spacings,
-            color=color
+            color=color,
+            status=status
         )
 
         if isinstance(obj_data.get('children'), list) and len(obj_data['children']) > 0:

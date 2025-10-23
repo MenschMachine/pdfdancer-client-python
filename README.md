@@ -122,6 +122,9 @@ with helpers such as `delete()`, `move_to(x, y)`, or `edit()` depending on the o
 - Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
+- The HTTP client now keeps TLS connections warm with aggressive pooling and retries. Fine-tune via
+  environment variables such as `PDFDANCER_POOL_CONNECTIONS`, `PDFDANCER_POOL_MAXSIZE`,
+  `PDFDANCER_RETRY_TOTAL`, and `PDFDANCER_TRUST_ENV=true` (if you want to honour system proxy settings).
 
 ## Error Handling
 

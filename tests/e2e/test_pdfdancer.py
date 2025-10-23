@@ -20,7 +20,7 @@ def test_env_vars():
     with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
         pass
 
-    os.environ["PDFDANCER_BASE_URL"] = "http://www.google.com"
+    os.environ["PDFDANCER_BASE_URL"] = "https://www.google.com"
     with pytest.raises(HttpClientException) as exc_info:
         with PDFDancer.open(pdf_path) as pdf:
             pass

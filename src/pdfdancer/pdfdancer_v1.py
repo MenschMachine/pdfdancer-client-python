@@ -7,6 +7,7 @@ Provides session-based PDF manipulation operations with strict validation.
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import List, Optional, Union, BinaryIO, Mapping, Any
 
@@ -14,6 +15,13 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Global variable to disable SSL certificate verification
+# Set to True to skip SSL verification (useful for testing with self-signed certificates)
+# WARNING: Only use in development/testing environments
+DISABLE_SSL_VERIFY = False
+
+DEBUG = False
 
 from . import ParagraphBuilder
 from .exceptions import (
@@ -470,11 +478,20 @@ class PDFDancer:
                 'pdf': ('document.pdf', self._pdf_bytes, 'application/pdf')
             }
 
+            request_size = len(self._pdf_bytes)
+            if DEBUG:
+                print(f"{time.time()}|POST /session/create - request size: {request_size} bytes")
+
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/session/create"),
                 files=files,
-                timeout=self._read_timeout if self._read_timeout > 0 else None
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
+                verify=not DISABLE_SSL_VERIFY
             )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(f"{time.time()}|POST /session/create - response size: {response_size} bytes")
 
             self._handle_authentication_error(response)
             response.raise_for_status()
@@ -538,13 +555,23 @@ class PDFDancer:
                 raise ValidationException(f"Initial page count must be at least 1, got {initial_page_count}")
             request_data['initialPageCount'] = initial_page_count
 
+            request_body = json.dumps(request_data)
+            request_size = len(request_body.encode('utf-8'))
+            if DEBUG:
+                print(f"{time.time()}|POST /session/new - request size: {request_size} bytes")
+
             headers = {'Content-Type': 'application/json'}
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/session/new"),
                 json=request_data,
                 headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
+                verify=not DISABLE_SSL_VERIFY
             )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(f"{time.time()}|POST /session/new - response size: {response_size} bytes")
 
             self._handle_authentication_error(response)
             response.raise_for_status()
@@ -572,14 +599,26 @@ class PDFDancer:
         }
 
         try:
+            request_size = 0
+            if data is not None:
+                request_body = json.dumps(data)
+                request_size = len(request_body.encode('utf-8'))
+            if DEBUG:
+                print(f"{time.time()}|{method} {path} - request size: {request_size} bytes")
+
             response = self._session.request(
                 method=method,
                 url=self._cleanup_url_path(self._base_url, path),
                 json=data,
                 params=params,
                 headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
+                verify=not DISABLE_SSL_VERIFY
             )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(f"{time.time()}|{method} {path} - response size: {response_size} bytes")
 
             # Handle FontNotFoundException
             if response.status_code == 404:
@@ -1040,13 +1079,22 @@ class PDFDancer:
                 'ttfFile': (filename, font_data, 'font/ttf')
             }
 
+            request_size = len(font_data)
+            if DEBUG:
+                print(f"{time.time()}|POST /font/register - request size: {request_size} bytes")
+
             headers = {'X-Session-Id': self._session_id}
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/font/register"),
                 files=files,
                 headers=headers,
-                timeout=30
+                timeout=30,
+                verify=not DISABLE_SSL_VERIFY
             )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(f"{time.time()}|POST /font/register - response size: {response_size} bytes")
 
             response.raise_for_status()
             return response.text.strip()

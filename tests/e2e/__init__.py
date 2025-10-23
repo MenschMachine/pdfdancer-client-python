@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 import requests
@@ -25,12 +26,12 @@ def _read_token() -> str | None:
     return None
 
 
-def _server_up(base_url: str) -> bool:
+def _server_up(base_url: str) -> Tuple[bool, str]:
     try:
-        r = requests.get(f"{base_url}/ping", timeout=3)
-        return r.status_code == 200 and 'Pong' in r.text
-    except Exception:
-        return False
+        r = requests.get(f"{base_url}/ping", timeout=3, verify=False)
+        return r.status_code == 200 and 'Pong' in r.text, r.text
+    except Exception as e:
+        return False, str(e)
 
 
 def _require_env_and_fixture(pdf_filename: str) -> tuple[str, str, Path]:
@@ -44,8 +45,10 @@ def _require_env_and_fixture(pdf_filename: str) -> tuple[str, str, Path]:
 def _require_env() -> tuple[str, str | None]:
     base_url = _get_base_url()
     token = _read_token()
-    if not _server_up(base_url):
-        pytest.fail(f"PDFDancer server not reachable at {base_url}; set PDFDANCER_BASE_URL or start server")
+    up, msg = _server_up(base_url)
+    if not up:
+        pytest.fail(
+            f"PDFDancer server not reachable at {base_url}, reason: {msg}; set PDFDANCER_BASE_URL or start server")
     if not token:
         pytest.fail("PDFDANCER_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo")
     return base_url, token

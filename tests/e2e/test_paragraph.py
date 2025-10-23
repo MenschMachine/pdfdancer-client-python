@@ -282,7 +282,7 @@ def test_add_paragraph_with_custom_font1_expect_not_found():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         with pytest.raises(Exception, match="Font not found"):
-            (
+            response = (
                 pdf.new_paragraph()
                 .text("Awesomely\nObvious!")
                 .font("Roboto", 14)
@@ -290,6 +290,7 @@ def test_add_paragraph_with_custom_font1_expect_not_found():
                 .at(0, 300.1, 500)
                 .add()
             )
+            print(response)
 
 
 def test_add_paragraph_with_custom_font1_1():

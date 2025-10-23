@@ -134,19 +134,206 @@ Operations raise subclasses of `PdfDancerException`:
 
 Wrap automated workflows in `try/except` blocks to surface actionable errors to your users.
 
-## Development
+## Development Setup
+
+### Prerequisites
+
+- **Python 3.10 or higher** (Python 3.9 has SSL issues with large file uploads)
+- **Git** for cloning the repository
+- **PDFDancer API token** for running end-to-end tests
+
+### Step-by-Step Setup
+
+#### 1. Clone the Repository
 
 ```bash
-python -m venv venv
-source venv/bin/activate            # Windows: venv\Scripts\activate
-pip install -e ".[dev]"
-
-pytest -q                           # unit suite
-pytest tests/e2e                    # integration tests (requires live API + fixtures)
-python -m build                     # produce distribution artifacts
+git clone https://github.com/MenschMachine/pdfdancer-client-python.git
+cd pdfdancer-client-python/_main
 ```
 
-Releases are published with `python release.py`. Contributions are welcome via pull request.
+#### 2. Create a Virtual Environment
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+
+# On Windows:
+venv\Scripts\activate
+```
+
+You should see `(venv)` in your terminal prompt indicating the virtual environment is active.
+
+#### 3. Install Dependencies
+
+```bash
+# Install the package in editable mode with development dependencies
+pip install -e ".[dev]"
+
+# Alternatively, install dependencies separately:
+# pip install -e .
+# pip install -r requirements-dev.txt
+```
+
+This installs:
+- The `pdfdancer` package in editable mode (changes reflect immediately)
+- Development dependencies: `pytest`, `build`, `twine`, etc.
+
+#### 4. Configure API Token
+
+Set your PDFDancer API token as an environment variable:
+
+```bash
+# On macOS/Linux:
+export PDFDANCER_TOKEN="your-api-token-here"
+
+# On Windows (Command Prompt):
+set PDFDANCER_TOKEN=your-api-token-here
+
+# On Windows (PowerShell):
+$env:PDFDANCER_TOKEN="your-api-token-here"
+```
+
+For permanent configuration, add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
+
+#### 5. Verify Installation
+
+```bash
+# Run the test suite
+pytest tests/ -v
+
+# Run only unit tests (faster)
+pytest tests/test_models.py -v
+
+# Run end-to-end tests (requires API token)
+pytest tests/e2e/ -v
+```
+
+All 123 tests should pass if everything is set up correctly.
+
+### Common Development Tasks
+
+#### Running Tests
+
+```bash
+# Run all tests with verbose output
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_models.py -v
+
+# Run end-to-end tests only
+pytest tests/e2e/ -v
+
+# Run with coverage report
+pytest tests/ --cov=pdfdancer --cov-report=term-missing
+```
+
+#### Building Distribution Packages
+
+```bash
+# Build wheel and source distribution
+python -m build
+
+# Verify the built packages
+python -m twine check dist/*
+```
+
+Artifacts will be created in the `dist/` directory.
+
+#### Publishing to PyPI
+
+```bash
+# Test upload to TestPyPI (recommended first)
+python -m twine upload --repository testpypi dist/*
+
+# Upload to PyPI
+python -m twine upload dist/*
+
+# Or use the release script
+python release.py
+```
+
+#### Code Quality
+
+```bash
+# The project follows existing code style
+# No formatter is configured - match the existing patterns
+
+# Type checking (if using mypy)
+mypy src/pdfdancer/
+
+# Run linting (if configured)
+pylint src/pdfdancer/
+```
+
+### Project Structure
+
+```
+pdfdancer-client-python/_main/
+├── src/pdfdancer/          # Main package source
+│   ├── __init__.py         # Package exports
+│   ├── pdfdancer_v1.py     # Core PDFDancer and PageClient classes
+│   ├── paragraph_builder.py # Fluent paragraph builders
+│   ├── image_builder.py    # Fluent image builders
+│   ├── models.py           # Data models (Position, Font, Color, etc.)
+│   ├── types.py            # Object wrappers (ParagraphObject, etc.)
+│   └── exceptions.py       # Exception hierarchy
+├── tests/                  # Test suite
+│   ├── test_models.py      # Model unit tests
+│   ├── e2e/                # End-to-end integration tests
+│   └── fixtures/           # Test fixtures and sample PDFs
+├── docs/                   # Documentation
+├── pyproject.toml          # Project metadata and dependencies
+├── setup.py                # Build configuration
+└── README.md               # This file
+```
+
+### Troubleshooting
+
+#### Virtual Environment Issues
+
+If `python -m venv venv` fails, ensure you have the `venv` module:
+
+```bash
+# On Ubuntu/Debian
+sudo apt-get install python3-venv
+
+# On macOS (using Homebrew)
+brew install python@3.10
+```
+
+#### SSL Errors with Large Files
+
+Upgrade to Python 3.10+ if you encounter SSL errors during large file uploads.
+
+#### Import Errors
+
+Ensure the virtual environment is activated and the package is installed in editable mode:
+
+```bash
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+pip install -e .
+```
+
+#### Test Failures
+
+- Ensure `PDFDANCER_TOKEN` is set for e2e tests
+- Check network connectivity to the PDFDancer API
+- Verify you're using Python 3.10 or higher
+
+### Contributing
+
+Contributions are welcome via pull request. Please:
+
+1. Create a feature branch from `main`
+2. Add tests for new functionality
+3. Ensure all tests pass: `pytest tests/ -v`
+4. Follow existing code style and patterns
+5. Update documentation as needed
 
 ## Related SDKs
 

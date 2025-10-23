@@ -272,7 +272,8 @@ class ParagraphBuilder:
         return lines
 
     def add(self):
-        self._client._add_paragraph(self._build())
+        # noinspection PyProtectedMember
+        return self._client._add_paragraph(self._build())
 
 
 class ParagraphPageBuilder(ParagraphBuilder):

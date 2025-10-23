@@ -120,11 +120,9 @@ with helpers such as `delete()`, `move_to(x, y)`, or `edit()` depending on the o
 ## Configuration
 
 - Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
-- Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox environments).
-- Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()`.
-- The HTTP client now keeps TLS connections warm with aggressive pooling and retries. Fine-tune via
-  environment variables such as `PDFDANCER_POOL_CONNECTIONS`, `PDFDANCER_POOL_MAXSIZE`,
-  `PDFDANCER_RETRY_TOTAL`, and `PDFDANCER_TRUST_ENV=true` (if you want to honour system proxy settings).
+- Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox or local environments). Defaults to `https://api.pdfdancer.com`.
+- Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()` (default: 30 seconds).
+- For testing against self-signed certificates, call `pdfdancer.set_ssl_verify(False)` to temporarily disable TLS verification.
 
 ## Error Handling
 
@@ -176,14 +174,13 @@ You should see `(venv)` in your terminal prompt indicating the virtual environme
 # Install the package in editable mode with development dependencies
 pip install -e ".[dev]"
 
-# Alternatively, install dependencies separately:
+# Alternatively, install runtime dependencies only:
 # pip install -e .
-# pip install -r requirements-dev.txt
 ```
 
 This installs:
 - The `pdfdancer` package in editable mode (changes reflect immediately)
-- Development dependencies: `pytest`, `build`, `twine`, etc.
+- Development tooling including `pytest`, `pytest-cov`, `pytest-mock`, `black`, `isort`, `flake8`, `mypy`, `build`, and `twine`.
 
 #### 4. Configure API Token
 
@@ -215,7 +212,7 @@ pytest tests/test_models.py -v
 pytest tests/e2e/ -v
 ```
 
-All 123 tests should pass if everything is set up correctly.
+All tests should pass if everything is set up correctly.
 
 ### Common Development Tasks
 
@@ -263,14 +260,15 @@ python release.py
 #### Code Quality
 
 ```bash
-# The project follows existing code style
-# No formatter is configured - match the existing patterns
+# Format code
+black src tests
+isort src tests
 
-# Type checking (if using mypy)
+# Lint
+flake8 src tests
+
+# Type checking
 mypy src/pdfdancer/
-
-# Run linting (if configured)
-pylint src/pdfdancer/
 ```
 
 ### Project Structure
@@ -290,8 +288,10 @@ pdfdancer-client-python/_main/
 │   ├── e2e/                # End-to-end integration tests
 │   └── fixtures/           # Test fixtures and sample PDFs
 ├── docs/                   # Documentation
+├── dist/                   # Build artifacts (created after packaging)
+├── logs/                   # Local execution logs (ignored in VCS)
 ├── pyproject.toml          # Project metadata and dependencies
-├── setup.py                # Build configuration
+├── release.py              # Helper for publishing releases
 └── README.md               # This file
 ```
 

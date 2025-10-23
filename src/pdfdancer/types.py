@@ -189,7 +189,7 @@ class ParagraphEdit(BaseTextEdit):
         ):
             # noinspection PyProtectedMember
             result = self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
-            if result.warning is not None:
+            if result.warning:
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
         else:
@@ -202,7 +202,7 @@ class ParagraphEdit(BaseTextEdit):
             )
             # noinspection PyProtectedMember
             result = self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
-            if result.warning is not None:
+            if result.warning:
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
 
@@ -250,7 +250,7 @@ class TextLineEdit(BaseTextEdit):
         ):
             # noinspection PyProtectedMember
             result = self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
-            if result.warning is not None:
+            if result.warning:
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
         else:

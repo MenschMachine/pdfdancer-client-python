@@ -5,6 +5,7 @@ A Python client that closely mirrors the Java Client class structure and functio
 Provides session-based PDF manipulation operations with strict validation.
 """
 
+import gzip
 import json
 import os
 import time
@@ -22,7 +23,7 @@ load_dotenv()
 # WARNING: Only use in development/testing environments
 DISABLE_SSL_VERIFY = False
 
-DEBUG = False
+DEBUG = True
 DEFAULT_TOLERANCE = 0.01
 
 
@@ -574,18 +575,38 @@ class PDFDancer:
         Creates a new PDF processing session by uploading the PDF data.
         """
         try:
-            files = {
-                'pdf': ('document.pdf', self._pdf_bytes, 'application/pdf')
+            # Prepare multipart form data
+            import io
+            from requests_toolbelt import MultipartEncoder
+
+            encoder = MultipartEncoder(
+                fields={'pdf': ('document.pdf', io.BytesIO(self._pdf_bytes), 'application/pdf')}
+            )
+
+            # Get the uncompressed body
+            uncompressed_body = encoder.to_string()
+
+            # Compress entire request body using gzip
+            compressed_body = gzip.compress(uncompressed_body)
+
+            original_size = len(uncompressed_body)
+            compressed_size = len(compressed_body)
+            compression_ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
+
+            if DEBUG:
+                print(f"{time.time()}|POST /session/create - original size: {original_size} bytes, "
+                      f"compressed size: {compressed_size} bytes, "
+                      f"compression: {compression_ratio:.1f}%")
+
+            headers = {
+                'X-Generated-At': _generate_timestamp(),
+                'Content-Type': encoder.content_type,
+                'Content-Encoding': 'gzip'
             }
 
-            request_size = len(self._pdf_bytes)
-            if DEBUG:
-                print(f"{time.time()}|POST /session/create - request size: {request_size} bytes")
-
-            headers = {'X-Generated-At': _generate_timestamp()}
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/session/create"),
-                files=files,
+                data=compressed_body,
                 headers=headers,
                 timeout=self._read_timeout if self._read_timeout > 0 else None,
                 verify=not DISABLE_SSL_VERIFY

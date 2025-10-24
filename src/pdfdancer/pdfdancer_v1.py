@@ -21,7 +21,7 @@ load_dotenv()
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)
 # WARNING: Only use in development/testing environments
-DISABLE_SSL_VERIFY = False
+DISABLE_SSL_VERIFY = os.environ.get("PDFDANCER_CLIENT_DISABLE_SSL_VERIFY", False)
 
 DEBUG = os.environ.get("PDFDANCER_CLIENT_DEBUG", False)
 DEFAULT_TOLERANCE = 0.01

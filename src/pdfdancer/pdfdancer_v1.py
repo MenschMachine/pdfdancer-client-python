@@ -8,6 +8,7 @@ Provides session-based PDF manipulation operations with strict validation.
 import json
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Union, BinaryIO, Mapping, Any
 
@@ -23,6 +24,94 @@ DISABLE_SSL_VERIFY = False
 
 DEBUG = False
 DEFAULT_TOLERANCE = 0.01
+
+
+def _generate_timestamp() -> str:
+    """
+    Generate a timestamp string in the format expected by the API.
+    Format: YYYY-MM-DDTHH:MM:SS.ffffffZ (with microseconds)
+
+    Returns:
+        Timestamp string with UTC timezone
+    """
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+
+def _parse_timestamp(timestamp_str: str) -> datetime:
+    """
+    Parse timestamp string, handling both microseconds and nanoseconds precision.
+
+    Args:
+        timestamp_str: Timestamp string in format YYYY-MM-DDTHH:MM:SS.fffffffZ
+                      (with 6 or 9 fractional digits)
+
+    Returns:
+        datetime object with UTC timezone
+    """
+    # Remove the 'Z' suffix
+    ts = timestamp_str.rstrip('Z')
+
+    # Handle nanoseconds (9 digits) by truncating to microseconds (6 digits)
+    # Python's datetime only supports microseconds precision
+    if '.' in ts:
+        date_part, frac_part = ts.rsplit('.', 1)
+        if len(frac_part) > 6:
+            # Truncate to 6 digits (microseconds)
+            frac_part = frac_part[:6]
+        ts = f"{date_part}.{frac_part}"
+
+    return datetime.fromisoformat(ts).replace(tzinfo=timezone.utc)
+
+
+def _log_generated_at_header(response: requests.Response, method: str, path: str) -> None:
+    """
+    Check for X-Generated-AT and X-Received-At headers and log timing information if DEBUG=True.
+
+    Expected timestamp formats:
+    - 2025-10-24T08:49:39.161945Z (microseconds - 6 digits)
+    - 2025-10-24T08:58:45.468131265Z (nanoseconds - 9 digits)
+
+    Args:
+        response: The HTTP response object
+        method: HTTP method used
+        path: API path
+    """
+    if not DEBUG:
+        return
+
+    generated_at = response.headers.get('X-Generated-AT')
+    received_at = response.headers.get('X-Received-At')
+
+    if generated_at or received_at:
+        try:
+            log_parts = []
+            current_time = datetime.now(timezone.utc)
+
+            # Parse and log X-Received-At
+            received_time = None
+            if received_at:
+                received_time = _parse_timestamp(received_at)
+                time_since_received = (current_time - received_time).total_seconds()
+                log_parts.append(f"X-Received-At: {received_at}, time since received: {time_since_received:.3f}s")
+
+            # Parse and log X-Generated-AT
+            generated_time = None
+            if generated_at:
+                generated_time = _parse_timestamp(generated_at)
+                time_since_generated = (current_time - generated_time).total_seconds()
+                log_parts.append(f"X-Generated-AT: {generated_at}, time since generated: {time_since_generated:.3f}s")
+
+            # Calculate processing time (X-Generated-AT - X-Received-At)
+            if received_time and generated_time:
+                processing_time = (generated_time - received_time).total_seconds()
+                log_parts.append(f"processing time: {processing_time:.3f}s")
+
+            if log_parts:
+                print(f"{time.time()}|{method} {path} - {', '.join(log_parts)}")
+
+        except (ValueError, AttributeError) as e:
+            print(f"{time.time()}|{method} {path} - Header parse error: {e}")
+
 
 from . import ParagraphBuilder
 from .exceptions import (
@@ -493,9 +582,11 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /session/create - request size: {request_size} bytes")
 
+            headers = {'X-Generated-At': _generate_timestamp()}
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/session/create"),
                 files=files,
+                headers=headers,
                 timeout=self._read_timeout if self._read_timeout > 0 else None,
                 verify=not DISABLE_SSL_VERIFY
             )
@@ -504,6 +595,7 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /session/create - response size: {response_size} bytes")
 
+            _log_generated_at_header(response, "POST", "/session/create")
             self._handle_authentication_error(response)
             response.raise_for_status()
             session_id = response.text.strip()
@@ -571,7 +663,10 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /session/new - request size: {request_size} bytes")
 
-            headers = {'Content-Type': 'application/json'}
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Generated-At': _generate_timestamp()
+            }
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/session/new"),
                 json=request_data,
@@ -584,6 +679,7 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /session/new - response size: {response_size} bytes")
 
+            _log_generated_at_header(response, "POST", "/session/new")
             self._handle_authentication_error(response)
             response.raise_for_status()
             session_id = response.text.strip()
@@ -606,7 +702,8 @@ class PDFDancer:
         """
         headers = {
             'X-Session-Id': self._session_id,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Generated-At': _generate_timestamp()
         }
 
         try:
@@ -630,6 +727,8 @@ class PDFDancer:
             response_size = len(response.content)
             if DEBUG:
                 print(f"{time.time()}|{method} {path} - response size: {response_size} bytes")
+
+            _log_generated_at_header(response, method, path)
 
             # Handle FontNotFoundException
             if response.status_code == 404:
@@ -1215,7 +1314,10 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /font/register - request size: {request_size} bytes")
 
-            headers = {'X-Session-Id': self._session_id}
+            headers = {
+                'X-Session-Id': self._session_id,
+                'X-Generated-At': _generate_timestamp()
+            }
             response = self._session.post(
                 self._cleanup_url_path(self._base_url, "/font/register"),
                 files=files,
@@ -1228,6 +1330,7 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|POST /font/register - response size: {response_size} bytes")
 
+            _log_generated_at_header(response, "POST", "/font/register")
             response.raise_for_status()
             return response.text.strip()
 

@@ -22,6 +22,7 @@ load_dotenv()
 DISABLE_SSL_VERIFY = False
 
 DEBUG = False
+DEFAULT_TOLERANCE = 0.01
 
 from . import ParagraphBuilder
 from .exceptions import (
@@ -61,9 +62,10 @@ class PageClient:
         else:
             self.orientation = orientation
 
-    def select_paths_at(self, x: float, y: float) -> List[PathObject]:
+    def select_paths_at(self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE) -> List[PathObject]:
+        position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_path_objects(self.root._find_paths(Position.at_page_coordinates(self.page_index, x, y)))
+        return self.root._to_path_objects(self.root._find_paths(position, tolerance))
 
     def select_paragraphs(self) -> List[ParagraphObject]:
         # noinspection PyProtectedMember
@@ -87,10 +89,10 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
-    def select_paragraphs_at(self, x: float, y: float) -> List[ParagraphObject]:
+    def select_paragraphs_at(self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE) -> List[ParagraphObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
+        return self.root._to_paragraph_objects(self.root._find_paragraphs(position, tolerance))
 
     def select_text_lines(self) -> List[TextLineObject]:
         position = Position.at_page(self.page_index)
@@ -103,29 +105,29 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
-    def select_text_lines_at(self, x, y) -> List[TextLineObject]:
+    def select_text_lines_at(self, x, y, tolerance: float = DEFAULT_TOLERANCE) -> List[TextLineObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
+        return self.root._to_textline_objects(self.root._find_text_lines(position, tolerance))
 
     def select_images(self) -> List[ImageObject]:
         # noinspection PyProtectedMember
         return self.root._to_image_objects(self.root._find_images(Position.at_page(self.page_index)))
 
-    def select_images_at(self, x: float, y: float) -> List[ImageObject]:
+    def select_images_at(self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE) -> List[ImageObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_image_objects(self.root._find_images(position))
+        return self.root._to_image_objects(self.root._find_images(position, tolerance))
 
     def select_forms(self) -> List[FormObject]:
         position = Position.at_page(self.page_index)
         # noinspection PyProtectedMember
         return self.root._to_form_objects(self.root._find_form_x_objects(position))
 
-    def select_forms_at(self, x: float, y: float) -> List[FormObject]:
+    def select_forms_at(self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE) -> List[FormObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_form_objects(self.root._find_form_x_objects(position))
+        return self.root._to_form_objects(self.root._find_form_x_objects(position, tolerance))
 
     def select_form_fields(self) -> List[FormFieldObject]:
         position = Position.at_page(self.page_index)
@@ -138,10 +140,10 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(self.root._find_form_fields(pos))
 
-    def select_form_fields_at(self, x: float, y: float) -> List[FormFieldObject]:
+    def select_form_fields_at(self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE) -> List[FormFieldObject]:
         position = Position.at_page_coordinates(self.page_index, x, y)
         # noinspection PyProtectedMember
-        return self.root._to_form_field_objects(self.root._find_form_fields(position))
+        return self.root._to_form_field_objects(self.root._find_form_fields(position, tolerance))
 
     @classmethod
     def from_ref(cls, root: 'PDFDancer', page_ref: PageRef) -> 'PageClient':
@@ -321,6 +323,10 @@ class PDFDancer:
         # Set pdf_bytes to None since we don't have the PDF bytes yet
         instance._pdf_bytes = None
 
+        # Initialize snapshot caches (lazy-loaded)
+        instance._document_snapshot = None
+        instance._page_snapshots = {}
+
         return instance
 
     def __init__(self, token: str, pdf_data: Union[bytes, Path, str, BinaryIO],
@@ -360,6 +366,10 @@ class PDFDancer:
 
         # Create session - equivalent to Java constructor behavior
         self._session_id = self._create_session()
+
+        # Initialize snapshot caches (lazy-loaded)
+        self._document_snapshot: Optional[DocumentSnapshot] = None
+        self._page_snapshots: dict[int, PageSnapshot] = {}
 
     @staticmethod
     def _process_pdf_data(pdf_data: Union[bytes, Path, str, BinaryIO]) -> bytes:
@@ -640,25 +650,37 @@ class PDFDancer:
             raise HttpClientException(f"API request failed: {error_message}", response=getattr(e, 'response', None),
                                       cause=e) from None
 
-    def _find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None,
+              tolerance: float = DEFAULT_TOLERANCE) -> List[ObjectRef]:
         """
         Searches for PDF objects matching the specified criteria.
-        This method provides flexible search capabilities across all PDF content,
-        allowing filtering by object type and position constraints.
+        Uses snapshot cache for all queries except paths at specific coordinates.
 
         Args:
             object_type: The type of objects to find (None for all types)
             position: Positional constraints for the search (None for all positions)
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
 
         Returns:
             List of object references matching the search criteria
         """
-        request_data = FindRequest(object_type, position).to_dict()
-        response = self._make_request('POST', '/pdf/find', data=request_data)
+        # Special case: PATH queries with bounding_rect need API (full vector data)
+        if object_type == ObjectType.PATH and position and position.bounding_rect:
+            request_data = FindRequest(object_type, position).to_dict()
+            response = self._make_request('POST', '/pdf/find', data=request_data)
+            objects_data = response.json()
+            return [self._parse_object_ref(obj_data) for obj_data in objects_data]
 
-        # Parse response into ObjectRef objects
-        objects_data = response.json()
-        return [self._parse_object_ref(obj_data) for obj_data in objects_data]
+        # Use snapshot for all other queries
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, object_type, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, object_type, position, tolerance)
 
     def select_paragraphs(self) -> List[TextObjectRef]:
         """
@@ -666,21 +688,39 @@ class PDFDancer:
         """
         return self._find_paragraphs(None)
 
-    def _find_paragraphs(self, position: Optional[Position] = None) -> List[TextObjectRef]:
+    def _find_paragraphs(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
+        TextObjectRef]:
         """
         Searches for paragraph objects returning TextObjectRef with hierarchical structure.
+        Uses snapshot cache for all queries.
         """
-        request_data = FindRequest(ObjectType.PARAGRAPH, position).to_dict()
-        response = self._make_request('POST', '/pdf/find', data=request_data)
+        # Use snapshot for all queries (including spatial)
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.PARAGRAPH, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.PARAGRAPH, position, tolerance)
 
-        objects_data = response.json()
-        return [self._parse_text_object_ref(obj_data) for obj_data in objects_data]
-
-    def _find_images(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_images(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
+        ObjectRef]:
         """
         Searches for image objects at the specified position.
+        Uses snapshot cache for all queries.
         """
-        return self._find(ObjectType.IMAGE, position)
+        # Use snapshot for all queries (including spatial)
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.IMAGE, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.IMAGE, position, tolerance)
 
     def select_images(self) -> List[ImageObject]:
         """
@@ -694,11 +734,22 @@ class PDFDancer:
         """
         return self._to_form_objects(self._find(ObjectType.FORM_X_OBJECT, None))
 
-    def _find_form_x_objects(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_form_x_objects(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
+        ObjectRef]:
         """
-        Searches for form field objects at the specified position.
+        Searches for form X objects at the specified position.
+        Uses snapshot cache for all queries.
         """
-        return self._find(ObjectType.FORM_X_OBJECT, position)
+        # Use snapshot for all queries (including spatial)
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.FORM_X_OBJECT, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.FORM_X_OBJECT, position, tolerance)
 
     def select_form_fields(self) -> List[FormFieldObject]:
         """
@@ -712,17 +763,23 @@ class PDFDancer:
         """
         return self._to_form_field_objects(self._find_form_fields(Position.by_name(field_name)))
 
-    def _find_form_fields(self, position: Optional[Position] = None) -> List[FormFieldRef]:
+    def _find_form_fields(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
+        FormFieldRef]:
         """
         Searches for form fields at the specified position.
         Returns FormFieldRef objects with name and value properties.
+        Uses snapshot cache for all queries (including name and spatial filtering).
         """
-        request_data = FindRequest(ObjectType.FORM_FIELD, position).to_dict()
-        response = self._make_request('POST', '/pdf/find', data=request_data)
-
-        # Parse response into ObjectRef objects
-        objects_data = response.json()
-        return [self._parse_form_field_ref(obj_data) for obj_data in objects_data]
+        # Use snapshot for all queries (including name and spatial)
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.FORM_FIELD, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.FORM_FIELD, position, tolerance)
 
     def _change_form_field(self, form_field_ref: FormFieldRef, new_value: str) -> bool:
         """
@@ -741,21 +798,45 @@ class PDFDancer:
         """
         return self._find(ObjectType.PATH, None)
 
-    def _find_paths(self, position: Optional[Position] = None) -> List[ObjectRef]:
+    def _find_paths(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[ObjectRef]:
         """
         Searches for vector path objects at the specified position.
+        Note: Spatial queries (with bounding_rect) fall back to API since snapshots
+        don't include full vector path data needed for precise intersection tests.
         """
-        return self._find(ObjectType.PATH, position)
+        # Special case: paths at specific coordinates need full vector data
+        # which is not available in snapshots, so pass through to API
+        if position and position.bounding_rect:
+            return self._find(ObjectType.PATH, position, tolerance)
 
-    def _find_text_lines(self, position: Optional[Position] = None) -> List[TextObjectRef]:
+        # For simple page-level "all paths" queries, use snapshot
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.PATH, position, tolerance)
+        else:
+            # Document-level query - use document snapshot
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.PATH, position, tolerance)
+
+    def _find_text_lines(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
+        TextObjectRef]:
         """
         Searches for text line objects returning TextObjectRef with hierarchical structure.
+        Uses snapshot cache for all queries.
         """
-        request_data = FindRequest(ObjectType.TEXT_LINE, position).to_dict()
-        response = self._make_request('POST', '/pdf/find', data=request_data)
-
-        objects_data = response.json()
-        return [self._parse_text_object_ref(obj_data) for obj_data in objects_data]
+        # Use snapshot for all queries (including spatial)
+        if position and position.page_index is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+            return self._filter_snapshot_elements(snapshot.elements, ObjectType.TEXT_LINE, position, tolerance)
+        else:
+            snapshot = self._get_or_fetch_document_snapshot()
+            all_elements = []
+            for page_snap in snapshot.pages:
+                all_elements.extend(page_snap.elements)
+            return self._filter_snapshot_elements(all_elements, ObjectType.TEXT_LINE, position, tolerance)
 
     def select_text_lines(self) -> List[TextLineObject]:
         """
@@ -765,7 +846,7 @@ class PDFDancer:
 
     def page(self, page_index: int) -> PageClient:
         """
-        Get a specific page by index, fetching page properties from the server.
+        Get a specific page by index, using snapshot cache when available.
 
         Args:
             page_index: The 0-based page index
@@ -773,11 +854,16 @@ class PDFDancer:
         Returns:
             PageClient with page properties populated
         """
+        # Try to get page ref from snapshot first (avoids API call)
+        page_snapshot = self._get_or_fetch_page_snapshot(page_index)
+        if page_snapshot and page_snapshot.page_ref:
+            return PageClient.from_ref(self, page_snapshot.page_ref)
+
+        # Fallback to API if snapshot doesn't have page ref
         page_ref = self._get_page(page_index)
         if page_ref:
             return PageClient.from_ref(self, page_ref)
         else:
-            # Fallback to basic PageClient if page not found
             return PageClient(page_index, self)
 
     # Page Operations
@@ -787,11 +873,11 @@ class PDFDancer:
 
     def _get_pages(self) -> List[PageRef]:
         """
-        Retrieves references to all pages in the PDF document.
+        Retrieves references to all pages in the PDF document using snapshot cache.
         """
-        response = self._make_request('POST', '/pdf/page/find')
-        pages_data = response.json()
-        return [self._parse_page_ref(page_data) for page_data in pages_data]
+        # Use document snapshot which includes all pages (avoids API call)
+        doc_snapshot = self._get_or_fetch_document_snapshot()
+        return [page_snap.page_ref for page_snap in doc_snapshot.pages]
 
     def _get_page(self, page_index: int) -> Optional[PageRef]:
         """
@@ -831,7 +917,13 @@ class PDFDancer:
         request_data = page_ref.to_dict()
 
         response = self._make_request('DELETE', '/pdf/page/delete', data=request_data)
-        return response.json()
+        result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     def move_page(self, from_page_index: int, to_page_index: int) -> bool:
         """Move a page to a different index within the document."""
@@ -850,6 +942,11 @@ class PDFDancer:
         request_data = PageMoveRequest(from_page_index, to_page_index).to_dict()
         response = self._make_request('PUT', '/pdf/page/move', data=request_data)
         result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
         return bool(result)
 
     # Manipulation Operations
@@ -869,7 +966,13 @@ class PDFDancer:
 
         request_data = DeleteRequest(object_ref).to_dict()
         response = self._make_request('DELETE', '/pdf/delete', data=request_data)
-        return response.json()
+        result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     def _move(self, object_ref: ObjectRef, position: Position) -> bool:
         """
@@ -889,7 +992,13 @@ class PDFDancer:
 
         request_data = MoveRequest(object_ref, position).to_dict()
         response = self._make_request('PUT', '/pdf/move', data=request_data)
-        return response.json()
+        result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     # Add Operations
 
@@ -942,14 +1051,25 @@ class PDFDancer:
         """
         request_data = AddRequest(pdf_object).to_dict()
         response = self._make_request('POST', '/pdf/add', data=request_data)
-        return response.json()
+        result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)
 
     def new_page(self):
         response = self._make_request('POST', '/pdf/page/add', data=None)
-        return self._parse_page_ref(response.json())
+        result = self._parse_page_ref(response.json())
+
+        # Invalidate snapshot caches after adding page
+        self._invalidate_snapshots()
+
+        return result
 
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)
@@ -975,12 +1095,16 @@ class PDFDancer:
             # Text modification - returns CommandResult
             request_data = ModifyTextRequest(object_ref, new_paragraph).to_dict()
             response = self._make_request('PUT', '/pdf/text/paragraph', data=request_data)
-            return CommandResult.from_dict(response.json())
+            result = CommandResult.from_dict(response.json())
         else:
             # Object modification
             request_data = ModifyRequest(object_ref, new_paragraph).to_dict()
             response = self._make_request('PUT', '/pdf/modify', data=request_data)
-            return CommandResult.from_dict(response.json())
+            result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
+        self._invalidate_snapshots()
+        return result
 
     def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> CommandResult:
         """
@@ -1000,7 +1124,11 @@ class PDFDancer:
 
         request_data = ModifyTextRequest(object_ref, new_text).to_dict()
         response = self._make_request('PUT', '/pdf/text/line', data=request_data)
-        return CommandResult.from_dict(response.json())
+        result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
+        self._invalidate_snapshots()
+        return result
 
     # Font Operations
 
@@ -1152,6 +1280,144 @@ class PDFDancer:
         data = response.json()
 
         return self._parse_page_snapshot(data)
+
+    def _get_or_fetch_document_snapshot(self) -> DocumentSnapshot:
+        """
+        Get document snapshot from cache or fetch if not cached.
+        This is used internally by select_* methods for optimization.
+        Also caches individual page snapshots from the document snapshot.
+        """
+        if self._document_snapshot is None:
+            self._document_snapshot = self.get_document_snapshot()
+            # Cache individual page snapshots from document snapshot
+            for i, page_snapshot in enumerate(self._document_snapshot.pages):
+                if i not in self._page_snapshots:
+                    self._page_snapshots[i] = page_snapshot
+        return self._document_snapshot
+
+    def _get_or_fetch_page_snapshot(self, page_index: int) -> PageSnapshot:
+        """
+        Get page snapshot from cache or fetch if not cached.
+        This is used internally by select_* methods for optimization.
+        If document snapshot exists, uses page from it instead of making separate API call.
+        """
+        # Check if already cached
+        if page_index in self._page_snapshots:
+            return self._page_snapshots[page_index]
+
+        # If document snapshot exists, get page from it (no API call needed)
+        if self._document_snapshot is not None:
+            if 0 <= page_index < len(self._document_snapshot.pages):
+                page_snapshot = self._document_snapshot.pages[page_index]
+                self._page_snapshots[page_index] = page_snapshot
+                return page_snapshot
+
+        # Otherwise fetch page snapshot individually
+        self._page_snapshots[page_index] = self.get_page_snapshot(page_index)
+        return self._page_snapshots[page_index]
+
+    def _invalidate_snapshots(self) -> None:
+        """
+        Clear all snapshot caches.
+        Called after mutations (delete, move, modify) to ensure fresh data on next select.
+        """
+        self._document_snapshot = None
+        self._page_snapshots.clear()
+
+    def _filter_snapshot_elements(self, elements: List, object_type: ObjectType,
+                                  position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List:
+        """
+        Filter snapshot elements client-side based on object type and position criteria.
+
+        Args:
+            elements: List of elements from snapshot (ObjectRef, TextObjectRef, etc.)
+            object_type: Type to filter for
+            position: Optional position filter with text matching, bounding rect, etc.
+            tolerance: Tolerance in points for spatial matching (default: 10.0)
+
+        Returns:
+            Filtered list of elements matching the criteria
+        """
+        import re
+
+        # Filter by object type (handle form field subtypes)
+        if object_type == ObjectType.FORM_FIELD:
+            # Form fields include TEXT_FIELD, CHECK_BOX, RADIO_BUTTON
+            form_field_types = {ObjectType.FORM_FIELD, ObjectType.TEXT_FIELD,
+                                ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON}
+            filtered = [e for e in elements if e.type in form_field_types]
+        else:
+            filtered = [e for e in elements if e.type == object_type]
+
+        if position is None:
+            return filtered
+
+        # Apply position filters
+        result = filtered
+
+        # Text starts with filter (case-insensitive to match API behavior)
+        if position.text_starts_with:
+            search_text = position.text_starts_with.lower()
+            result = [
+                e for e in result
+                if isinstance(e, TextObjectRef) and e.text and e.text.lower().startswith(search_text)
+            ]
+
+        # Regex pattern filter
+        if position.text_pattern:
+            pattern = re.compile(position.text_pattern)
+            result = [
+                e for e in result
+                if isinstance(e, TextObjectRef) and e.text and pattern.search(e.text)
+            ]
+
+        # Bounding rect filter (spatial queries like at(x, y))
+        if position.bounding_rect:
+            rect = position.bounding_rect
+            result = [
+                e for e in result
+                if e.position and e.position.bounding_rect and
+                   self._rects_intersect(e.position.bounding_rect, rect, tolerance)
+            ]
+
+        # Name filter (for form fields)
+        if position.name:
+            from .models import FormFieldRef
+            result = [
+                e for e in result
+                if isinstance(e, FormFieldRef) and e.name == position.name
+            ]
+
+        return result
+
+    @staticmethod
+    def _rects_intersect(rect1, rect2, tolerance: float = DEFAULT_TOLERANCE) -> bool:
+        """
+        Check if two bounding rectangles intersect or are very close.
+        Handles point queries (width/height = 0) with tolerance.
+
+        Args:
+            rect1: First bounding rectangle
+            rect2: Second bounding rectangle
+            tolerance: Tolerance in points for position matching (default: 10.0)
+        """
+        # Get effective bounds with tolerance
+        r1_left = rect1.x - tolerance
+        r1_right = rect1.x + rect1.width + tolerance
+        r1_top = rect1.y - tolerance
+        r1_bottom = rect1.y + rect1.height + tolerance
+
+        r2_left = rect2.x - tolerance
+        r2_right = rect2.x + rect2.width + tolerance
+        r2_top = rect2.y - tolerance
+        r2_bottom = rect2.y + rect2.height + tolerance
+
+        # Check if rectangles overlap
+        if r1_right < r2_left or r2_right < r1_left:
+            return False
+        if r1_bottom < r2_top or r2_bottom < r1_top:
+            return False
+        return True
 
     def get_bytes(self) -> bytes:
         """
@@ -1355,9 +1621,41 @@ class PDFDancer:
         )
 
     def _parse_page_snapshot(self, data: dict) -> PageSnapshot:
-        """Parse JSON data into PageSnapshot instance."""
+        """Parse JSON data into PageSnapshot instance with proper type handling."""
         page_ref = self._parse_page_ref(data.get('pageRef', {}))
-        elements = [self._parse_object_ref(elem_data) for elem_data in data.get('elements', [])]
+
+        # Parse elements using appropriate parser based on type
+        elements = []
+        for elem_data in data.get('elements', []):
+            elem_type_str = elem_data.get('type')
+            if not elem_type_str:
+                continue
+
+            try:
+                # Normalize type string (API returns "CHECKBOX" but enum is "CHECK_BOX")
+                if elem_type_str == "CHECKBOX":
+                    elem_type_str = "CHECK_BOX"
+                    # Deep copy to avoid modifying original
+                    import copy
+                    elem_data = copy.deepcopy(elem_data)
+                    elem_data['type'] = elem_type_str  # Update type in data
+
+                elem_type = ObjectType(elem_type_str)
+
+                # Use appropriate parser based on element type
+                if elem_type in (ObjectType.PARAGRAPH, ObjectType.TEXT_LINE):
+                    # Parse as TextObjectRef to capture text, font, color, children
+                    elements.append(self._parse_text_object_ref(elem_data))
+                elif elem_type in (ObjectType.FORM_FIELD, ObjectType.TEXT_FIELD,
+                                   ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON):
+                    # Parse as FormFieldRef to capture name and value
+                    elements.append(self._parse_form_field_ref(elem_data))
+                else:
+                    # Parse as basic ObjectRef
+                    elements.append(self._parse_object_ref(elem_data))
+            except (ValueError, KeyError):
+                # Skip elements with invalid types
+                continue
 
         return PageSnapshot(
             page_ref=page_ref,

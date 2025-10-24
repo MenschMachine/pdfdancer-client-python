@@ -24,7 +24,7 @@ def test_find_form_fields():
         first_page_fields = pdf.page(0).select_form_fields()
         assert len(first_page_fields) == 10
 
-        first_form = pdf.page(0).select_form_fields_at(290, 460)
+        first_form = pdf.page(0).select_form_fields_at(280, 455, 1)
         assert len(first_form) == 1
         f = first_form[0]
         assert f.object_type == ObjectType.RADIO_BUTTON
@@ -55,7 +55,7 @@ def test_move_form_field():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert 10 == len(pdf.page(0).select_form_fields())
-        form_fields = pdf.page(0).select_form_fields_at(290, 460)
+        form_fields = pdf.page(0).select_form_fields_at(280, 455, 1)
         assert len(form_fields) == 1
         f = form_fields[0]
         assert abs(f.position.x() - 280) < 0.1
@@ -63,9 +63,9 @@ def test_move_form_field():
 
         f.move_to(30, 40)
 
-        assert pdf.page(0).select_form_fields_at(290, 460) == []
+        assert pdf.page(0).select_form_fields_at(280, 455, 1) == []
 
-        moved = pdf.page(0).select_form_fields_at(30, 40)
+        moved = pdf.page(0).select_form_fields_at(30, 40, 1)
         assert len(moved) == 1
         assert moved[0].internal_id == f.internal_id
 
@@ -73,7 +73,7 @@ def test_move_form_field():
         PDFAssertions(pdf)
         .assert_number_of_form_fields(10)
         .assert_form_field_at(30, 40)
-        .assert_form_field_not_at(290, 460)
+        .assert_form_field_not_at(280, 455)
     )
 
 

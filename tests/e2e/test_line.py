@@ -82,12 +82,12 @@ def test_move_line():
         new_y = pos.y() + 18
         line.move_to(new_x, new_y)
 
-        moved_para = pdf.page(0).select_paragraphs_at(new_x, new_y)[0]
-        assert moved_para is not None
-        assert moved_para.object_ref().status is not None
-        assert moved_para.object_ref().status.is_encodable()
-        assert moved_para.object_ref().status.font_type == FontType.EMBEDDED
-        assert not moved_para.object_ref().status.is_modified()
+        moved_line = pdf.page(0).select_text_lines_at(new_x, new_y, 1)[0]
+        assert moved_line is not None
+        assert moved_line.object_ref().status is not None
+        assert moved_line.object_ref().status.is_encodable()
+        assert moved_line.object_ref().status.font_type == FontType.EMBEDDED
+        assert not moved_line.object_ref().status.is_modified()
 
     (
         PDFAssertions(pdf)

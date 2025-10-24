@@ -204,14 +204,14 @@ class PDFAssertions(object):
         return self
 
     def assert_form_field_at(self, x: float, y: float, page=0) -> 'PDFAssertions':
-        form_fields = self.pdf.page(page).select_form_fields_at(x, y)
+        form_fields = self.pdf.page(page).select_form_fields_at(x, y, 1)
         all_form_fields = self.pdf.page(page).select_form_fields()
         assert len(
             form_fields) == 1, f"Expected 1 form field but got {len(form_fields)}, total form_fields: {len(all_form_fields)}, first pos: {all_form_fields[0].position}"
         return self
 
     def assert_form_field_not_at(self, x: float, y: float, page=0) -> 'PDFAssertions':
-        form_fields = self.pdf.page(page).select_form_fields_at(x, y)
+        form_fields = self.pdf.page(page).select_form_fields_at(x, y, 1)
         assert len(
             form_fields) == 0, f"Expected 0 form fields at {x}/{y} but got {len(form_fields)}, {form_fields[0].internal_id}"
         return self

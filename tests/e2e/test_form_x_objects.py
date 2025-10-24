@@ -36,6 +36,6 @@ def test_find_form_by_position():
         none_found = pdf.page(0).select_forms_at(0, 0)
         assert len(none_found) == 0
 
-        found = pdf.page(0).select_forms_at(321, 601)
+        found = pdf.page(0).select_forms_at(320, 600)
         assert len(found) == 1
         assert found[0].internal_id == "FORM_000005"

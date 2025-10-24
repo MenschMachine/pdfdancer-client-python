@@ -250,7 +250,7 @@ def test_modify_paragraph_only_move():
     (
         PDFAssertions(pdf)
         .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
-        .assert_textline_is_at("The Complete", 1, 1, 0, epsilon=0.22)
+        .assert_paragraph_is_at("The Complete", 1, 1, 0)
         .assert_textline_has_color("The Complete", Color(255, 255, 255))
     )
 

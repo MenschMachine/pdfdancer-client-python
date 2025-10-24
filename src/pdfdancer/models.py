@@ -309,10 +309,15 @@ class ObjectRef:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        # Normalize type back to API format (API uses "CHECKBOX" not "CHECK_BOX")
+        type_value = self.type.value
+        if type_value == "CHECK_BOX":
+            type_value = "CHECKBOX"
+
         return {
             "internalId": self.internal_id,
             "position": FindRequest._position_to_dict(self.position),
-            "type": self.type.value
+            "type": type_value
         }
 
 
@@ -428,12 +433,9 @@ class DeleteRequest:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
-            "objectRef": {
-                "internalId": self.object_ref.internal_id,
-                "position": FindRequest._position_to_dict(self.object_ref.position),
-                "type": self.object_ref.type.value
-            }
+            "objectRef": self.object_ref.to_dict()
         }
 
 
@@ -446,12 +448,9 @@ class MoveRequest:
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         # Server API expects the new coordinates under 'newPosition'
+        # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
-            "objectRef": {
-                "internalId": self.object_ref.internal_id,
-                "position": FindRequest._position_to_dict(self.object_ref.position),
-                "type": self.object_ref.type.value
-            },
+            "objectRef": self.object_ref.to_dict(),
             "newPosition": FindRequest._position_to_dict(self.position)
         }
 
@@ -547,12 +546,9 @@ class ModifyRequest:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
-            "ref": {
-                "internalId": self.object_ref.internal_id,
-                "position": FindRequest._position_to_dict(self.object_ref.position),
-                "type": self.object_ref.type.value
-            },
+            "ref": self.object_ref.to_dict(),
             "newObject": AddRequest(None)._object_to_dict(self.new_object)
         }
 
@@ -565,12 +561,9 @@ class ModifyTextRequest:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
-            "ref": {
-                "internalId": self.object_ref.internal_id,
-                "position": FindRequest._position_to_dict(self.object_ref.position),
-                "type": self.object_ref.type.value
-            },
+            "ref": self.object_ref.to_dict(),
             "newTextLine": self.new_text
         }
 
@@ -582,12 +575,9 @@ class ChangeFormFieldRequest:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
-            "ref": {
-                "internalId": self.object_ref.internal_id,
-                "position": FindRequest._position_to_dict(self.object_ref.position),
-                "type": self.object_ref.type.value
-            },
+            "ref": self.object_ref.to_dict(),
             "value": self.value
         }
 

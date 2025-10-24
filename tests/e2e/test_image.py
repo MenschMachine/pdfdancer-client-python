@@ -74,7 +74,7 @@ def test_find_image_by_position():
         images_none = pdf.page(11).select_images_at(0, 0)
         assert len(images_none) == 0
 
-        images_found = pdf.page(11).select_images_at(55, 310)
+        images_found = pdf.page(11).select_images_at(54, 300, 1)
         assert len(images_found) == 1
         assert images_found[0].internal_id == "IMAGE_000003"
 

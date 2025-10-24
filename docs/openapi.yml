@@ -3,9 +3,42 @@ info:
   title: development
   version: "0.0"
 paths:
-  /font/find:
+  /config:
     get:
       operationId: findFont
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: findFont 200 response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /font/find:
+    get:
+      operationId: findFont_1
       parameters:
       - name: X-Session-Id
         in: header
@@ -40,13 +73,55 @@ paths:
           type: string
       responses:
         "200":
-          description: findFont 200 response
+          description: findFont_1 200 response
           content:
             application/json:
               schema:
                 type: array
                 items:
                   type: string
+  /font/get/{fontName}:
+    get:
+      operationId: getFont
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: fontName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getFont 200 response
+          content:
+            font/ttf:
+              schema:
+                type: string
+                format: binary
   /font/register:
     post:
       operationId: registerFont
@@ -97,6 +172,173 @@ paths:
             application/json:
               schema:
                 type: string
+  /me/tenant:
+    get:
+      operationId: getTenant
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getTenant 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserTenantResponse"
+  /me/tokens:
+    get:
+      operationId: listTokens
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: listTokens 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiTokenListResponse"
+    post:
+      operationId: createToken
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiTokenCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: createToken 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenCreateResponse"
+  /me/tokens/{tokenId}:
+    get:
+      operationId: getToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getToken 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenListResponse"
+    delete:
+      operationId: revokeToken
+      parameters:
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: revokeToken 200 response
   /pdf/add:
     post:
       operationId: addObject
@@ -181,6 +423,48 @@ paths:
             application/json:
               schema:
                 type: boolean
+  /pdf/document/snapshot:
+    get:
+      operationId: getDocumentSnapshot
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getDocumentSnapshot 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentSnapshot"
   /pdf/find:
     post:
       operationId: findObject
@@ -266,6 +550,48 @@ paths:
           content:
             application/json:
               schema:
+                $ref: "#/components/schemas/CommandResult"
+  /pdf/modify/formField:
+    put:
+      operationId: changeFormField
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeFormFieldRequest"
+        required: true
+      responses:
+        "200":
+          description: changeFormField 200 response
+          content:
+            application/json:
+              schema:
                 type: boolean
   /pdf/move:
     put:
@@ -318,13 +644,6 @@ paths:
         required: true
         schema:
           type: string
-      - name: position
-        in: query
-        explode: false
-        schema:
-          nullable: true
-          allOf:
-          - $ref: "#/components/schemas/Position"
       - name: v
         in: query
         description: API version
@@ -345,19 +664,13 @@ paths:
         description: API version
         schema:
           type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Page"
-        required: true
       responses:
         "200":
           description: addPage 200 response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ObjectRef"
+                $ref: "#/components/schemas/PageRef"
   /pdf/page/delete:
     delete:
       operationId: deletePage
@@ -409,7 +722,7 @@ paths:
         required: true
         schema:
           type: string
-      - name: pageNumber
+      - name: pageIndex
         in: query
         explode: false
         schema:
@@ -444,7 +757,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ObjectRef"
+                  $ref: "#/components/schemas/PageRef"
   /pdf/page/modify:
     put:
       operationId: modifyPage
@@ -478,7 +791,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ModifyRequest"
+              $ref: "#/components/schemas/ChangeFormFieldRequest"
         required: true
       responses:
         "200":
@@ -529,6 +842,54 @@ paths:
             application/json:
               schema:
                 type: boolean
+  /pdf/page/{pageIndex}/snapshot:
+    get:
+      operationId: getPageSnapshot
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: pageIndex
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - name: types
+        in: query
+        explode: false
+        schema:
+          type: string
+          nullable: true
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getPageSnapshot 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageSnapshot"
   /pdf/text/line:
     put:
       operationId: modifyTextLine
@@ -570,7 +931,7 @@ paths:
           content:
             application/json:
               schema:
-                type: boolean
+                $ref: "#/components/schemas/CommandResult"
   /pdf/text/paragraph:
     put:
       operationId: modifyParagraph
@@ -612,7 +973,7 @@ paths:
           content:
             application/json:
               schema:
-                type: boolean
+                $ref: "#/components/schemas/CommandResult"
   /ping:
     get:
       operationId: index
@@ -644,14 +1005,108 @@ paths:
             text/plain:
               schema:
                 type: string
+  /product:
+    get:
+      operationId: getProducts
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getProducts 200 response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /product/subscription:
+    get:
+      operationId: getSubscription
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSubscription 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /product/{productId}:
+    get:
+      operationId: getSessionPdf
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessionPdf 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
   /session/create:
     post:
-      summary: Creates a new session by uploading and processing a PDF document.
-      description: "Creates a new session by uploading and processing a PDF document.\
-        \ This operation validates the uploaded file, creates a unique session identifier,\
-        \ processes the PDF structure for manipulation, and stores the session for\
-        \ future operations. The PDF is analyzed to extract its internal structure\
-        \ and prepare it for editing."
       operationId: createSession
       parameters:
       - name: v
@@ -682,7 +1137,6 @@ paths:
               properties:
                 pdf:
                   type: string
-                  description: uploaded PDF file from the multipart request
                   format: binary
             encoding:
               pdf:
@@ -691,23 +1145,54 @@ paths:
         required: true
       responses:
         "200":
-          description: HTTP response containing the generated session ID for subsequent
-            operations
+          description: createSession 200 response
+          content:
+            application/json:
+              schema:
+                type: string
+  /session/new:
+    post:
+      operationId: createBlankPdf
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlankPdfRequest"
+        required: true
+      responses:
+        "200":
+          description: createBlankPdf 200 response
           content:
             application/json:
               schema:
                 type: string
   /session/{sessionId}:
     delete:
-      summary: Deletes an existing session and cleans up associated resources.
-      description: Deletes an existing session and cleans up associated resources.
-        This operation removes the session from the store and should also clean up
-        temporary files and release any held resources.
       operationId: deleteSession
       parameters:
       - name: sessionId
         in: path
-        description: unique identifier of the session to delete
         required: true
         schema:
           type: string
@@ -733,26 +1218,17 @@ paths:
           type: string
       responses:
         "200":
-          description: HTTP response indicating whether the session was successfully
-            deleted
+          description: deleteSession 200 response
           content:
             application/json:
               schema:
                 type: boolean
   /session/{sessionId}/pdf:
     get:
-      summary: Retrieves the current state of the PDF document from the specified
-        session.
-      description: "Retrieves the current state of the PDF document from the specified\
-        \ session. This operation builds and streams the PDF with all applied modifications,\
-        \ generating the final PDF output that reflects all changes made during the\
-        \ session. The PDF is built asynchronously and streamed to avoid memory issues\
-        \ with large files."
-      operationId: getSessionPdf
+      operationId: getSessionPdf_1
       parameters:
       - name: sessionId
         in: path
-        description: unique identifier of the session containing the PDF
         required: true
         schema:
           type: string
@@ -778,8 +1254,7 @@ paths:
           type: string
       responses:
         "200":
-          description: HTTP response containing the streamed PDF file with all modifications
-            applied
+          description: getSessionPdf_1 200 response
           content:
             application/pdf:
               schema:
@@ -816,6 +1291,105 @@ paths:
             text/plain:
               schema:
                 type: string
+  /user:
+    get:
+      operationId: info
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: info 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Authentication"
+  /version:
+    get:
+      operationId: getVersion
+      parameters:
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getVersion 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+  /xml:
+    get:
+      operationId: getSessionXml
+      parameters:
+      - name: X-Session-Id
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: getSessionXml 200 response
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: binary
 components:
   schemas:
     AddRequest:
@@ -825,6 +1399,84 @@ components:
       properties:
         object:
           $ref: "#/components/schemas/PDFObject"
+    ApiTokenCreateRequest:
+      required:
+      - expiresAt
+      - name
+      type: object
+      properties:
+        name:
+          type: string
+        expiresAt:
+          type: string
+    ApiTokenCreateResponse:
+      required:
+      - metadata
+      - token
+      type: object
+      properties:
+        token:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/ApiTokenCreateResponse.ApiTokenMetadata"
+    ApiTokenCreateResponse.ApiTokenMetadata:
+      required:
+      - createdAt
+      - expiresAt
+      - id
+      - name
+      - prefix
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        expiresAt:
+          type: string
+    ApiTokenListResponse:
+      required:
+      - createdAt
+      - expiresAt
+      - id
+      - lastUsedAt
+      - name
+      - prefix
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        createdAt:
+          type: string
+        lastUsedAt:
+          type: string
+        expiresAt:
+          type: string
+    Authentication:
+      required:
+      - attributes
+      - roles
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/Principal"
+      - type: object
+        properties:
+          attributes:
+            type: object
+            additionalProperties:
+              type: object
+          roles:
+            type: array
+            items:
+              type: string
     BoundingRect:
       required:
       - height
@@ -847,6 +1499,16 @@ components:
         height:
           type: number
           format: double
+    ChangeFormFieldRequest:
+      required:
+      - ref
+      - value
+      type: object
+      properties:
+        ref:
+          $ref: "#/components/schemas/ObjectRef"
+        value:
+          type: string
     Color:
       type: object
       properties:
@@ -862,6 +1524,39 @@ components:
         alpha:
           type: integer
           format: int32
+    CommandResult:
+      required:
+      - commandName
+      - elementId
+      - message
+      - success
+      - warning
+      type: object
+      properties:
+        commandName:
+          type: string
+        elementId:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        warning:
+          type: string
+    CreateBlankPdfRequest:
+      required:
+      - initialPageCount
+      - orientation
+      - pageSize
+      type: object
+      properties:
+        pageSize:
+          $ref: "#/components/schemas/PageSize"
+        orientation:
+          $ref: "#/components/schemas/Orientation"
+        initialPageCount:
+          type: integer
+          format: int32
     DeleteRequest:
       required:
       - objectRef
@@ -869,6 +1564,24 @@ components:
       properties:
         objectRef:
           $ref: "#/components/schemas/ObjectRef"
+    DocumentSnapshot:
+      required:
+      - fonts
+      - pageCount
+      - pages
+      type: object
+      properties:
+        pageCount:
+          type: integer
+          format: int32
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/FontRecommendationDto"
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/PageSnapshot"
     FindRequest:
       required:
       - hint
@@ -890,6 +1603,28 @@ components:
         size:
           type: number
           format: double
+        embedded:
+          type: boolean
+    FontRecommendationDto:
+      required:
+      - fontName
+      - fontType
+      - similarityScore
+      type: object
+      properties:
+        fontName:
+          type: string
+        fontType:
+          $ref: "#/components/schemas/FontType"
+        similarityScore:
+          type: number
+          format: double
+    FontType:
+      type: string
+      enum:
+      - SYSTEM
+      - STANDARD
+      - EMBEDDED
     Form:
       type: object
       allOf:
@@ -987,9 +1722,18 @@ components:
       - RECTANGLE
       - BEZIER
       - CLIPPING
-      - FORM
+      - FORM_X_OBJECT
+      - FORM_FIELD
       - WORD
       - TEXT_LINE
+      - TEXT_FIELD
+      - RADIO_BUTTON
+      - CHECK_BOX
+    Orientation:
+      type: string
+      enum:
+      - PORTRAIT
+      - LANDSCAPE
     PDFObject:
       type: object
       properties:
@@ -1002,10 +1746,15 @@ components:
       discriminator:
         propertyName: type
         mapping:
+          PATH: "#/components/schemas/Path"
           image: "#/components/schemas/Image"
           path: "#/components/schemas/Path"
           paragraph: "#/components/schemas/Paragraph"
+          IMAGE: "#/components/schemas/Image"
           form: "#/components/schemas/Form"
+          FORM: "#/components/schemas/Form"
+          PARAGRAPH: "#/components/schemas/Paragraph"
+          TEXT_LINE: "#/components/schemas/TextLine"
           textLine: "#/components/schemas/TextLine"
       oneOf:
       - $ref: "#/components/schemas/Image"
@@ -1013,51 +1762,54 @@ components:
       - $ref: "#/components/schemas/Form"
       - $ref: "#/components/schemas/Paragraph"
       - $ref: "#/components/schemas/TextLine"
-    Page:
-      type: object
-      allOf:
-      - $ref: "#/components/schemas/PDFObject"
-      - type: object
-        properties:
-          id:
-            type: string
-          pageNumber:
-            type: integer
-            format: int32
-          size:
-            $ref: "#/components/schemas/Size"
-          paragraphs:
-            type: array
-            items:
-              $ref: "#/components/schemas/Paragraph"
-          images:
-            type: array
-            items:
-              $ref: "#/components/schemas/Image"
-          paths:
-            type: array
-            items:
-              $ref: "#/components/schemas/PathSegment"
-          forms:
-            type: array
-            items:
-              $ref: "#/components/schemas/Form"
-          objectType:
-            $ref: "#/components/schemas/ObjectType"
-          position:
-            $ref: "#/components/schemas/Position"
     PageMoveRequest:
       required:
-      - fromPageNumber
-      - toPageNumber
+      - fromPageIndex
+      - toPageIndex
       type: object
       properties:
-        fromPageNumber:
+        fromPageIndex:
           type: integer
           format: int32
-        toPageNumber:
+        toPageIndex:
           type: integer
           format: int32
+    PageRef:
+      required:
+      - orientation
+      - pageSize
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/ObjectRef"
+      - type: object
+        properties:
+          pageSize:
+            $ref: "#/components/schemas/PageSize"
+          orientation:
+            $ref: "#/components/schemas/Orientation"
+    PageSize:
+      type: object
+      properties:
+        name:
+          type: string
+        width:
+          type: number
+          format: double
+        height:
+          type: number
+          format: double
+    PageSnapshot:
+      required:
+      - elements
+      - pageRef
+      type: object
+      properties:
+        pageRef:
+          $ref: "#/components/schemas/PageRef"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectRef"
     Paragraph:
       type: object
       allOf:
@@ -1077,6 +1829,8 @@ components:
               format: double
           font:
             $ref: "#/components/schemas/Font"
+          text:
+            type: string
     Path:
       type: object
       allOf:
@@ -1121,13 +1875,17 @@ components:
       properties:
         textStartsWith:
           type: string
+        name:
+          type: string
+        textPattern:
+          type: string
         x:
           type: number
           format: double
         "y":
           type: number
           format: double
-        pageNumber:
+        pageIndex:
           type: integer
           format: int32
         shape:
@@ -1148,6 +1906,55 @@ components:
       - LINE
       - CIRCLE
       - RECT
+    Principal:
+      type: object
+      properties:
+        name:
+          type: string
+    Product:
+      required:
+      - description
+      - id
+      - name
+      - price
+      - requiresContact
+      - type
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          $ref: "#/components/schemas/RecurringPrice"
+        type:
+          $ref: "#/components/schemas/ProductType"
+        requiresContact:
+          type: boolean
+    ProductType:
+      type: string
+      enum:
+      - SAAS
+    RecurringPrice:
+      required:
+      - currencyCode
+      - discount
+      - price
+      - timeInterval
+      type: object
+      properties:
+        currencyCode:
+          type: string
+        discount:
+          type: number
+          format: float
+        price:
+          type: integer
+          format: int32
+        timeInterval:
+          $ref: "#/components/schemas/TimeInterval"
     Size:
       type: object
       properties:
@@ -1160,6 +1967,21 @@ components:
         area:
           type: number
           format: double
+    Subscription:
+      required:
+      - end
+      - product
+      - start
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        product:
+          $ref: "#/components/schemas/Product"
     TextElement:
       type: object
       allOf:
@@ -1174,12 +1996,19 @@ components:
             $ref: "#/components/schemas/Color"
           objectType:
             $ref: "#/components/schemas/ObjectType"
+          status:
+            $ref: "#/components/schemas/TextStatus"
     TextLine:
       type: object
       allOf:
       - $ref: "#/components/schemas/PDFObject"
       - type: object
         properties:
+          fontSize:
+            type: number
+            format: double
+          fontName:
+            type: string
           objectType:
             $ref: "#/components/schemas/ObjectType"
           textElements:
@@ -1188,3 +2017,60 @@ components:
               $ref: "#/components/schemas/TextElement"
           color:
             $ref: "#/components/schemas/Color"
+          text:
+            type: string
+    TextStatus:
+      required:
+      - fontRecommendation
+      - fontType
+      type: object
+      properties:
+        modified:
+          type: boolean
+        encodable:
+          type: boolean
+        fontType:
+          $ref: "#/components/schemas/FontType"
+        fontRecommendation:
+          $ref: "#/components/schemas/FontRecommendationDto"
+        warning:
+          type: string
+    TimeInterval:
+      type: string
+      enum:
+      - DAY
+      - WEEK
+      - MONTH
+      - YEAR
+    UserTenantResponse:
+      required:
+      - planCode
+      - role
+      - status
+      - tenantId
+      - tenantName
+      - tenantSlug
+      type: object
+      properties:
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+        tenantSlug:
+          type: string
+        role:
+          type: string
+        planCode:
+          type: string
+        status:
+          type: string
+    VersionResponse:
+      required:
+      - color
+      - gitCommit
+      type: object
+      properties:
+        gitCommit:
+          type: string
+        color:
+          type: string

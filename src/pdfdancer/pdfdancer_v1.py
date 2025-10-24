@@ -23,7 +23,7 @@ load_dotenv()
 # WARNING: Only use in development/testing environments
 DISABLE_SSL_VERIFY = False
 
-DEBUG = True
+DEBUG = False
 DEFAULT_TOLERANCE = 0.01
 
 

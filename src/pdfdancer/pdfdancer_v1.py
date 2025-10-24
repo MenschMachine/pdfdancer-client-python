@@ -788,9 +788,12 @@ class PDFDancer:
         if form_field_ref is None:
             raise ValidationException("Form field reference cannot be null")
 
-        request_data = ChangeFormFieldRequest(form_field_ref, new_value).to_dict()
-        response = self._make_request('PUT', '/pdf/modify/formField', data=request_data)
-        return response.json()
+        try:
+            request_data = ChangeFormFieldRequest(form_field_ref, new_value).to_dict()
+            response = self._make_request('PUT', '/pdf/modify/formField', data=request_data)
+            return response.json()
+        finally:
+            self._invalidate_snapshots()
 
     def select_paths(self) -> List[ObjectRef]:
         """

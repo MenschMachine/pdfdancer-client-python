@@ -66,7 +66,7 @@ def _parse_timestamp(timestamp_str: str) -> datetime:
 
 def _log_generated_at_header(response: httpx.Response, method: str, path: str) -> None:
     """
-    Check for X-Generated-AT and X-Received-At headers and log timing information if DEBUG=True.
+    Check for X-Generated-At and X-Received-At headers and log timing information if DEBUG=True.
 
     Expected timestamp formats:
     - 2025-10-24T08:49:39.161945Z (microseconds - 6 digits)
@@ -80,7 +80,7 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
     if not DEBUG:
         return
 
-    generated_at = response.headers.get('X-Generated-AT')
+    generated_at = response.headers.get('X-Generated-At')
     received_at = response.headers.get('X-Received-At')
 
     if generated_at or received_at:
@@ -95,14 +95,14 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
                 time_since_received = (current_time - received_time).total_seconds()
                 log_parts.append(f"X-Received-At: {received_at}, time since received: {time_since_received:.3f}s")
 
-            # Parse and log X-Generated-AT
+            # Parse and log X-Generated-At
             generated_time = None
             if generated_at:
                 generated_time = _parse_timestamp(generated_at)
                 time_since_generated = (current_time - generated_time).total_seconds()
-                log_parts.append(f"X-Generated-AT: {generated_at}, time since generated: {time_since_generated:.3f}s")
+                log_parts.append(f"X-Generated-At: {generated_at}, time since generated: {time_since_generated:.3f}s")
 
-            # Calculate processing time (X-Generated-AT - X-Received-At)
+            # Calculate processing time (X-Generated-At - X-Received-At)
             if received_time and generated_time:
                 processing_time = (generated_time - received_time).total_seconds()
                 log_parts.append(f"processing time: {processing_time:.3f}s")

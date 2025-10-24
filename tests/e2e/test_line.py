@@ -64,10 +64,10 @@ def test_delete_line():
         line.delete()
         assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_does_not_exist("The Complete")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("The Complete")
+        )
 
 
 def test_move_line():
@@ -89,10 +89,10 @@ def test_move_line():
         assert moved_line.object_ref().status.font_type == FontType.EMBEDDED
         assert not moved_line.object_ref().status.is_modified()
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_is_at("The Complete", new_x, new_y)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_is_at("The Complete", new_x, new_y)
+        )
 
 
 def test_modify_line():
@@ -117,12 +117,12 @@ def test_modify_line():
         assert lines[0].object_ref().status.is_encodable
         assert lines[0].object_ref().status.font_type == FontType.EMBEDDED
         assert lines[0].object_ref().status.is_modified
-    (
-        PDFAssertions(pdf)
-        .assert_textline_does_not_exist("The Complete")
-        .assert_textline_exists(" replaced ")
-        .assert_paragraph_exists(" replaced ")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("The Complete")
+            .assert_textline_exists(" replaced ")
+            .assert_paragraph_exists(" replaced ")
+        )
 
 
 def test_modify_line_multi():
@@ -137,7 +137,7 @@ def test_modify_line_multi():
             assert line.edit().replace(line_text).apply()
         pdf.save("/tmp/test_modify_line_multi.pdf")
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_exists("9 The Complete C")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_exists("9 The Complete C")
+        )

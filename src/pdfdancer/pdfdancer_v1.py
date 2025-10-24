@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Union, BinaryIO, Mapping, Any
 
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,7 +64,7 @@ def _parse_timestamp(timestamp_str: str) -> datetime:
     return datetime.fromisoformat(ts).replace(tzinfo=timezone.utc)
 
 
-def _log_generated_at_header(response: requests.Response, method: str, path: str) -> None:
+def _log_generated_at_header(response: httpx.Response, method: str, path: str) -> None:
     """
     Check for X-Generated-AT and X-Received-At headers and log timing information if DEBUG=True.
 
@@ -397,11 +397,12 @@ class PDFDancer:
         instance._base_url = resolved_base_url.rstrip('/')
         instance._read_timeout = timeout
 
-        # Create HTTP session for connection reuse
-        instance._session = requests.Session()
-        instance._session.headers.update({
-            'Authorization': f'Bearer {instance._token}'
-        })
+        # Create HTTP client for connection reuse with HTTP/2 support
+        instance._client = httpx.Client(
+            http2=True,
+            headers={'Authorization': f'Bearer {instance._token}'},
+            verify=not DISABLE_SSL_VERIFY
+        )
 
         # Create blank PDF session
         instance._session_id = instance._create_blank_pdf_session(
@@ -448,11 +449,12 @@ class PDFDancer:
         # Process PDF data with validation
         self._pdf_bytes = self._process_pdf_data(pdf_data)
 
-        # Create HTTP session for connection reuse
-        self._session = requests.Session()
-        self._session.headers.update({
-            'Authorization': f'Bearer {self._token}'
-        })
+        # Create HTTP client for connection reuse with HTTP/2 support
+        self._client = httpx.Client(
+            http2=True,
+            headers={'Authorization': f'Bearer {self._token}'},
+            verify=not DISABLE_SSL_VERIFY
+        )
 
         # Create session - equivalent to Java constructor behavior
         self._session_id = self._create_session()
@@ -502,7 +504,7 @@ class PDFDancer:
         except (IOError, OSError) as e:
             raise PdfDancerException(f"Failed to read PDF data: {e}", cause=e)
 
-    def _extract_error_message(self, response: Optional[requests.Response]) -> str:
+    def _extract_error_message(self, response: Optional[httpx.Response]) -> str:
         """
         Extract meaningful error messages from API response.
         Parses JSON error responses with _embedded.errors structure.
@@ -538,7 +540,7 @@ class PDFDancer:
             # If JSON parsing fails, return response content or status
             return response.text or f"HTTP {response.status_code}"
 
-    def _handle_authentication_error(self, response: Optional[requests.Response]) -> None:
+    def _handle_authentication_error(self, response: Optional[httpx.Response]) -> None:
         """
         Translate authentication failures into a clear, actionable validation error.
         """
@@ -575,16 +577,23 @@ class PDFDancer:
         Creates a new PDF processing session by uploading the PDF data.
         """
         try:
-            # Prepare multipart form data
-            import io
-            from requests_toolbelt import MultipartEncoder
+            # Build multipart body manually to avoid base64 encoding and enable compression
+            # httpx by default may add Content-Transfer-Encoding: base64 which the server rejects
+            import uuid
 
-            encoder = MultipartEncoder(
-                fields={'pdf': ('document.pdf', io.BytesIO(self._pdf_bytes), 'application/pdf')}
-            )
+            boundary = uuid.uuid4().hex
 
-            # Get the uncompressed body
-            uncompressed_body = encoder.to_string()
+            # Build multipart body with binary (not base64) encoding
+            body_parts = []
+            body_parts.append(f'--{boundary}\r\n'.encode('utf-8'))
+            body_parts.append(b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n')
+            body_parts.append(b'Content-Type: application/pdf\r\n')
+            body_parts.append(b'\r\n')  # End of headers, no Content-Transfer-Encoding
+            body_parts.append(self._pdf_bytes)
+            body_parts.append(b'\r\n')
+            body_parts.append(f'--{boundary}--\r\n'.encode('utf-8'))
+
+            uncompressed_body = b''.join(body_parts)
 
             # Compress entire request body using gzip
             compressed_body = gzip.compress(uncompressed_body)
@@ -600,16 +609,15 @@ class PDFDancer:
 
             headers = {
                 'X-Generated-At': _generate_timestamp(),
-                'Content-Type': encoder.content_type,
+                'Content-Type': f'multipart/form-data; boundary={boundary}',
                 'Content-Encoding': 'gzip'
             }
 
-            response = self._session.post(
+            response = self._client.post(
                 self._cleanup_url_path(self._base_url, "/session/create"),
-                data=compressed_body,
+                content=compressed_body,
                 headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
-                verify=not DISABLE_SSL_VERIFY
+                timeout=self._read_timeout if self._read_timeout > 0 else None
             )
 
             response_size = len(response.content)
@@ -626,11 +634,14 @@ class PDFDancer:
 
             return session_id
 
-        except requests.exceptions.RequestException as e:
-            self._handle_authentication_error(getattr(e, 'response', None))
-            error_message = self._extract_error_message(getattr(e, 'response', None))
+        except httpx.HTTPStatusError as e:
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
             raise HttpClientException(f"Failed to create session: {error_message}",
-                                      response=getattr(e, 'response', None), cause=e) from None
+                                      response=e.response, cause=e) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(f"Failed to create session: {str(e)}",
+                                      response=None, cause=e) from None
 
     def _create_blank_pdf_session(self,
                                   page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
@@ -688,12 +699,11 @@ class PDFDancer:
                 'Content-Type': 'application/json',
                 'X-Generated-At': _generate_timestamp()
             }
-            response = self._session.post(
+            response = self._client.post(
                 self._cleanup_url_path(self._base_url, "/session/new"),
                 json=request_data,
                 headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
-                verify=not DISABLE_SSL_VERIFY
+                timeout=self._read_timeout if self._read_timeout > 0 else None
             )
 
             response_size = len(response.content)
@@ -710,14 +720,17 @@ class PDFDancer:
 
             return session_id
 
-        except requests.exceptions.RequestException as e:
-            self._handle_authentication_error(getattr(e, 'response', None))
-            error_message = self._extract_error_message(getattr(e, 'response', None))
+        except httpx.HTTPStatusError as e:
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
             raise HttpClientException(f"Failed to create blank PDF session: {error_message}",
-                                      response=getattr(e, 'response', None), cause=e) from None
+                                      response=e.response, cause=e) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(f"Failed to create blank PDF session: {str(e)}",
+                                      response=None, cause=e) from None
 
     def _make_request(self, method: str, path: str, data: Optional[dict] = None,
-                      params: Optional[dict] = None) -> requests.Response:
+                      params: Optional[dict] = None) -> httpx.Response:
         """
         Make HTTP request with session headers and error handling.
         """
@@ -735,14 +748,13 @@ class PDFDancer:
             if DEBUG:
                 print(f"{time.time()}|{method} {path} - request size: {request_size} bytes")
 
-            response = self._session.request(
+            response = self._client.request(
                 method=method,
                 url=self._cleanup_url_path(self._base_url, path),
                 json=data,
                 params=params,
                 headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
-                verify=not DISABLE_SSL_VERIFY
+                timeout=self._read_timeout if self._read_timeout > 0 else None
             )
 
             response_size = len(response.content)
@@ -764,10 +776,13 @@ class PDFDancer:
             response.raise_for_status()
             return response
 
-        except requests.exceptions.RequestException as e:
-            self._handle_authentication_error(getattr(e, 'response', None))
-            error_message = self._extract_error_message(getattr(e, 'response', None))
-            raise HttpClientException(f"API request failed: {error_message}", response=getattr(e, 'response', None),
+        except httpx.HTTPStatusError as e:
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
+            raise HttpClientException(f"API request failed: {error_message}", response=e.response,
+                                      cause=e) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(f"API request failed: {str(e)}", response=None,
                                       cause=e) from None
 
     def _find(self, object_type: Optional[ObjectType] = None, position: Optional[Position] = None,
@@ -1339,12 +1354,11 @@ class PDFDancer:
                 'X-Session-Id': self._session_id,
                 'X-Generated-At': _generate_timestamp()
             }
-            response = self._session.post(
+            response = self._client.post(
                 self._cleanup_url_path(self._base_url, "/font/register"),
                 files=files,
                 headers=headers,
-                timeout=30,
-                verify=not DISABLE_SSL_VERIFY
+                timeout=30
             )
 
             response_size = len(response.content)
@@ -1357,10 +1371,13 @@ class PDFDancer:
 
         except (IOError, OSError) as e:
             raise PdfDancerException(f"Failed to read font file: {e}", cause=e)
-        except requests.exceptions.RequestException as e:
-            error_message = self._extract_error_message(getattr(e, 'response', None))
+        except httpx.HTTPStatusError as e:
+            error_message = self._extract_error_message(e.response)
             raise HttpClientException(f"Font registration failed: {error_message}",
-                                      response=getattr(e, 'response', None), cause=e) from None
+                                      response=e.response, cause=e) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(f"Font registration failed: {str(e)}",
+                                      response=None, cause=e) from None
 
     # Document Operations
 
@@ -1819,8 +1836,16 @@ class PDFDancer:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - cleanup if needed."""
+        # Close the HTTP client to free resources
+        if hasattr(self, '_client'):
+            self._client.close()
         # TODO Could add session cleanup here if API supports it. Cleanup on the server
         pass
+
+    def close(self):
+        """Close the HTTP client and free resources."""
+        if hasattr(self, '_client'):
+            self._client.close()
 
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
         return [PathObject(self, ref.internal_id, ref.type, ref.position) for ref in refs]

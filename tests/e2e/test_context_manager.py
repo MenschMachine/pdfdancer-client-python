@@ -1,6 +1,6 @@
 import pytest
 
-from pdfdancer import Color, StandardFonts, FontType
+from pdfdancer import Color, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -19,16 +19,18 @@ def test_context_manager_edit_text_only():
     """Test context manager with paragraph.edit() - text replacement only"""
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with (PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf):
         paragraph = pdf.page(0).select_paragraphs_starting_with("The Complete")[0]
 
         # Context manager automatically calls apply() on success
         with paragraph.edit() as editor:
             editor.replace("Awesomely\nObvious!")
 
-    PDFAssertions(pdf).assert_textline_exists("Awesomely", page=0)
-    PDFAssertions(pdf).assert_textline_exists("Obvious!", page=0)
-    PDFAssertions(pdf).assert_textline_does_not_exist("The Complete", page=0)
+        (
+            PDFAssertions(pdf)
+            .assert_textline_exists("Awesomely", page=0).assert_textline_exists("Obvious!", page=0)
+            .assert_textline_does_not_exist("The Complete", page=0)
+        )
 
 
 def test_context_manager_edit_font_only():
@@ -41,11 +43,11 @@ def test_context_manager_edit_font_only():
         with paragraph.edit() as editor:
             editor.font("Helvetica", 28)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("The Complete", "Helvetica", 28)
-        .assert_textline_has_color("The Complete", Color(255, 255, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("The Complete", "Helvetica", 28)
+            .assert_textline_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_context_manager_edit_text_and_font():
@@ -59,12 +61,12 @@ def test_context_manager_edit_text_and_font():
             editor.replace("New Text\nHere")
             editor.font("Helvetica", 16)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("New Text", "Helvetica", 16)
-        .assert_textline_has_font("Here", "Helvetica", 16)
-        .assert_textline_does_not_exist("The Complete")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("New Text", "Helvetica", 16)
+            .assert_textline_has_font("Here", "Helvetica", 16)
+            .assert_textline_does_not_exist("The Complete")
+        )
 
 
 def test_context_manager_edit_all_properties():
@@ -81,14 +83,14 @@ def test_context_manager_edit_all_properties():
             editor.line_spacing(1.5)
             editor.move_to(100, 200)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Fully", "Helvetica", 18)
-        .assert_textline_has_font("Modified", "Helvetica", 18)
-        .assert_textline_has_color("Fully", Color(255, 0, 0))
-        .assert_textline_has_color("Modified", Color(255, 0, 0))
-        .assert_paragraph_is_at("Fully", 100, 200, 0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Fully", "Helvetica", 18)
+            .assert_textline_has_font("Modified", "Helvetica", 18)
+            .assert_textline_has_color("Fully", Color(255, 0, 0))
+            .assert_textline_has_color("Modified", Color(255, 0, 0))
+            .assert_paragraph_is_at("Fully", 100, 200, 0)
+        )
 
 
 def test_context_manager_edit_color_only():
@@ -101,7 +103,7 @@ def test_context_manager_edit_color_only():
         with paragraph.edit() as editor:
             editor.color(Color(0, 255, 0))
 
-    PDFAssertions(pdf).assert_textline_has_color("The Complete", Color(0, 255, 0))
+        PDFAssertions(pdf).assert_textline_has_color("The Complete", Color(0, 255, 0))
 
 
 def test_context_manager_edit_line_spacing_only():
@@ -114,7 +116,7 @@ def test_context_manager_edit_line_spacing_only():
         with paragraph.edit() as editor:
             editor.line_spacing(2.0)
 
-    PDFAssertions(pdf).assert_textline_exists("The Complete")
+        PDFAssertions(pdf).assert_textline_exists("The Complete")
 
 
 def test_context_manager_edit_move_only():
@@ -127,11 +129,11 @@ def test_context_manager_edit_move_only():
         with paragraph.edit() as editor:
             editor.move_to(150, 300)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
-        .assert_paragraph_is_at("The Complete", 150, 300, 0, epsilon=0.22)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
+            .assert_paragraph_is_at("The Complete", 150, 300, 0, epsilon=0.22)
+        )
 
 
 def test_context_manager_multiple_edits_sequential():
@@ -150,12 +152,12 @@ def test_context_manager_multiple_edits_sequential():
             editor.replace("Second Edit")
             editor.font("Helvetica", 20)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Second Edit", "Helvetica", 20)
-        .assert_textline_does_not_exist("First Edit")
-        .assert_textline_does_not_exist("The Complete")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Second Edit", "Helvetica", 20)
+            .assert_textline_does_not_exist("First Edit")
+            .assert_textline_does_not_exist("The Complete")
+        )
 
 
 def test_context_manager_edit_multiple_paragraphs():
@@ -175,11 +177,11 @@ def test_context_manager_edit_multiple_paragraphs():
             editor.replace("Modified Second")
             editor.font("Helvetica", 14)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Modified First", "Helvetica", 14)
-        .assert_textline_has_font("Modified Second", "Helvetica", 14)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Modified First", "Helvetica", 14)
+            .assert_textline_has_font("Modified Second", "Helvetica", 14)
+        )
 
 
 def test_context_manager_edit_with_exception_no_apply():
@@ -195,8 +197,8 @@ def test_context_manager_edit_with_exception_no_apply():
                 editor.replace("This should not be applied")
                 raise ValueError("Test exception")
 
-    # Original text should still exist since apply() was not called
-    PDFAssertions(pdf).assert_textline_exists("The Complete")
+        # Original text should still exist since apply() was not called
+        PDFAssertions(pdf).assert_textline_exists("The Complete")
 
 
 def test_context_manager_nested_pdf_and_edit():
@@ -211,13 +213,13 @@ def test_context_manager_nested_pdf_and_edit():
             editor.font("Helvetica", 16)
             editor.color(Color(0, 0, 255))
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Nested Context", "Helvetica", 16)
-        .assert_textline_has_color("Nested Context", Color(0, 0, 255))
-        .assert_textline_has_font("Manager Test", "Helvetica", 16)
-        .assert_textline_has_color("Manager Test", Color(0, 0, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Nested Context", "Helvetica", 16)
+            .assert_textline_has_color("Nested Context", Color(0, 0, 255))
+            .assert_textline_has_font("Manager Test", "Helvetica", 16)
+            .assert_textline_has_color("Manager Test", Color(0, 0, 255))
+        )
 
 
 def test_context_manager_edit_preserves_position_when_not_specified():
@@ -233,7 +235,7 @@ def test_context_manager_edit_preserves_position_when_not_specified():
             editor.replace("Position Preserved")
             editor.font("Helvetica", 14)
 
-    PDFAssertions(pdf).assert_paragraph_is_at("Position Preserved", original_x, original_y, 0)
+        PDFAssertions(pdf).assert_paragraph_is_at("Position Preserved", original_x, original_y, 0)
 
 
 def test_context_manager_edit_chaining():
@@ -246,13 +248,13 @@ def test_context_manager_edit_chaining():
         with paragraph.edit() as editor:
             editor.replace("Chained\nEdits").font("Helvetica", 15).color(Color(128, 128, 128)).line_spacing(1.8)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Chained", "Helvetica", 15)
-        .assert_textline_has_color("Chained", Color(128, 128, 128))
-        .assert_textline_has_font("Edits", "Helvetica", 15)
-        .assert_textline_has_color("Edits", Color(128, 128, 128))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Chained", "Helvetica", 15)
+            .assert_textline_has_color("Chained", Color(128, 128, 128))
+            .assert_textline_has_font("Edits", "Helvetica", 15)
+            .assert_textline_has_color("Edits", Color(128, 128, 128))
+        )
 
 
 def test_context_manager_edit_standard_fonts():
@@ -266,7 +268,7 @@ def test_context_manager_edit_standard_fonts():
             editor.replace("Times Roman")
             editor.font(StandardFonts.TIMES_ROMAN.value, 16)
 
-    PDFAssertions(pdf).assert_textline_has_font("Times Roman", StandardFonts.TIMES_ROMAN.value, 16)
+        PDFAssertions(pdf).assert_textline_has_font("Times Roman", StandardFonts.TIMES_ROMAN.value, 16)
 
 
 def test_context_manager_edit_with_multiline_text():
@@ -280,11 +282,11 @@ def test_context_manager_edit_with_multiline_text():
             editor.replace("Line 1\nLine 2")
             editor.font("Helvetica", 12)
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_exists("Line 1")
-        .assert_textline_exists("Line 2")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_exists("Line 1")
+            .assert_textline_exists("Line 2")
+        )
 
 
 def test_context_manager_edit_empty_text():
@@ -298,7 +300,7 @@ def test_context_manager_edit_empty_text():
             editor.replace("")
             editor.font("Helvetica", 12)
 
-    PDFAssertions(pdf).assert_textline_does_not_exist("The Complete")
+        PDFAssertions(pdf).assert_textline_does_not_exist("The Complete")
 
 
 def test_context_manager_example_from_docs():
@@ -315,13 +317,13 @@ def test_context_manager_example_from_docs():
 
         pdf.save("/tmp/output_context_manager_test.pdf")
 
-    # Verify the changes
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Awesomely", "Helvetica", 12)
-        .assert_textline_has_font("Obvious!", "Helvetica", 12)
-        .assert_textline_does_not_exist("The Complete")
-    )
+        # Verify the changes
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Awesomely", "Helvetica", 12)
+            .assert_textline_has_font("Obvious!", "Helvetica", 12)
+            .assert_textline_does_not_exist("The Complete")
+        )
 
 
 def test_context_manager_vs_manual_apply():

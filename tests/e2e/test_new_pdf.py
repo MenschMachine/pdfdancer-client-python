@@ -17,9 +17,9 @@ def test_create_blank_pdf_defaults():
         assert len(pdf_bytes) > 0, "PDF bytes should not be empty"
         assert pdf_bytes[:4] == b'%PDF', "PDF should start with PDF signature"
 
-    (
-        PDFAssertions(pdf).assert_total_number_of_elements(0)
-    )
+        (
+            PDFAssertions(pdf).assert_total_number_of_elements(0)
+        )
 
 
 def test_create_blank_pdf_with_custom_params():
@@ -35,12 +35,12 @@ def test_create_blank_pdf_with_custom_params():
     ) as pdf:
         pages = pdf.pages()
         assert len(pages) == 3, "PDF should have 3 pages"
-    (
-        PDFAssertions(pdf)
-        .assert_total_number_of_elements(0)
-        .assert_page_count(3)
-        .assert_page_dimension(PageSize.A4.height, PageSize.A4.width)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_total_number_of_elements(0)
+            .assert_page_count(3)
+            .assert_page_dimension(PageSize.A4.height, PageSize.A4.width)
+        )
 
 
 def test_create_blank_pdf_with_string_params():
@@ -57,12 +57,12 @@ def test_create_blank_pdf_with_string_params():
         pages = pdf.pages()
         assert len(pages) == 2, "PDF should have 2 pages"
 
-    (
-        PDFAssertions(pdf)
-        .assert_total_number_of_elements(0)
-        .assert_page_count(2)
-        .assert_page_dimension(PageSize.LETTER.width, PageSize.LETTER.height, Orientation.PORTRAIT)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_total_number_of_elements(0)
+            .assert_page_count(2)
+            .assert_page_dimension(PageSize.LETTER.width, PageSize.LETTER.height, Orientation.PORTRAIT)
+        )
 
 
 def test_create_blank_pdf_add_content():
@@ -83,10 +83,10 @@ def test_create_blank_pdf_add_content():
         assert len(paragraphs) == 1, "Should have one paragraph"
         assert paragraphs[0].get_text() == "Hello from blank PDF"
 
-    (
-        PDFAssertions(pdf)
-        .assert_paragraph_is_at("Hello from blank PDF", 100, 201.5)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_paragraph_is_at("Hello from blank PDF", 100, 201.5)
+        )
 
 
 def test_create_blank_pdf_add_and_modify_content():
@@ -123,10 +123,10 @@ def test_create_blank_pdf_add_page():
         assert Orientation.PORTRAIT == page_ref.orientation
         assert 2 == len(pdf.pages())
 
-    (
-        PDFAssertions(pdf)
-        .assert_page_count(2)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_page_count(2)
+        )
 
 
 def test_create_blank_pdf_invalid_page_count():

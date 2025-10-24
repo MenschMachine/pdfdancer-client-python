@@ -32,7 +32,7 @@ jobs:
           venv/bin/pip install -e ".[dev]"
 
       - name: Run tests
-        run: PDFDANCER_BASE_URL=https://api.staging.pdfdancer.com PDFDANCER_TOKEN=42 venv/bin/python -m pytest tests/ -v  --maxfail=3
+        run: PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com PDFDANCER_TOKEN=42 venv/bin/python -m pytest tests/ -v  --maxfail=3
 
       - name: Build distribution packages
         run: venv/bin/python -m build

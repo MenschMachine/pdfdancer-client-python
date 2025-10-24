@@ -31,9 +31,9 @@ def test_delete_all_images():
 
         assert pdf.select_images() == []
 
-    pdf_assertions = PDFAssertions(pdf)
-    for p in pdf.pages():
-        pdf_assertions.assert_number_of_images(0, p.page_index)
+        pdf_assertions = PDFAssertions(pdf)
+        for p in pdf.pages():
+            pdf_assertions.assert_number_of_images(0, p.page_index)
 
 
 def test_move_image():
@@ -60,11 +60,11 @@ def test_move_image():
         assert pytest.approx(moved.position.x(), rel=0, abs=0.05) == new_x
         assert pytest.approx(moved.position.y(), rel=0, abs=0.05) == new_y
 
-    (
-        PDFAssertions(pdf)
-        .assert_image_at(new_x, new_y, 11)
-        .assert_no_image_at(original_x, original_y, 11)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_image_at(new_x, new_y, 11)
+            .assert_no_image_at(original_x, original_y, 11)
+        )
 
 
 def test_find_image_by_position():
@@ -106,8 +106,8 @@ def test_add_image():
         assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
 
-    (
-        PDFAssertions(pdf)
-        .assert_image_at(50.1, 98, 6)
-        .assert_number_of_images(1, 6)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_image_at(50.1, 98, 6)
+            .assert_number_of_images(1, 6)
+        )

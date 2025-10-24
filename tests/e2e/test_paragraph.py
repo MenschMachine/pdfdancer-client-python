@@ -92,14 +92,14 @@ def test_modify_paragraph():
         assert moved.object_ref().status.font_type == FontType.STANDARD
         assert moved.object_ref().status.is_modified()
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Awesomely", "Helvetica", 12)
-        .assert_textline_has_font("Obvious!", "Helvetica", 12)
-        .assert_textline_has_color("Awesomely", Color(255, 255, 255))
-        .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_paragraph_is_at("Awesomely", 300.1, 500)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Awesomely", "Helvetica", 12)
+            .assert_textline_has_font("Obvious!", "Helvetica", 12)
+            .assert_textline_has_color("Awesomely", Color(255, 255, 255))
+            .assert_textline_has_color("Obvious!", Color(255, 255, 255))
+            .assert_paragraph_is_at("Awesomely", 300.1, 500)
+        )
 
 
 def test_modify_paragraph_without_position():
@@ -118,14 +118,14 @@ def test_modify_paragraph_without_position():
             .apply()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Awesomely", "Helvetica", 12)
-        .assert_textline_has_font("Obvious!", "Helvetica", 12)
-        .assert_textline_has_color("Awesomely", Color(255, 255, 255))
-        .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_paragraph_is_at("Awesomely", original_x, original_y)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Awesomely", "Helvetica", 12)
+            .assert_textline_has_font("Obvious!", "Helvetica", 12)
+            .assert_textline_has_color("Awesomely", Color(255, 255, 255))
+            .assert_textline_has_color("Obvious!", Color(255, 255, 255))
+            .assert_paragraph_is_at("Awesomely", original_x, original_y)
+        )
 
 
 def test_modify_paragraph_without_position_and_spacing():
@@ -142,14 +142,14 @@ def test_modify_paragraph_without_position_and_spacing():
             .apply()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Awesomely", "Helvetica", 12)
-        .assert_textline_has_font("Obvious!", "Helvetica", 12)
-        .assert_textline_has_color("Awesomely", Color(255, 255, 255))
-        .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-        .assert_paragraph_is_at("Awesomely", original_x, original_y)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Awesomely", "Helvetica", 12)
+            .assert_textline_has_font("Obvious!", "Helvetica", 12)
+            .assert_textline_has_color("Awesomely", Color(255, 255, 255))
+            .assert_textline_has_color("Obvious!", Color(255, 255, 255))
+            .assert_paragraph_is_at("Awesomely", original_x, original_y)
+        )
 
 
 def test_modify_paragraph_noop():
@@ -167,11 +167,11 @@ def test_modify_paragraph_noop():
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
         assert not paragraph.object_ref().status.is_modified()
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
-        .assert_textline_has_color("The Complete", Color(255, 255, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
+            .assert_textline_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_only_text():
@@ -196,13 +196,13 @@ def test_modify_paragraph_only_text():
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
         assert paragraph.object_ref().status.is_modified()
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_does_not_exist("The Complete")
-        .assert_textline_has_color("lorem", Color(255, 255, 255))
-        .assert_textline_has_color("ipsum", Color(255, 255, 255))
-        .assert_textline_has_color("Caesar", Color(255, 255, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("The Complete")
+            .assert_textline_has_color("lorem", Color(255, 255, 255))
+            .assert_textline_has_color("ipsum", Color(255, 255, 255))
+            .assert_textline_has_color("Caesar", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_only_font():
@@ -221,12 +221,12 @@ def test_modify_paragraph_only_font():
         assert paragraph.object_ref().status.font_type == FontType.STANDARD
         assert paragraph.object_ref().status.is_modified()
 
-    # TODO does not preserve color and fucks up line spacings
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("The Complete", "Helvetica", 28)
-        .assert_textline_has_color("The Complete", Color(255, 255, 255))
-    )
+        # TODO does not preserve color and fucks up line spacings
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("The Complete", "Helvetica", 28)
+            .assert_textline_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_only_move():
@@ -247,12 +247,12 @@ def test_modify_paragraph_only_move():
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
         assert paragraph.object_ref().status.is_modified()  # This should actually not be marked as 'modified' but since we are using a ModifyObject operation we are not (yet) able to detect this
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
-        .assert_paragraph_is_at("The Complete", 1, 1, 0)
-        .assert_textline_has_color("The Complete", Color(255, 255, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("The Complete", "IXKSWR+Poppins-Bold", 1)
+            .assert_paragraph_is_at("The Complete", 1, 1, 0)
+            .assert_textline_has_color("The Complete", Color(255, 255, 255))
+        )
 
 
 def test_modify_paragraph_simple():
@@ -268,13 +268,13 @@ def test_modify_paragraph_simple():
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
         assert paragraph.object_ref().status.is_modified()
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font("Awesomely", "IXKSWR+Poppins-Bold", 1)
-        .assert_textline_has_font("Obvious!", "IXKSWR+Poppins-Bold", 1)
-        .assert_textline_has_color("Awesomely", Color(255, 255, 255))
-        .assert_textline_has_color("Obvious!", Color(255, 255, 255))
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font("Awesomely", "IXKSWR+Poppins-Bold", 1)
+            .assert_textline_has_font("Obvious!", "IXKSWR+Poppins-Bold", 1)
+            .assert_textline_has_color("Awesomely", Color(255, 255, 255))
+            .assert_textline_has_color("Obvious!", Color(255, 255, 255))
+        )
 
 
 def test_add_paragraph_with_custom_font1_expect_not_found():
@@ -306,14 +306,14 @@ def test_add_paragraph_with_custom_font1_1():
             .add()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font_matching("Awesomely", "Roboto-Regular", 14)
-        .assert_textline_has_font_matching("Obvious!", "Roboto-Regular", 14)
-        .assert_textline_has_color("Awesomely", Color(0, 0, 0))
-        .assert_textline_has_color("Obvious!", Color(0, 0, 0))
-        .assert_paragraph_is_at("Awesomely", 300.1, 500, 0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font_matching("Awesomely", "Roboto-Regular", 14)
+            .assert_textline_has_font_matching("Obvious!", "Roboto-Regular", 14)
+            .assert_textline_has_color("Awesomely", Color(0, 0, 0))
+            .assert_textline_has_color("Obvious!", Color(0, 0, 0))
+            .assert_paragraph_is_at("Awesomely", 300.1, 500, 0)
+        )
 
 
 def test_add_paragraph_on_page_with_custom_font1_1():
@@ -329,14 +329,14 @@ def test_add_paragraph_on_page_with_custom_font1_1():
             .add()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font_matching("Awesomely", "Roboto-Regular", 14)
-        .assert_textline_has_font_matching("Obvious!", "Roboto-Regular", 14)
-        .assert_textline_has_color("Awesomely", Color(0, 0, 0))
-        .assert_textline_has_color("Obvious!", Color(0, 0, 0))
-        .assert_paragraph_is_at("Awesomely", 300.1, 500, 0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font_matching("Awesomely", "Roboto-Regular", 14)
+            .assert_textline_has_font_matching("Obvious!", "Roboto-Regular", 14)
+            .assert_textline_has_color("Awesomely", Color(0, 0, 0))
+            .assert_textline_has_color("Obvious!", Color(0, 0, 0))
+            .assert_paragraph_is_at("Awesomely", 300.1, 500, 0)
+        )
 
 
 def test_add_paragraph_with_custom_font1_2():
@@ -433,11 +433,11 @@ def test_add_paragraph_with_standard_font_times():
             .at(0, 150, 150)
             .add()
         )
-    (
-        PDFAssertions(pdf)
-        .assert_text_has_font("Times Roman Test", StandardFonts.TIMES_ROMAN.value, 14)
-        .assert_paragraph_is_at("Times Roman Test", 150, 150, 0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Times Roman Test", StandardFonts.TIMES_ROMAN.value, 14)
+            .assert_paragraph_is_at("Times Roman Test", 150, 150, 0)
+        )
 
 
 def test_add_paragraph_with_standard_font_courier():
@@ -453,11 +453,11 @@ def test_add_paragraph_with_standard_font_courier():
             .add()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_text_has_font("Courier Monospace", StandardFonts.COURIER_BOLD.value, 12, page=0)
-        .assert_paragraph_is_at("Courier Monospace", 200, 200, page=0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_text_has_font("Courier Monospace", StandardFonts.COURIER_BOLD.value, 12, page=0)
+            .assert_paragraph_is_at("Courier Monospace", 200, 200, page=0)
+        )
 
 
 def test_paragraph_color_reading():
@@ -501,9 +501,9 @@ def test_add_paragraph_to_new_page():
             .add()
         )
 
-    (
-        PDFAssertions(pdf)
-        .assert_textline_has_font_matching("Awesome", "Roboto-Regular", 14)
-        .assert_textline_has_color("Awesome", Color(0, 0, 0))
-        .assert_paragraph_is_at("Awesome", 50, 100, 0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_font_matching("Awesome", "Roboto-Regular", 14)
+            .assert_textline_has_color("Awesome", Color(0, 0, 0))
+            .assert_paragraph_is_at("Awesome", 50, 100, 0)
+        )

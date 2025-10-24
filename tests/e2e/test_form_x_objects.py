@@ -23,10 +23,10 @@ def test_delete_form(tmp_path: Path):
         assert len(pdf.select_elements()) == len(all_elements) - 17
         pdf.save("/tmp/delete-form1.pdf")
 
-    (
-        PDFAssertions(pdf)
-        .assert_number_of_formxobjects(0)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_number_of_formxobjects(0)
+        )
 
 
 def test_find_form_by_position():

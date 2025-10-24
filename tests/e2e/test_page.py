@@ -46,10 +46,10 @@ def test_delete_page():
         pages_after = pdf.pages()
         assert len(pages_after) == 11
 
-    (
-        PDFAssertions(pdf)
-        .assert_number_of_pages(11)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_number_of_pages(11)
+        )
 
 
 def test_move_page():
@@ -60,7 +60,7 @@ def test_move_page():
         assert len(pages_before) == 12
         assert pdf.move_page(0, 11)
 
-    (
-        PDFAssertions(pdf)
-        .assert_paragraph_exists("The Complete", 11)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_paragraph_exists("The Complete", 11)
+        )

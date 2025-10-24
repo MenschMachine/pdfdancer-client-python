@@ -5,7 +5,7 @@ Mirrors the Java client exception hierarchy.
 
 from typing import Optional
 
-import requests
+import httpx
 
 
 class PdfDancerException(Exception):
@@ -32,10 +32,10 @@ class FontNotFoundException(PdfDancerException):
 class HttpClientException(PdfDancerException):
     """
     Exception raised for HTTP client errors during API communication.
-    Wraps requests exceptions and HTTP errors from the API.
+    Wraps httpx exceptions and HTTP errors from the API.
     """
 
-    def __init__(self, message: str, response: Optional[requests.Response] = None, cause: Optional[Exception] = None):
+    def __init__(self, message: str, response: Optional[httpx.Response] = None, cause: Optional[Exception] = None):
         super().__init__(message, cause)
         self.response = response
         self.status_code = response.status_code if response else None

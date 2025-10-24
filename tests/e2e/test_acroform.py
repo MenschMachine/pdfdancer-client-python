@@ -45,9 +45,9 @@ def test_delete_form_fields():
         assert len(all_form_fields) == 9
         assert all(f.internal_id != to_delete.internal_id for f in all_form_fields)
 
-    (
-        PDFAssertions(pdf).assert_number_of_form_fields(9)
-    )
+        (
+            PDFAssertions(pdf).assert_number_of_form_fields(9)
+        )
 
 
 def test_move_form_field():
@@ -69,12 +69,12 @@ def test_move_form_field():
         assert len(moved) == 1
         assert moved[0].internal_id == f.internal_id
 
-    (
-        PDFAssertions(pdf)
-        .assert_number_of_form_fields(10)
-        .assert_form_field_at(30, 40)
-        .assert_form_field_not_at(280, 455)
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_number_of_form_fields(10)
+            .assert_form_field_at(30, 40)
+            .assert_form_field_not_at(280, 455)
+        )
 
 
 def test_edit_form_fields():
@@ -95,8 +95,8 @@ def test_edit_form_fields():
         assert updated.name == "firstName"
         assert updated.value == "Donald Duck"
 
-    (
-        PDFAssertions(pdf)
-        .assert_form_field_exists("firstName")
-        .assert_form_field_has_value("firstName", "Donald Duck")
-    )
+        (
+            PDFAssertions(pdf)
+            .assert_form_field_exists("firstName")
+            .assert_form_field_has_value("firstName", "Donald Duck")
+        )

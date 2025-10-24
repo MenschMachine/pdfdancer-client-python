@@ -23,7 +23,7 @@ load_dotenv()
 # WARNING: Only use in development/testing environments
 DISABLE_SSL_VERIFY = False
 
-DEBUG = False
+DEBUG = os.environ.get("PDFDANCER_CLIENT_DEBUG", False)
 DEFAULT_TOLERANCE = 0.01
 
 

@@ -36,7 +36,8 @@ from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
     FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddRequest, ModifyRequest, ModifyTextRequest,
     ChangeFormFieldRequest, CommandResult,
-    ShapeType, PositionMode, PageSize, Orientation
+    ShapeType, PositionMode, PageSize, Orientation,
+    PageSnapshot, DocumentSnapshot, FontRecommendation, FontType
 )
 from .paragraph_builder import ParagraphPageBuilder
 from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
@@ -1108,6 +1109,50 @@ class PDFDancer:
 
     # Document Operations
 
+    # Snapshot Operations
+
+    def get_document_snapshot(self, types: Optional[str] = None) -> DocumentSnapshot:
+        """
+        Retrieve a snapshot of the entire document with all pages and elements.
+
+        Args:
+            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+
+        Returns:
+            DocumentSnapshot containing page count, fonts, and all page snapshots
+        """
+        params = {}
+        if types:
+            params['types'] = types
+
+        response = self._make_request('GET', '/pdf/document/snapshot', params=params)
+        data = response.json()
+
+        return self._parse_document_snapshot(data)
+
+    def get_page_snapshot(self, page_index: int, types: Optional[str] = None) -> PageSnapshot:
+        """
+        Retrieve a snapshot of a specific page with all its elements.
+
+        Args:
+            page_index: The index of the page to snapshot (0-based)
+            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+
+        Returns:
+            PageSnapshot containing page reference and all elements on that page
+        """
+        if page_index < 0:
+            raise ValidationException(f"Page index must be >= 0, got {page_index}")
+
+        params = {}
+        if types:
+            params['types'] = types
+
+        response = self._make_request('GET', f'/pdf/page/{page_index}/snapshot', params=params)
+        data = response.json()
+
+        return self._parse_page_snapshot(data)
+
     def get_bytes(self) -> bytes:
         """
         Downloads the current state of the PDF document with all modifications applied.
@@ -1296,6 +1341,39 @@ class PDFDancer:
             type=object_type,
             page_size=page_size,
             orientation=orientation
+        )
+
+    def _parse_font_recommendation(self, data: dict) -> FontRecommendation:
+        """Parse JSON data into FontRecommendation instance."""
+        font_type_str = data.get('fontType', 'SYSTEM')
+        font_type = FontType(font_type_str)
+
+        return FontRecommendation(
+            font_name=data.get('fontName', ''),
+            font_type=font_type,
+            similarity_score=data.get('similarityScore', 0.0)
+        )
+
+    def _parse_page_snapshot(self, data: dict) -> PageSnapshot:
+        """Parse JSON data into PageSnapshot instance."""
+        page_ref = self._parse_page_ref(data.get('pageRef', {}))
+        elements = [self._parse_object_ref(elem_data) for elem_data in data.get('elements', [])]
+
+        return PageSnapshot(
+            page_ref=page_ref,
+            elements=elements
+        )
+
+    def _parse_document_snapshot(self, data: dict) -> DocumentSnapshot:
+        """Parse JSON data into DocumentSnapshot instance."""
+        page_count = data.get('pageCount', 0)
+        fonts = [self._parse_font_recommendation(font_data) for font_data in data.get('fonts', [])]
+        pages = [self._parse_page_snapshot(page_data) for page_data in data.get('pages', [])]
+
+        return DocumentSnapshot(
+            page_count=page_count,
+            fonts=fonts,
+            pages=pages
         )
 
     # Builder Pattern Support

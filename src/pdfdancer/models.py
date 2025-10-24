@@ -753,3 +753,42 @@ class CommandResult:
     @classmethod
     def empty(cls, command_name: str, element_id: str | None) -> 'CommandResult':
         return CommandResult(command_name=command_name, element_id=element_id, message=None, success=True, warning=None)
+
+
+@dataclass
+class PageSnapshot:
+    """
+    Snapshot of a single page containing all elements and page metadata.
+    """
+    page_ref: PageRef
+    elements: List[ObjectRef]
+
+    def get_page_ref(self) -> PageRef:
+        """Get the page reference."""
+        return self.page_ref
+
+    def get_elements(self) -> List[ObjectRef]:
+        """Get the list of elements on this page."""
+        return self.elements
+
+
+@dataclass
+class DocumentSnapshot:
+    """
+    Snapshot of the entire document containing all pages and font information.
+    """
+    page_count: int
+    fonts: List[FontRecommendation]
+    pages: List[PageSnapshot]
+
+    def get_page_count(self) -> int:
+        """Get the total number of pages."""
+        return self.page_count
+
+    def get_fonts(self) -> List[FontRecommendation]:
+        """Get the list of fonts used in the document."""
+        return self.fonts
+
+    def get_pages(self) -> List[PageSnapshot]:
+        """Get the list of page snapshots."""
+        return self.pages

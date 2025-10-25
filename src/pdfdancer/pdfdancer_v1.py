@@ -1486,9 +1486,10 @@ class PDFDancer:
 
         # Filter by object type (handle form field subtypes)
         if object_type == ObjectType.FORM_FIELD:
-            # Form fields include TEXT_FIELD, CHECK_BOX, RADIO_BUTTON
+            # Form fields include TEXT_FIELD, CHECK_BOX, RADIO_BUTTON, BUTTON, DROPDOWN
             form_field_types = {ObjectType.FORM_FIELD, ObjectType.TEXT_FIELD,
-                                ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON}
+                                ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON,
+                                ObjectType.BUTTON, ObjectType.DROPDOWN}
             filtered = [e for e in elements if e.type in form_field_types]
         else:
             filtered = [e for e in elements if e.type == object_type]
@@ -1791,7 +1792,8 @@ class PDFDancer:
                     # Parse as TextObjectRef to capture text, font, color, children
                     elements.append(self._parse_text_object_ref(elem_data))
                 elif elem_type in (ObjectType.FORM_FIELD, ObjectType.TEXT_FIELD,
-                                   ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON):
+                                   ObjectType.CHECK_BOX, ObjectType.RADIO_BUTTON,
+                                   ObjectType.BUTTON, ObjectType.DROPDOWN):
                     # Parse as FormFieldRef to capture name and value
                     elements.append(self._parse_form_field_ref(elem_data))
                 else:

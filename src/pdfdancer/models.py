@@ -164,6 +164,8 @@ class ObjectType(Enum):
     TEXT_FIELD = "TEXT_FIELD"
     CHECK_BOX = "CHECK_BOX"
     RADIO_BUTTON = "RADIO_BUTTON"
+    BUTTON = "BUTTON"
+    DROPDOWN = "DROPDOWN"
 
 
 class PositionMode(Enum):

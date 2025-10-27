@@ -16,6 +16,8 @@ from typing import List, Optional, Union, BinaryIO, Mapping, Any
 import httpx
 from dotenv import load_dotenv
 
+from .fingerprint import Fingerprint
+
 load_dotenv()
 
 # Global variable to disable SSL certificate verification
@@ -749,7 +751,8 @@ class PDFDancer:
         headers = {
             'X-Session-Id': self._session_id,
             'Content-Type': 'application/json',
-            'X-Generated-At': _generate_timestamp()
+            'X-Generated-At': _generate_timestamp(),
+            'X-Fingerprint': Fingerprint.generate()
         }
 
         try:

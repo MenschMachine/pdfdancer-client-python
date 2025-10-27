@@ -13,14 +13,18 @@ from .exceptions import (
 from .models import (
     ObjectRef, Position, ObjectType, Font, Color, Image, BoundingRect, Paragraph, FormFieldRef, TextObjectRef,
     PageRef, PositionMode, ShapeType, Point, StandardFonts, PageSize, Orientation, TextStatus, FontRecommendation,
-    FontType
+    FontType, PathSegment, Line, Bezier, Path
 )
 from .paragraph_builder import ParagraphBuilder
+from .path_builder import PathBuilder, LineBuilder, BezierBuilder
 
 __version__ = "1.0.0"
 __all__ = [
     "PDFDancer",
     "ParagraphBuilder",
+    "PathBuilder",
+    "LineBuilder",
+    "BezierBuilder",
     "ObjectRef",
     "Position",
     "ObjectType",
@@ -41,6 +45,10 @@ __all__ = [
     "TextStatus",
     "FontRecommendation",
     "FontType",
+    "PathSegment",
+    "Line",
+    "Bezier",
+    "Path",
     "PdfDancerException",
     "FontNotFoundException",
     "ValidationException",

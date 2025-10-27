@@ -349,6 +349,117 @@ class Font:
 
 
 @dataclass
+class PathSegment:
+    """
+    Abstract base class for individual path segments within vector paths.
+    This class provides common properties for path elements including stroke and fill colors,
+    line width, and positioning. Concrete subclasses implement specific geometric shapes
+    like lines, curves, and bezier segments.
+    """
+    stroke_color: Optional[Color] = None
+    fill_color: Optional[Color] = None
+    stroke_width: Optional[float] = None
+    dash_array: Optional[List[float]] = None
+    dash_phase: Optional[float] = None
+
+    def get_stroke_color(self) -> Optional[Color]:
+        """Color used for drawing the segment's outline or stroke."""
+        return self.stroke_color
+
+    def get_fill_color(self) -> Optional[Color]:
+        """Color used for filling the segment's interior area (if applicable)."""
+        return self.fill_color
+
+    def get_stroke_width(self) -> Optional[float]:
+        """Width of the stroke line in PDF coordinate units."""
+        return self.stroke_width
+
+    def get_dash_array(self) -> Optional[List[float]]:
+        """Dash pattern for stroking the path segment. Null or empty means solid line."""
+        return self.dash_array
+
+    def get_dash_phase(self) -> Optional[float]:
+        """Dash phase (offset) into the dash pattern in user space units."""
+        return self.dash_phase
+
+
+@dataclass
+class Line(PathSegment):
+    """
+    Represents a straight line path segment between two points.
+    This class defines a linear path element connecting two coordinate points,
+    commonly used in vector graphics and geometric shapes within PDF documents.
+    """
+    p0: Optional[Point] = None
+    p1: Optional[Point] = None
+
+    def get_p0(self) -> Optional[Point]:
+        """Returns the starting point of this line segment."""
+        return self.p0
+
+    def get_p1(self) -> Optional[Point]:
+        """Returns the ending point of this line segment."""
+        return self.p1
+
+
+@dataclass
+class Bezier(PathSegment):
+    """
+    Represents a cubic Bezier curve path segment defined by four control points.
+    This class implements a cubic Bezier curve with start point, two control points,
+    and end point, providing smooth curved path segments for complex vector graphics.
+    """
+    p0: Optional[Point] = None
+    p1: Optional[Point] = None
+    p2: Optional[Point] = None
+    p3: Optional[Point] = None
+
+    def get_p0(self) -> Optional[Point]:
+        """Returns the starting point p0 of this Bezier segment."""
+        return self.p0
+
+    def get_p1(self) -> Optional[Point]:
+        """Returns the first control point p1 of this Bezier segment."""
+        return self.p1
+
+    def get_p2(self) -> Optional[Point]:
+        """Returns the second control point p2 of this Bezier segment."""
+        return self.p2
+
+    def get_p3(self) -> Optional[Point]:
+        """Returns the ending point p3 of this Bezier segment."""
+        return self.p3
+
+
+@dataclass
+class Path:
+    """
+    Represents a complex vector path consisting of multiple path segments.
+    This class encapsulates vector graphics data within PDF documents, composed of
+    various path elements like lines, curves, and shapes.
+    """
+    position: Optional[Position] = None
+    path_segments: Optional[List[PathSegment]] = None
+    even_odd_fill: Optional[bool] = None
+
+    def get_position(self) -> Optional[Position]:
+        """Returns the position of this path."""
+        return self.position
+
+    def set_position(self, position: Position) -> None:
+        """Sets the position of this path."""
+        self.position = position
+
+    def get_path_segments(self) -> Optional[List[PathSegment]]:
+        """Returns the list of path segments that compose this path."""
+        return self.path_segments
+
+    def get_even_odd_fill(self) -> Optional[bool]:
+        """Returns whether even-odd fill rule should be used (true) or nonzero (false)."""
+        return self.even_odd_fill
+
+
+@dataclass
 class Image:
     """
     Represents an image object in a PDF document.
@@ -488,7 +599,26 @@ class AddRequest:
     def _object_to_dict(self, obj: Any) -> dict:
         """Convert PDF object to dictionary for JSON serialization."""
         import base64
-        if isinstance(obj, Image):
+        from .models import Path as PathModel, Line, Bezier, PathSegment
+
+        if isinstance(obj, PathModel):
+            # Serialize Path object
+            segments = []
+            if obj.path_segments:
+                for seg in obj.path_segments:
+                    seg_dict = self._segment_to_dict(seg)
+                    # Include per-segment position to satisfy backend validation (matches Java client)
+                    if obj.position:
+                        seg_dict["position"] = FindRequest._position_to_dict(obj.position)
+                    segments.append(seg_dict)
+
+            return {
+                "type": "PATH",
+                "position": FindRequest._position_to_dict(obj.position) if obj.position else None,
+                "pathSegments": segments if segments else None,
+                "evenOddFill": obj.even_odd_fill
+            }
+        elif isinstance(obj, Image):
             size = None
             if obj.width is not None and obj.height is not None:
                 size = {"width": obj.width, "height": obj.height}
@@ -538,6 +668,61 @@ class AddRequest:
             }
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
+
+    def _segment_to_dict(self, segment: 'PathSegment') -> dict:
+        """Convert a PathSegment (Line or Bezier) to dictionary for JSON serialization."""
+        from .models import Line, Bezier
+
+        result = {}
+
+        # Add common PathSegment properties
+        if segment.stroke_color:
+            result["strokeColor"] = {
+                "red": segment.stroke_color.r,
+                "green": segment.stroke_color.g,
+                "blue": segment.stroke_color.b,
+                "alpha": segment.stroke_color.a
+            }
+
+        if segment.fill_color:
+            result["fillColor"] = {
+                "red": segment.fill_color.r,
+                "green": segment.fill_color.g,
+                "blue": segment.fill_color.b,
+                "alpha": segment.fill_color.a
+            }
+
+        if segment.stroke_width is not None:
+            result["strokeWidth"] = segment.stroke_width
+
+        if segment.dash_array:
+            result["dashArray"] = segment.dash_array
+
+        if segment.dash_phase is not None:
+            result["dashPhase"] = segment.dash_phase
+
+        # Add segment-specific properties
+        if isinstance(segment, Line):
+            result["type"] = "LINE"
+            result["segmentType"] = "LINE"
+            if segment.p0:
+                result["p0"] = {"x": segment.p0.x, "y": segment.p0.y}
+            if segment.p1:
+                result["p1"] = {"x": segment.p1.x, "y": segment.p1.y}
+
+        elif isinstance(segment, Bezier):
+            result["type"] = "BEZIER"
+            result["segmentType"] = "BEZIER"
+            if segment.p0:
+                result["p0"] = {"x": segment.p0.x, "y": segment.p0.y}
+            if segment.p1:
+                result["p1"] = {"x": segment.p1.x, "y": segment.p1.y}
+            if segment.p2:
+                result["p2"] = {"x": segment.p2.x, "y": segment.p2.y}
+            if segment.p3:
+                result["p3"] = {"x": segment.p3.x, "y": segment.p3.y}
+
+        return result
 
 
 @dataclass

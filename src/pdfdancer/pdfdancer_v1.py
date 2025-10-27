@@ -271,6 +271,18 @@ class PageClient:
     def new_paragraph(self):
         return ParagraphPageBuilder(self.root, self.page_index)
 
+    def new_path(self):
+        from .path_builder import PathBuilder
+        return PathBuilder(self.root, self.page_index)
+
+    def new_line(self):
+        from .path_builder import LineBuilder
+        return LineBuilder(self.root, self.page_index)
+
+    def new_bezier(self):
+        from .path_builder import BezierBuilder
+        return BezierBuilder(self.root, self.page_index)
+
     def select_paths(self):
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(Position.at_page(self.page_index)))
@@ -1183,6 +1195,25 @@ class PDFDancer:
 
         return self._add_object(paragraph)
 
+    def _add_path(self, path: 'Path') -> bool:
+        """
+        Internal method to add a path to the document after validation.
+        """
+        from .models import Path as PathModel
+
+        if path is None:
+            raise ValidationException("Path cannot be null")
+        if path.get_position() is None:
+            raise ValidationException("Path position is null")
+        if path.get_position().page_index is None:
+            raise ValidationException("Path position page index is null")
+        if path.get_position().page_index < 0:
+            raise ValidationException("Path position page index is less than 0")
+        if not path.get_path_segments() or len(path.get_path_segments()) == 0:
+            raise ValidationException("Path must have at least one segment")
+
+        return self._add_object(path)
+
     def _add_object(self, pdf_object) -> bool:
         """
         Internal method to add any PDF object.
@@ -1211,6 +1242,10 @@ class PDFDancer:
 
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)
+
+    def new_path(self) -> 'PathBuilder':
+        from .path_builder import PathBuilder
+        return PathBuilder(self)
 
     # Modify Operations
     def _modify_paragraph(self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]) -> CommandResult:
@@ -1752,6 +1787,109 @@ class PDFDancer:
             type=object_type,
             page_size=page_size,
             orientation=orientation
+        )
+
+    def _parse_path_segment(self, segment_data: dict) -> 'PathSegment':
+        """Parse JSON data into PathSegment instance (Line or Bezier)."""
+        from .models import Line, Bezier, PathSegment, Point, Color
+
+        segment_type = segment_data.get('segmentType', segment_data.get('type', '')).upper()
+
+        # Parse common properties
+        stroke_color = None
+        stroke_color_data = segment_data.get('strokeColor')
+        if isinstance(stroke_color_data, dict):
+            r = stroke_color_data.get('red', 0)
+            g = stroke_color_data.get('green', 0)
+            b = stroke_color_data.get('blue', 0)
+            a = stroke_color_data.get('alpha', 255)
+            if all(isinstance(v, int) for v in [r, g, b]):
+                stroke_color = Color(r, g, b, a)
+
+        fill_color = None
+        fill_color_data = segment_data.get('fillColor')
+        if isinstance(fill_color_data, dict):
+            r = fill_color_data.get('red', 0)
+            g = fill_color_data.get('green', 0)
+            b = fill_color_data.get('blue', 0)
+            a = fill_color_data.get('alpha', 255)
+            if all(isinstance(v, int) for v in [r, g, b]):
+                fill_color = Color(r, g, b, a)
+
+        stroke_width = segment_data.get('strokeWidth')
+        dash_array = segment_data.get('dashArray')
+        dash_phase = segment_data.get('dashPhase')
+
+        # Parse specific segment type
+        if segment_type == 'LINE':
+            p0_data = segment_data.get('p0', {})
+            p1_data = segment_data.get('p1', {})
+
+            p0 = Point(p0_data.get('x', 0.0), p0_data.get('y', 0.0)) if p0_data else None
+            p1 = Point(p1_data.get('x', 0.0), p1_data.get('y', 0.0)) if p1_data else None
+
+            return Line(
+                stroke_color=stroke_color,
+                fill_color=fill_color,
+                stroke_width=stroke_width,
+                dash_array=dash_array,
+                dash_phase=dash_phase,
+                p0=p0,
+                p1=p1
+            )
+        elif segment_type == 'BEZIER':
+            p0_data = segment_data.get('p0', {})
+            p1_data = segment_data.get('p1', {})
+            p2_data = segment_data.get('p2', {})
+            p3_data = segment_data.get('p3', {})
+
+            p0 = Point(p0_data.get('x', 0.0), p0_data.get('y', 0.0)) if p0_data else None
+            p1 = Point(p1_data.get('x', 0.0), p1_data.get('y', 0.0)) if p1_data else None
+            p2 = Point(p2_data.get('x', 0.0), p2_data.get('y', 0.0)) if p2_data else None
+            p3 = Point(p3_data.get('x', 0.0), p3_data.get('y', 0.0)) if p3_data else None
+
+            return Bezier(
+                stroke_color=stroke_color,
+                fill_color=fill_color,
+                stroke_width=stroke_width,
+                dash_array=dash_array,
+                dash_phase=dash_phase,
+                p0=p0,
+                p1=p1,
+                p2=p2,
+                p3=p3
+            )
+        else:
+            # Fallback to base PathSegment for unknown types
+            return PathSegment(
+                stroke_color=stroke_color,
+                fill_color=fill_color,
+                stroke_width=stroke_width,
+                dash_array=dash_array,
+                dash_phase=dash_phase
+            )
+
+    def _parse_path(self, obj_data: dict) -> 'Path':
+        """Parse JSON data into Path instance with path segments."""
+        from .models import Path
+
+        position_data = obj_data.get('position', {})
+        position = self._parse_position(position_data) if position_data else None
+
+        # Parse path segments
+        path_segments = []
+        segments_data = obj_data.get('pathSegments', [])
+        if isinstance(segments_data, list):
+            for segment_data in segments_data:
+                if isinstance(segment_data, dict):
+                    path_segments.append(self._parse_path_segment(segment_data))
+
+        even_odd_fill = obj_data.get('evenOddFill')
+
+        return Path(
+            position=position,
+            path_segments=path_segments if path_segments else None,
+            even_odd_fill=even_odd_fill
         )
 
     def _parse_font_recommendation(self, data: dict) -> FontRecommendation:

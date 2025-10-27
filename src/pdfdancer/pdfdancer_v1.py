@@ -910,6 +910,20 @@ class PDFDancer:
         """
         return self._to_paragraph_objects(self._find_paragraphs(None))
 
+    def select_paragraphs_matching(self, pattern: str) -> List[ParagraphObject]:
+        """
+        Searches for paragraph objects matching a regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against paragraph text
+
+        Returns:
+            List of ParagraphObject instances matching the pattern
+        """
+        position = Position()
+        position.text_pattern = pattern
+        return self._to_paragraph_objects(self._find_paragraphs(position))
+
     def _find_paragraphs(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
         TextObjectRef]:
         """

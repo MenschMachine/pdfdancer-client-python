@@ -46,6 +46,128 @@ def test_find_paragraphs_by_text():
         assert pytest.approx(p.position.y(), rel=0, abs=2) == 496
 
 
+def test_select_paragraphs_matching_document_level():
+    """Test document-level regex pattern matching for paragraphs"""
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        # Get all paragraphs to ensure PDF is loaded
+        all_paras = pdf.select_paragraphs()
+        assert len(all_paras) > 0
+
+        # Test matching any word characters (should match most paragraphs)
+        matches = pdf.select_paragraphs_matching(r"\w+")
+        assert len(matches) >= 1
+
+        # Test matching any paragraph that contains text
+        matches = pdf.select_paragraphs_matching(r".")
+        assert len(matches) >= 1
+
+
+def test_select_paragraphs_matching_with_special_characters():
+    """Test regex pattern matching with special characters and numbers"""
+    base_url, token, _ = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    # Create a new PDF with test data
+    with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
+        # Add paragraphs with various patterns
+        pdf.new_paragraph().text('Invoice #12345').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
+        pdf.new_paragraph().text('Date: 2024-01-15').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+        pdf.new_paragraph().text('Total: $99.99').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add()
+        pdf.new_paragraph().text('Email: test@example.com').font(StandardFonts.HELVETICA, 12).at(0, 100, 400).add()
+
+        # Test matching invoice numbers
+        invoice_matches = pdf.select_paragraphs_matching(r'Invoice #[0-9]+')
+        assert len(invoice_matches) == 1
+        assert 'Invoice #12345' in invoice_matches[0].text
+
+        # Test matching dates in YYYY-MM-DD format
+        date_matches = pdf.select_paragraphs_matching(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        assert len(date_matches) == 1
+        assert '2024-01-15' in date_matches[0].text
+
+        # Test matching dollar amounts
+        dollar_matches = pdf.select_paragraphs_matching(r'\$[0-9]+\.[0-9]+')
+        assert len(dollar_matches) == 1
+        assert '$99.99' in dollar_matches[0].text
+
+        # Test matching email addresses
+        email_matches = pdf.select_paragraphs_matching(r'[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+')
+        assert len(email_matches) == 1
+        assert 'test@example.com' in email_matches[0].text
+
+
+def test_select_paragraphs_matching_multiple_pages():
+    """Test regex pattern matching across multiple pages"""
+    base_url, token, _ = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.new(token=token, base_url=base_url, timeout=30.0, initial_page_count=3) as pdf:
+        # Add paragraphs to different pages
+        pdf.new_paragraph().text('Chapter 1: Introduction').font(StandardFonts.HELVETICA, 14).at(0, 100, 100).add()
+        pdf.new_paragraph().text('Section 1.1').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+
+        pdf.new_paragraph().text('Chapter 2: Methods').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add()
+        pdf.new_paragraph().text('Section 2.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add()
+
+        pdf.new_paragraph().text('Chapter 3: Results').font(StandardFonts.HELVETICA, 14).at(2, 100, 100).add()
+        pdf.new_paragraph().text('Section 3.1').font(StandardFonts.HELVETICA, 12).at(2, 100, 200).add()
+
+        # Test matching all chapters (document-level)
+        chapter_matches = pdf.select_paragraphs_matching(r'^Chapter [0-9]+:')
+        assert len(chapter_matches) == 3
+        assert all('Chapter' in p.text for p in chapter_matches)
+
+        # Test matching all sections (document-level)
+        section_matches = pdf.select_paragraphs_matching(r'^Section [0-9]+\.[0-9]+')
+        assert len(section_matches) == 3
+        assert all('Section' in p.text for p in section_matches)
+
+        # Compare with page-level matching
+        page1_chapters = pdf.page(1).select_paragraphs_matching(r'^Chapter [0-9]+:')
+        assert len(page1_chapters) == 1
+        assert 'Chapter 2' in page1_chapters[0].text
+
+
+def test_select_paragraphs_matching_empty_results():
+    """Test regex pattern matching with no matches"""
+    base_url, token, _ = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph().text('Hello World').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
+        pdf.new_paragraph().text('Goodbye Moon').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+
+        # Test pattern that doesn't match anything
+        no_matches = pdf.select_paragraphs_matching(r'[0-9]{5}')
+        assert len(no_matches) == 0
+
+        # Test pattern that doesn't match
+        no_matches = pdf.select_paragraphs_matching(r'^Nonexistent')
+        assert len(no_matches) == 0
+
+
+def test_select_paragraphs_matching_case_sensitivity():
+    """Test that regex pattern matching is case-sensitive"""
+    base_url, token, _ = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.new_paragraph().text('UPPERCASE TEXT').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
+        pdf.new_paragraph().text('lowercase text').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+        pdf.new_paragraph().text('MixedCase Text').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add()
+
+        # Test case-sensitive matching
+        uppercase_matches = pdf.select_paragraphs_matching(r'UPPERCASE')
+        assert len(uppercase_matches) == 1
+        assert 'UPPERCASE' in uppercase_matches[0].text
+
+        lowercase_matches = pdf.select_paragraphs_matching(r'lowercase')
+        assert len(lowercase_matches) == 1
+        assert 'lowercase' in lowercase_matches[0].text
+
+        # Test case-insensitive pattern
+        case_insensitive_matches = pdf.select_paragraphs_matching(r'(?i)text')
+        assert len(case_insensitive_matches) == 3
+
+
 def test_delete_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
 

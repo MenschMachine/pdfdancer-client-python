@@ -900,11 +900,11 @@ class PDFDancer:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(all_elements, object_type, position, tolerance)
 
-    def select_paragraphs(self) -> List[TextObjectRef]:
+    def select_paragraphs(self) -> List[ParagraphObject]:
         """
-        Searches for paragraph objects returning TextObjectRef with hierarchical structure.
+        Searches for paragraph objects returning ParagraphObject instances.
         """
-        return self._find_paragraphs(None)
+        return self._to_paragraph_objects(self._find_paragraphs(None))
 
     def _find_paragraphs(self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE) -> List[
         TextObjectRef]:

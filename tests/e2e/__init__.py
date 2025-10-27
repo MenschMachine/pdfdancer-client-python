@@ -28,7 +28,7 @@ def _read_token() -> str | None:
 
 def _server_up(base_url: str) -> Tuple[bool, str]:
     try:
-        r = httpx.get(f"{base_url}/ping", timeout=3, verify=False)
+        r = httpx.get(f"{base_url}/ping", timeout=30, verify=False)
         return r.status_code == 200 and 'Pong' in r.text, r.text
     except Exception as e:
         return False, str(e)

@@ -8,3 +8,4 @@ src/pdfdancer_python.egg-info
 src/pdfdancer_client_python.egg-info
 /logs/
 /venv
+/venv-*

@@ -66,8 +66,8 @@ class TestFingerprint:
             assert tz == "unknown"
 
     def test_get_locale_fallback(self):
-        """Should fallback to 'en_US' on error."""
-        with patch('locale.getdefaultlocale', side_effect=Exception("Locale error")):
+        """Should fallback to 'unknown' on error."""
+        with patch('locale.getlocale', side_effect=Exception("Locale error")):
             loc = Fingerprint._get_locale()
             assert loc == "unknown"
 

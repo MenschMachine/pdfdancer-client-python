@@ -72,7 +72,7 @@ class Fingerprint:
     def _get_locale(cls) -> str:
         """Get default locale."""
         try:
-            loc = locale.getdefaultlocale()[0]
+            loc = locale.getlocale()[0]
             return loc if loc else "en_US"
         except Exception:
             return "unknown"

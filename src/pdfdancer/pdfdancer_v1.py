@@ -285,6 +285,10 @@ class PageClient:
     def new_bezier(self) -> BezierBuilder:
         return BezierBuilder(self.root, self.page_index)
 
+    def new_rectangle(self) -> 'RectangleBuilder':
+        from .path_builder import RectangleBuilder
+        return RectangleBuilder(self.root, self.page_index)
+
     def select_paths(self):
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(Position.at_page(self.page_index)))

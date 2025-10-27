@@ -154,6 +154,38 @@ class PathBuilder:
         self._segments.append(bezier)
         return self
 
+    def add_rectangle(self, x: float, y: float, width: float, height: float) -> 'PathBuilder':
+        """
+        Convenient method to add a rectangle as four line segments to the path.
+
+        Args:
+            x: X coordinate of bottom-left corner
+            y: Y coordinate of bottom-left corner
+            width: Rectangle width
+            height: Rectangle height
+
+        Returns:
+            Self for method chaining
+        """
+        if width <= 0:
+            raise ValidationException("Rectangle width must be positive")
+        if height <= 0:
+            raise ValidationException("Rectangle height must be positive")
+
+        # Create rectangle as 4 line segments (clockwise from bottom-left)
+        bottom_left = Point(x, y)
+        bottom_right = Point(x + width, y)
+        top_right = Point(x + width, y + height)
+        top_left = Point(x, y + height)
+
+        # Add four lines forming the rectangle
+        self.add_line(bottom_left, bottom_right)
+        self.add_line(bottom_right, top_right)
+        self.add_line(top_right, top_left)
+        self.add_line(top_left, bottom_left)
+
+        return self
+
     def even_odd_fill(self, enabled: bool = True) -> 'PathBuilder':
         """
         Set the fill rule to even-odd (vs nonzero winding).
@@ -550,6 +582,226 @@ class BezierBuilder:
             position=position,
             path_segments=[bezier],
             even_odd_fill=False
+        )
+
+        # Add it using the client's internal method
+        # noinspection PyProtectedMember
+        return self._client._add_path(path)
+
+
+class RectangleBuilder:
+    """
+    Builder class for constructing Rectangle objects with fluent interface.
+    Provides a convenient way to create a rectangle path with a single builder.
+    """
+
+    def __init__(self, client: 'PDFDancer', page_index: int):
+        """
+        Initialize the rectangle builder.
+
+        Args:
+            client: The PDFDancer instance for adding the rectangle
+            page_index: The page number (0-indexed)
+        """
+        if client is None:
+            raise ValidationException("Client cannot be null")
+
+        self._client = client
+        self._page_index = page_index
+        self._x: Optional[float] = None
+        self._y: Optional[float] = None
+        self._width: Optional[float] = None
+        self._height: Optional[float] = None
+        self._stroke_color: Optional[Color] = Color(0, 0, 0)  # Black default
+        self._fill_color: Optional[Color] = None
+        self._stroke_width: float = 1.0
+        self._dash_array: Optional[List[float]] = None
+        self._dash_phase: Optional[float] = None
+        self._even_odd_fill: bool = False
+
+    def at_coordinates(self, x: float, y: float) -> 'RectangleBuilder':
+        """
+        Set the bottom-left corner position of the rectangle.
+
+        Args:
+            x: X coordinate on the page
+            y: Y coordinate on the page
+
+        Returns:
+            Self for method chaining
+        """
+        self._x = x
+        self._y = y
+        return self
+
+    def with_size(self, width: float, height: float) -> 'RectangleBuilder':
+        """
+        Set the dimensions of the rectangle.
+
+        Args:
+            width: Rectangle width
+            height: Rectangle height
+
+        Returns:
+            Self for method chaining
+        """
+        self._width = width
+        self._height = height
+        return self
+
+    def stroke_color(self, color: Color) -> 'RectangleBuilder':
+        """
+        Set the stroke color.
+
+        Args:
+            color: The stroke color
+
+        Returns:
+            Self for method chaining
+        """
+        self._stroke_color = color
+        return self
+
+    def fill_color(self, color: Color) -> 'RectangleBuilder':
+        """
+        Set the fill color.
+
+        Args:
+            color: The fill color
+
+        Returns:
+            Self for method chaining
+        """
+        self._fill_color = color
+        return self
+
+    def stroke_width(self, width: float) -> 'RectangleBuilder':
+        """
+        Set the stroke width.
+
+        Args:
+            width: The stroke width in points
+
+        Returns:
+            Self for method chaining
+        """
+        if width <= 0:
+            raise ValidationException("Stroke width must be positive")
+        self._stroke_width = width
+        return self
+
+    def dash_pattern(self, dash_array: List[float], dash_phase: float = 0.0) -> 'RectangleBuilder':
+        """
+        Set a dash pattern.
+
+        Args:
+            dash_array: List of on/off lengths (e.g., [10, 5] = 10pt on, 5pt off)
+            dash_phase: Offset into the pattern
+
+        Returns:
+            Self for method chaining
+        """
+        self._dash_array = dash_array
+        self._dash_phase = dash_phase
+        return self
+
+    def solid(self) -> 'RectangleBuilder':
+        """
+        Set rectangle to solid (no dash pattern).
+
+        Returns:
+            Self for method chaining
+        """
+        self._dash_array = None
+        self._dash_phase = None
+        return self
+
+    def even_odd_fill(self, enabled: bool = True) -> 'RectangleBuilder':
+        """
+        Set the fill rule to even-odd (vs nonzero winding).
+
+        Args:
+            enabled: True for even-odd, False for nonzero winding
+
+        Returns:
+            Self for method chaining
+        """
+        self._even_odd_fill = enabled
+        return self
+
+    def add(self) -> bool:
+        """
+        Build the rectangle and add it to the PDF document.
+
+        Returns:
+            True if successful
+
+        Raises:
+            ValidationException: If required properties are missing
+        """
+        if self._x is None or self._y is None:
+            raise ValidationException("Rectangle position must be set using at_coordinates()")
+        if self._width is None or self._height is None:
+            raise ValidationException("Rectangle dimensions must be set using with_size()")
+        if self._width <= 0:
+            raise ValidationException("Rectangle width must be positive")
+        if self._height <= 0:
+            raise ValidationException("Rectangle height must be positive")
+
+        # Create rectangle as 4 line segments
+        bottom_left = Point(self._x, self._y)
+        bottom_right = Point(self._x + self._width, self._y)
+        top_right = Point(self._x + self._width, self._y + self._height)
+        top_left = Point(self._x, self._y + self._height)
+
+        # Create four lines forming the rectangle
+        lines = [
+            Line(
+                p0=bottom_left,
+                p1=bottom_right,
+                stroke_color=self._stroke_color,
+                fill_color=self._fill_color,
+                stroke_width=self._stroke_width,
+                dash_array=self._dash_array,
+                dash_phase=self._dash_phase
+            ),
+            Line(
+                p0=bottom_right,
+                p1=top_right,
+                stroke_color=self._stroke_color,
+                fill_color=self._fill_color,
+                stroke_width=self._stroke_width,
+                dash_array=self._dash_array,
+                dash_phase=self._dash_phase
+            ),
+            Line(
+                p0=top_right,
+                p1=top_left,
+                stroke_color=self._stroke_color,
+                fill_color=self._fill_color,
+                stroke_width=self._stroke_width,
+                dash_array=self._dash_array,
+                dash_phase=self._dash_phase
+            ),
+            Line(
+                p0=top_left,
+                p1=bottom_left,
+                stroke_color=self._stroke_color,
+                fill_color=self._fill_color,
+                stroke_width=self._stroke_width,
+                dash_array=self._dash_array,
+                dash_phase=self._dash_phase
+            )
+        ]
+
+        # Create position with only page index set
+        position = Position.at_page_coordinates(self._page_index, 0, 0)
+
+        # Wrap in Path with four line segments
+        path = Path(
+            position=position,
+            path_segments=lines,
+            even_odd_fill=self._even_odd_fill
         )
 
         # Add it using the client's internal method

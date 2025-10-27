@@ -336,9 +336,15 @@ class PDFDancer:
         """
         Create a client session, falling back to environment variables when needed.
 
+        Authentication:
+        - If token is provided, uses it
+        - Otherwise, checks PDFDANCER_TOKEN environment variable
+        - If no token is found, automatically obtains an anonymous token
+
         Args:
             pdf_data: PDF payload supplied directly or via filesystem handles.
-            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environement variable.
+            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable,
+                then to anonymous token if not set.
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
@@ -348,6 +354,10 @@ class PDFDancer:
         """
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
+
+        # If no token found, obtain anonymous token
+        if resolved_token is None:
+            resolved_token = cls._obtain_anonymous_token(resolved_base_url, timeout)
 
         return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
 
@@ -360,17 +370,65 @@ class PDFDancer:
         return resolved_base_url
 
     @classmethod
+    def _obtain_anonymous_token(cls, base_url: str, timeout: float = 30.0) -> str:
+        """
+        Obtain an anonymous token from the /keys/anon endpoint.
+
+        Args:
+            base_url: Base URL of the PDFDancer API server
+            timeout: HTTP read timeout in seconds
+
+        Returns:
+            Anonymous token string
+
+        Raises:
+            HttpClientException: If token request fails
+        """
+        try:
+            # Create temporary client without authentication
+            temp_client = httpx.Client(
+                http2=True,
+                verify=not DISABLE_SSL_VERIFY
+            )
+
+            headers = {
+                'X-Fingerprint': Fingerprint.generate()
+            }
+
+            response = temp_client.post(
+                cls._cleanup_url_path(base_url, "/keys/anon"),
+                headers=headers,
+                timeout=timeout if timeout > 0 else None
+            )
+
+            response.raise_for_status()
+            token_data = response.json()
+
+            # Extract token from response (matches Java AnonTokenResponse structure)
+            if isinstance(token_data, dict) and 'token' in token_data:
+                return token_data['token']
+            else:
+                raise HttpClientException("Invalid anonymous token response format")
+
+        except httpx.HTTPStatusError as e:
+            raise HttpClientException(f"Failed to obtain anonymous token: HTTP {e.response.status_code}",
+                                      response=e.response, cause=e) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(f"Failed to obtain anonymous token: {str(e)}",
+                                      response=None, cause=e) from None
+        finally:
+            temp_client.close()
+
+    @classmethod
     def _resolve_token(cls, token: Optional[str]) -> Optional[str]:
+        """
+        Resolve token from argument or environment variable.
+        Returns None if no token is found (allowing fallback to anonymous token).
+        """
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             env_token = os.getenv("PDFDANCER_TOKEN")
             resolved_token = env_token.strip() if env_token and env_token.strip() else None
-
-        if resolved_token is None:
-            raise ValidationException(
-                "Missing PDFDancer API token. Pass a token via the `token` argument "
-                "or set the PDFDANCER_TOKEN environment variable."
-            )
         return resolved_token
 
     @classmethod
@@ -384,8 +442,14 @@ class PDFDancer:
         """
         Create a new blank PDF document with optional configuration.
 
+        Authentication:
+        - If token is provided, uses it
+        - Otherwise, checks PDFDANCER_TOKEN environment variable
+        - If no token is found, automatically obtains an anonymous token
+
         Args:
-            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable.
+            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable,
+                then to anonymous token if not set.
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
@@ -399,6 +463,10 @@ class PDFDancer:
         """
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
+
+        # If no token found, obtain anonymous token
+        if resolved_token is None:
+            resolved_token = cls._obtain_anonymous_token(resolved_base_url, timeout)
 
         # Create a new instance that will call _create_blank_pdf_session
         instance = object.__new__(cls)

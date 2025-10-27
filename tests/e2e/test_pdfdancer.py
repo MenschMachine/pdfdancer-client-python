@@ -13,11 +13,13 @@ def test_env_vars():
     try:
         os.environ.pop("PDFDANCER_TOKEN", None)
 
-        with pytest.raises(ValidationException) as exc_info:
-            with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
-                pass
-        assert "Missing PDFDancer API token. Pass a token via the `token` argument or set the PDFDANCER_TOKEN environment variable." == str(
-            exc_info.value)
+        # With the anonymous token fallback, opening without a token should now succeed
+        # (it will automatically obtain an anonymous token)
+        # This test now verifies that the client works without PDFDANCER_TOKEN set
+        with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
+            # Verify we got a valid session
+            assert pdf._session_id is not None
+            assert pdf._token is not None  # Should have obtained an anonymous token
 
         os.environ["PDFDANCER_TOKEN"] = "42"
         with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
@@ -37,9 +39,9 @@ def test_env_vars():
     finally:
         if original_base_url_env is not None:
             os.environ["PDFDANCER_BASE_URL"] = original_base_url_env
-        else:
+        elif "PDFDANCER_BASE_URL" in os.environ:
             del os.environ["PDFDANCER_BASE_URL"]
         if original_token_env is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token_env
-        else:
+        elif "PDFDANCER_TOKEN" in os.environ:
             del os.environ["PDFDANCER_TOKEN"]

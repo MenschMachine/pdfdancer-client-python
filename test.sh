@@ -15,6 +15,48 @@ SERVERS=""
 TOKEN=""
 PARALLEL=""
 PYTEST_ARGS=()
+PYTHON_CMD=""
+
+# Determine which python executable to use (prefer active venv)
+detect_python_command() {
+    if [[ -n "${PDFDANCER_PYTHON:-}" && -x "${PDFDANCER_PYTHON}" ]]; then
+        echo "$PDFDANCER_PYTHON"
+        return
+    fi
+
+    if [[ -n "${VIRTUAL_ENV:-}" && -x "$VIRTUAL_ENV/bin/python" ]]; then
+        echo "$VIRTUAL_ENV/bin/python"
+        return
+    fi
+
+    if [[ -x "venv/bin/python" ]]; then
+        echo "venv/bin/python"
+        return
+    fi
+
+    if command -v python3 >/dev/null 2>&1; then
+        command -v python3
+        return
+    fi
+
+    if command -v python >/dev/null 2>&1; then
+        command -v python
+        return
+    fi
+
+    echo "python"
+}
+
+# Check whether the selected python has pytest-xdist available
+python_supports_xdist() {
+    local python_cmd="$1"
+    "$python_cmd" - <<'PY' >/dev/null 2>&1
+try:
+    import xdist  # modern package name
+except ImportError:
+    import pytest_xdist  # backward compatibility
+PY
+}
 
 # Generate random logfile name in /tmp
 generate_logfile() {
@@ -180,11 +222,14 @@ run_pytest_with_gnu_parallel() {
     local server="$1"
     local protocol="$2"
     local server_url="$protocol://$server"
-    local python_cmd="$3"
+    local python_cmd="${PYTHON_CMD:-python}"
 
     log_message "$server" "Starting pytest with $PARALLEL workers using GNU parallel"
     log_message "$server" "Server URL: $server_url"
     log_message "$server" "Pytest args: ${PYTEST_ARGS[*]:-tests/ -v}"
+    echo "⚡ Using $PARALLEL workers via GNU parallel (pytest-xdist not available)"
+    echo "   • Streaming detailed output to $LOGFILE"
+    echo "   • Use -S/--stdout for live logs"
 
     # Set environment variables for this test run
     export PDFDANCER_TOKEN="$TOKEN"
@@ -239,6 +284,7 @@ run_pytest_with_gnu_parallel() {
 run_pytest_on_server() {
     local server="$1"
     local protocol="$2"
+    local strategy="${3:-sequential}"
     local server_url="$protocol://$server"
     
     log_message "$server" "Starting pytest with $PARALLEL workers"
@@ -250,10 +296,7 @@ run_pytest_on_server() {
     export PDFDANCER_BASE_URL="$server_url"
     
     # Determine python executable (prefer venv if available)
-    local python_cmd="python"
-    if [[ -f "venv/bin/python" ]]; then
-        python_cmd="venv/bin/python"
-    fi
+    local python_cmd="${PYTHON_CMD:-python}"
 
     # Build pytest command
     local pytest_cmd=(
@@ -261,28 +304,13 @@ run_pytest_on_server() {
     )
 
     # Add parallel execution if supported and requested
-    if [[ "$PARALLEL" -gt 1 ]]; then
-        # Check if pytest-xdist is available
-        if "$python_cmd" -c "import pytest_xdist" >/dev/null 2>&1; then
-            pytest_cmd+=("-n" "$PARALLEL")
-            echo "⚡ Using $PARALLEL parallel workers (pytest-xdist)"
-            log_message "$server" "Using $PARALLEL parallel workers (pytest-xdist)"
-        # Check if GNU parallel is available as fallback
-        elif command -v parallel >/dev/null 2>&1; then
-            echo "⚡ Using $PARALLEL parallel workers (GNU parallel fallback)"
-            echo "   ℹ️  Note: pytest-xdist not available, using GNU parallel instead"
-            log_message "$server" "Using $PARALLEL parallel workers (GNU parallel fallback)"
-        else
-            echo "" >&2
-            echo "❌ ERROR: Parallel execution requested (-p $PARALLEL) but neither pytest-xdist nor GNU parallel is available!" >&2
-            echo "" >&2
-            echo "To fix this issue:" >&2
-            echo "  1. Install pytest-xdist: pip install pytest-xdist" >&2
-            echo "  2. Install GNU parallel: brew install parallel (macOS) or apt install parallel (Linux)" >&2
-            echo "  3. Or run without parallel flag: ./test.sh (uses 1 worker)" >&2
-            echo "" >&2
-            exit 1
-        fi
+    if [[ "$strategy" == "xdist" ]]; then
+        pytest_cmd+=("-n" "$PARALLEL")
+        echo "⚡ Using $PARALLEL parallel workers (pytest-xdist)"
+        log_message "$server" "Using $PARALLEL parallel workers (pytest-xdist)"
+    elif [[ "$PARALLEL" -gt 1 ]]; then
+        echo "⚠️  Requested $PARALLEL workers but pytest-xdist not available; running sequentially"
+        log_message "$server" "pytest-xdist unavailable, running sequentially"
     else
         echo "🔄 Running tests sequentially (1 worker)"
     fi
@@ -374,11 +402,38 @@ run_pytest_on_server() {
 main() {
     parse_args "$@"
     validate_args
+    PYTHON_CMD=$(detect_python_command)
+    
+    local parallel_strategy="sequential"
+    if [[ "$PARALLEL" -gt 1 ]]; then
+        if python_supports_xdist "$PYTHON_CMD"; then
+            parallel_strategy="xdist"
+        elif command -v parallel >/dev/null 2>&1; then
+            parallel_strategy="gnu"
+        else
+            echo "" >&2
+            echo "❌ ERROR: Parallel execution requested (-p $PARALLEL) but pytest-xdist is not installed for $PYTHON_CMD and GNU parallel is unavailable." >&2
+            echo "   Fix by installing pytest-xdist (pip install pytest-xdist) or GNU parallel (brew install parallel / apt install parallel)." >&2
+            echo "" >&2
+            exit 1
+        fi
+    fi
+
+    local parallel_backend_label="sequential (1 worker)"
+    case "$parallel_strategy" in
+        xdist)
+            parallel_backend_label="pytest-xdist (-n $PARALLEL)"
+            ;;
+        gnu)
+            parallel_backend_label="GNU parallel (-j $PARALLEL)"
+            ;;
+    esac
     
     # Initialize logfile
     echo "# PDFDancer Test Run - $(date)" > "$LOGFILE"
     echo "# Servers: $SERVERS" >> "$LOGFILE"
     echo "# Parallel workers per server: $PARALLEL" >> "$LOGFILE"
+    echo "# Parallel backend: $parallel_backend_label" >> "$LOGFILE"
     echo "# Pytest args: ${PYTEST_ARGS[*]:-}" >> "$LOGFILE"
     echo "# Fail fast: $FAIL_FAST" >> "$LOGFILE"
     echo "" >> "$LOGFILE"
@@ -388,6 +443,7 @@ main() {
     echo "📋 Configuration:"
     echo "   • Servers: $SERVERS"
     echo "   • Parallel workers per server: $PARALLEL"
+    echo "   • Parallel backend: $parallel_backend_label"
     echo "   • Pytest args: ${PYTEST_ARGS[*]:-tests/ -v}"
     echo "   • Fail fast: $FAIL_FAST"
     echo "   • Log file: $LOGFILE"
@@ -395,18 +451,6 @@ main() {
     
     # Convert servers string to array
     IFS=',' read -ra SERVER_ARRAY <<< "$SERVERS"
-
-    # Determine parallel execution method
-    local use_gnu_parallel=false
-    if [[ "$PARALLEL" -gt 1 ]]; then
-        # Check if pytest-xdist is available
-        if python -c "import pytest_xdist" >/dev/null 2>&1; then
-            use_gnu_parallel=false
-        # Check if GNU parallel is available as fallback
-        elif command -v parallel >/dev/null 2>&1; then
-            use_gnu_parallel=true
-        fi
-    fi
 
     local overall_exit_code=0
     local failed_servers=()
@@ -435,14 +479,8 @@ main() {
         log_message "$server" "✓ Connectivity test passed (using $protocol)"
         
         # Run pytest (either with pytest-xdist, GNU parallel, or sequentially)
-        if [[ "$use_gnu_parallel" == true ]]; then
-            # Determine python executable (prefer venv if available)
-            local python_cmd="python"
-            if [[ -f "venv/bin/python" ]]; then
-                python_cmd="venv/bin/python"
-            fi
-
-            if ! run_pytest_with_gnu_parallel "$server" "$protocol" "$python_cmd"; then
+        if [[ "$parallel_strategy" == "gnu" ]]; then
+            if ! run_pytest_with_gnu_parallel "$server" "$protocol"; then
                 failed_servers+=("$server")
                 overall_exit_code=1
 
@@ -452,7 +490,7 @@ main() {
                 fi
             fi
         else
-            if ! run_pytest_on_server "$server" "$protocol"; then
+            if ! run_pytest_on_server "$server" "$protocol" "$parallel_strategy"; then
                 failed_servers+=("$server")
                 overall_exit_code=1
 

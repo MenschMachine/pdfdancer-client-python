@@ -116,7 +116,7 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
             print(f"{time.time()}|{method} {path} - Header parse error: {e}")
 
 
-from . import ParagraphBuilder
+from . import ParagraphBuilder, BezierBuilder, PathBuilder, LineBuilder
 from .exceptions import (
     PdfDancerException,
     FontNotFoundException,
@@ -124,7 +124,7 @@ from .exceptions import (
     SessionException,
     ValidationException
 )
-from .image_builder import ImageBuilder
+from .image_builder import ImageBuilder, ImageOnPageBuilder
 from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
     FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddRequest, ModifyRequest, ModifyTextRequest,
@@ -270,19 +270,19 @@ class PageClient:
     def _ref(self):
         return ObjectRef(internal_id=self.internal_id, position=self.position, type=self.object_type)
 
-    def new_paragraph(self):
+    def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphPageBuilder(self.root, self.page_index)
 
-    def new_path(self):
-        from .path_builder import PathBuilder
+    def new_path(self) -> PathBuilder:
         return PathBuilder(self.root, self.page_index)
 
-    def new_line(self):
-        from .path_builder import LineBuilder
+    def new_image(self) -> ImageOnPageBuilder:
+        return ImageOnPageBuilder(self.root, self.page_index)
+
+    def new_line(self) -> LineBuilder:
         return LineBuilder(self.root, self.page_index)
 
-    def new_bezier(self):
-        from .path_builder import BezierBuilder
+    def new_bezier(self) -> BezierBuilder:
         return BezierBuilder(self.root, self.page_index)
 
     def select_paths(self):
@@ -1270,7 +1270,6 @@ class PDFDancer:
         """
         Internal method to add a path to the document after validation.
         """
-        from .models import Path as PathModel
 
         if path is None:
             raise ValidationException("Path cannot be null")

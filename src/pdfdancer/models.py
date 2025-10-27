@@ -9,7 +9,36 @@ from typing import Optional, List, Any, Dict, Mapping, Tuple, ClassVar, Union
 
 @dataclass(frozen=True)
 class PageSize:
-    """Represents a page size specification, covering both standard and custom dimensions."""
+    """Represents a page size specification, covering both standard and custom dimensions.
+
+    Parameters:
+    - name: Optional canonical name of the size (e.g. "A4", "LETTER"). Will be upper‑cased.
+    - width: Page width in PDF points (1/72 inch).
+    - height: Page height in PDF points (1/72 inch).
+
+    Notes:
+    - Use `PageSize.from_name()` or the convenience constants (e.g. `PageSize.A4`) for common sizes.
+    - `width` and `height` must be positive numbers and are validated in `__post_init__`.
+
+    Examples:
+    - From standard name:
+      ```python
+      size = PageSize.from_name("A4")  # or PageSize.A4
+      ```
+    - From custom dimensions:
+      ```python
+      size = PageSize(name=None, width=500.0, height=700.0)
+      ```
+    - From dict (e.g. deserialized JSON):
+      ```python
+      size = PageSize.from_dict({"width": 612, "height": 792, "name": "letter"})
+      ```
+    - Coercion utility:
+      ```python
+      size = PageSize.coerce("A4")
+      size = PageSize.coerce({"width": 300, "height": 300})
+      ```
+    """
 
     name: Optional[str]
     width: float
@@ -154,6 +183,7 @@ class StandardFonts(Enum):
 
 
 class ObjectType(Enum):
+    """Server object type discriminator used in refs, requests, and snapshots."""
     FORM_FIELD = "FORM_FIELD"
     IMAGE = "IMAGE"
     FORM_X_OBJECT = "FORM_X_OBJECT"
@@ -215,7 +245,39 @@ class BoundingRect:
 @dataclass
 class Position:
     """
-    Represents spatial positioning and location information for PDF objects.
+    Spatial locator used to find or place objects on a page.
+
+    Parameters:
+    - page_index: Zero-based page index this position refers to. Required for most operations
+      that place or search on a specific page; use `Position.at_page()` as a shortcut.
+    - shape: Optional geometric shape used when matching by area (`POINT`, `LINE`, `CIRCLE`, `RECT`).
+    - mode: How to match objects relative to the shape (`INTERSECT` or `CONTAINS`).
+    - bounding_rect: Rectangle describing the area or point (for `POINT`, width/height are 0).
+    - text_starts_with: Filter for text objects whose content starts with this string.
+    - text_pattern: Regex pattern to match text content.
+    - name: Named anchor or element name to target (e.g. form field name).
+
+    Builder helpers:
+    - `Position.at_page(page_index)` – target a whole page.
+    - `Position.at_page_coordinates(page_index, x, y)` – target a point on a page.
+    - `Position.by_name(name)` – target object(s) by name.
+    - `pos.at_coordinates(Point(x, y))` – switch to a point on the current page.
+    - `pos.move_x(dx)`, `pos.move_y(dy)` – offset the current coordinates.
+
+    Examples:
+    ```python
+    # A point on page 0
+    pos = Position.at_page_coordinates(0, x=72, y=720)
+
+    # Search by name (e.g. a form field) and then move down 12 points
+    pos = Position.by_name("Email").move_y(-12)
+
+    # Match anything intersecting a rectangular area on page 1
+    pos = Position.at_page(1)
+    pos.shape = ShapeType.RECT
+    pos.mode = PositionMode.INTERSECT
+    pos.bounding_rect = BoundingRect(x=100, y=100, width=200, height=50)
+    ```
     """
     page_index: Optional[int] = None
     shape: Optional[ShapeType] = None
@@ -287,7 +349,24 @@ class Position:
 @dataclass
 class ObjectRef:
     """
-    Lightweight reference to a PDF object providing identity and type information.
+    Reference to an object in a PDF document returned by the server.
+
+    Parameters:
+    - internal_id: Server-side identifier for the object.
+    - position: Position information describing where the object is.
+    - type: Object type (see `ObjectType`).
+
+    Usage:
+    - Instances are typically returned in snapshots or find results.
+    - Pass an `ObjectRef` to request objects such as `MoveRequest`, `DeleteRequest`,
+      `ModifyRequest`, or `ModifyTextRequest`.
+
+    Example:
+    ```python
+    # Move an object to a new position
+    new_pos = Position.at_page_coordinates(0, 120, 500)
+    payload = MoveRequest(object_ref=obj_ref, position=new_pos).to_dict()
+    ```
     """
     internal_id: str
     position: Position
@@ -325,7 +404,23 @@ class ObjectRef:
 
 @dataclass
 class Color:
-    """Represents an RGB color with optional alpha channel, values from 0-255."""
+    """RGB color with optional alpha channel.
+
+    Parameters:
+    - r: Red component (0-255)
+    - g: Green component (0-255)
+    - b: Blue component (0-255)
+    - a: Alpha component (0-255), default 255 (opaque)
+
+    Raises:
+    - ValueError: If any component is outside 0-255.
+
+    Example:
+    ```python
+    red = Color(255, 0, 0)
+    semi_transparent_black = Color(0, 0, 0, a=128)
+    ```
+    """
     r: int
     g: int
     b: int
@@ -339,7 +434,23 @@ class Color:
 
 @dataclass
 class Font:
-    """Represents a font with name and size."""
+    """Font face and size.
+
+    Parameters:
+    - name: Font family name. Can be one of `StandardFonts` values or any embedded font name.
+    - size: Font size in points (> 0).
+
+    Raises:
+    - ValueError: If `size` is not positive.
+
+    Example:
+    ```python
+    from pdfdancer.models import Font, StandardFonts
+
+    title_font = Font(name=StandardFonts.HELVETICA_BOLD.value, size=16)
+    body_font = Font(name="MyEmbeddedFont", size=10.5)
+    ```
+    """
     name: str
     size: float
 
@@ -351,10 +462,18 @@ class Font:
 @dataclass
 class PathSegment:
     """
-    Abstract base class for individual path segments within vector paths.
-    This class provides common properties for path elements including stroke and fill colors,
-    line width, and positioning. Concrete subclasses implement specific geometric shapes
-    like lines, curves, and bezier segments.
+    Base class for vector path segments.
+
+    Parameters:
+    - stroke_color: Outline color for the segment (`Color`).
+    - fill_color: Fill color for closed shapes when applicable (`Color`).
+    - stroke_width: Line width in points.
+    - dash_array: Dash pattern (e.g. `[3, 2]` for 3 on, 2 off). None or empty for solid.
+    - dash_phase: Offset into the dash pattern.
+
+    Notes:
+    - Concrete subclasses are `Line` and `Bezier`.
+    - Used inside `Path.path_segments` and serialized by `AddRequest`.
     """
     stroke_color: Optional[Color] = None
     fill_color: Optional[Color] = None
@@ -386,9 +505,19 @@ class PathSegment:
 @dataclass
 class Line(PathSegment):
     """
-    Represents a straight line path segment between two points.
-    This class defines a linear path element connecting two coordinate points,
-    commonly used in vector graphics and geometric shapes within PDF documents.
+    Straight line segment between two points.
+
+    Parameters:
+    - p0: Start point.
+    - p1: End point.
+
+    Example:
+    ```python
+    from pdfdancer.models import Line, Point, Path
+
+    line = Line(p0=Point(10, 10), p1=Point(100, 10))
+    path = Path(path_segments=[line])
+    ```
     """
     p0: Optional[Point] = None
     p1: Optional[Point] = None
@@ -405,9 +534,20 @@ class Line(PathSegment):
 @dataclass
 class Bezier(PathSegment):
     """
-    Represents a cubic Bezier curve path segment defined by four control points.
-    This class implements a cubic Bezier curve with start point, two control points,
-    and end point, providing smooth curved path segments for complex vector graphics.
+    Cubic Bezier curve segment defined by 4 points.
+
+    Parameters:
+    - p0: Start point.
+    - p1: First control point.
+    - p2: Second control point.
+    - p3: End point.
+
+    Example:
+    ```python
+    curve = Bezier(
+        p0=Point(10, 10), p1=Point(50, 80), p2=Point(80, 50), p3=Point(120, 10)
+    )
+    ```
     """
     p0: Optional[Point] = None
     p1: Optional[Point] = None
@@ -434,9 +574,28 @@ class Bezier(PathSegment):
 @dataclass
 class Path:
     """
-    Represents a complex vector path consisting of multiple path segments.
-    This class encapsulates vector graphics data within PDF documents, composed of
-    various path elements like lines, curves, and shapes.
+    Vector path composed of one or more `PathSegment`s.
+
+    Parameters:
+    - position: Where to place the path on the page.
+    - path_segments: List of `Line` and/or `Bezier` segments.
+    - even_odd_fill: If True, use even-odd rule for fills; otherwise nonzero winding.
+
+    Example (adding a triangle to a page):
+    ```python
+    from pdfdancer.models import Path, Line, Point, Position, AddRequest
+
+    tri = Path(
+        position=Position.at_page_coordinates(0, 100, 100),
+        path_segments=[
+            Line(Point(0, 0), Point(50, 100)),
+            Line(Point(50, 100), Point(100, 0)),
+            Line(Point(100, 0), Point(0, 0)),
+        ],
+        even_odd_fill=True,
+    )
+    payload = AddRequest(tri).to_dict()
+    ```
     """
     position: Optional[Position] = None
     path_segments: Optional[List[PathSegment]] = None
@@ -462,7 +621,28 @@ class Path:
 @dataclass
 class Image:
     """
-    Represents an image object in a PDF document.
+    Raster image to be placed on a page.
+
+    Parameters:
+    - position: Where to place the image. Use `Position.at_page_coordinates(page, x, y)`.
+    - format: Image format hint for the server (e.g. "PNG", "JPEG"). Optional.
+    - width: Target width in points. Optional; server may infer from data.
+    - height: Target height in points. Optional; server may infer from data.
+    - data: Raw image bytes. If provided, it will be base64-encoded in `AddRequest.to_dict()`.
+
+    Example:
+    ```python
+    from pdfdancer.models import Image, Position, AddRequest
+
+    img = Image(
+        position=Position.at_page_coordinates(0, 72, 600),
+        format="PNG",
+        width=128,
+        height=64,
+        data=open("/path/logo.png", "rb").read(),
+    )
+    payload = AddRequest(img).to_dict()
+    ```
     """
     position: Optional[Position] = None
     format: Optional[str] = None
@@ -482,7 +662,29 @@ class Image:
 @dataclass
 class Paragraph:
     """
-    Represents a paragraph of text in a PDF document.
+    Multi-line text paragraph to add to a page.
+
+    Parameters:
+    - position: Anchor position where the first line begins.
+    - text_lines: List of strings, one per line. Use `\n` within a string only if desired; normally
+      provide separate entries for multiple lines.
+    - font: Font to use for all text elements unless overridden later.
+    - color: Text color.
+    - line_spacing: Distance multiplier between lines. Server expects a list, handled for you by `AddRequest`.
+
+    Example:
+    ```python
+    from pdfdancer.models import Paragraph, Position, Font, Color, StandardFonts, AddRequest
+
+    para = Paragraph(
+        position=Position.at_page_coordinates(0, 72, 700),
+        text_lines=["Hello", "PDFDancer!"],
+        font=Font(StandardFonts.HELVETICA.value, 12),
+        color=Color(50, 50, 50),
+        line_spacing=1.4,
+    )
+    payload = AddRequest(para).to_dict()
+    ```
     """
     position: Optional[Position] = None
     text_lines: Optional[List[str]] = None
@@ -502,7 +704,22 @@ class Paragraph:
 # Request classes for API communication
 @dataclass
 class FindRequest:
-    """Request object for find operations."""
+    """Request for locating objects.
+
+    Parameters:
+    - object_type: Filter by `ObjectType` (optional). If None, all types may be returned.
+    - position: `Position` describing where/how to search.
+    - hint: Optional backend hint or free-form note to influence matching.
+
+    Usage:
+    ```python
+    req = FindRequest(
+        object_type=ObjectType.TEXT_LINE,
+        position=Position.at_page_coordinates(0, 72, 700).with_text_starts("Hello"),
+    )
+    payload = req.to_dict()
+    ```
+    """
     object_type: Optional[ObjectType]
     position: Optional[Position]
     hint: Optional[str] = None
@@ -541,7 +758,16 @@ class FindRequest:
 
 @dataclass
 class DeleteRequest:
-    """Request object for delete operations."""
+    """Request to delete an existing object.
+
+    Parameters:
+    - object_ref: The object to delete.
+
+    Example:
+    ```python
+    payload = DeleteRequest(object_ref=obj_ref).to_dict()
+    ```
+    """
     object_ref: ObjectRef
 
     def to_dict(self) -> dict:
@@ -554,7 +780,19 @@ class DeleteRequest:
 
 @dataclass
 class MoveRequest:
-    """Request object for move operations."""
+    """Request to move an existing object to a new position.
+
+    Parameters:
+    - object_ref: The object to move (obtained from a snapshot or find call).
+    - position: The new target `Position` (commonly a point created with `Position.at_page_coordinates`).
+
+    Example:
+    ```python
+    new_pos = Position.at_page_coordinates(0, 200, 500)
+    req = MoveRequest(object_ref=obj_ref, position=new_pos)
+    payload = req.to_dict()
+    ```
+    """
     object_ref: ObjectRef
     position: Position
 
@@ -570,7 +808,19 @@ class MoveRequest:
 
 @dataclass
 class PageMoveRequest:
-    """Request object for moving pages within the document."""
+    """Request to reorder pages.
+
+    Parameters:
+    - from_page_index: Zero-based index of the page to move.
+    - to_page_index: Zero-based destination index.
+
+    Example:
+    ```python
+    # Move first page to the end
+    req = PageMoveRequest(from_page_index=0, to_page_index=doc_page_count - 1)
+    payload = req.to_dict()
+    ```
+    """
     from_page_index: int
     to_page_index: int
 
@@ -583,7 +833,22 @@ class PageMoveRequest:
 
 @dataclass
 class AddRequest:
-    """Request object for add operations."""
+    """Request to add a new object to the document.
+
+    Parameters:
+    - pdf_object: The object to add (e.g. `Image`, `Paragraph`, or `Path`).
+
+    Usage:
+    ```python
+    para = Paragraph(position=Position.at_page_coordinates(0, 72, 700), text_lines=["Hello"]) 
+    req = AddRequest(para)
+    payload = req.to_dict()  # ready to send to the server API
+    ```
+
+    Notes:
+    - Serialization details (like base64 for image `data`, or per-segment position for paths)
+      are handled for you in `to_dict()`.
+    """
     pdf_object: Any  # Can be Image, Paragraph, etc.
 
     def to_dict(self) -> dict:
@@ -727,7 +992,19 @@ class AddRequest:
 
 @dataclass
 class ModifyRequest:
-    """Request object for modify operations."""
+    """Request to replace an object with a new one of possibly different type.
+
+    Parameters:
+    - object_ref: The existing object to replace.
+    - new_object: The replacement object (e.g. `Paragraph`, `Image`, or `Path`).
+
+    Example:
+    ```python
+    new_para = Paragraph(position=old.position, text_lines=["Updated text"]) 
+    req = ModifyRequest(object_ref=old, new_object=new_para)
+    payload = req.to_dict()
+    ```
+    """
     object_ref: ObjectRef
     new_object: Any
 
@@ -742,7 +1019,18 @@ class ModifyRequest:
 
 @dataclass
 class ModifyTextRequest:
-    """Request object for text modification operations."""
+    """Request to change the text content of a text object.
+
+    Parameters:
+    - object_ref: The text object to modify (e.g. a `TextObjectRef`).
+    - new_text: Replacement text content.
+
+    Example:
+    ```python
+    req = ModifyTextRequest(object_ref=text_ref, new_text="Hello world")
+    payload = req.to_dict()
+    ```
+    """
     object_ref: ObjectRef
     new_text: str
 
@@ -757,6 +1045,19 @@ class ModifyTextRequest:
 
 @dataclass
 class ChangeFormFieldRequest:
+    """Request to set a form field's value.
+
+    Parameters:
+    - object_ref: A `FormFieldRef` (or generic `ObjectRef`) identifying the field.
+    - value: The new value as a string. For checkboxes/radio buttons, use the
+      appropriate on/off/selection string per the document's field options.
+
+    Example:
+    ```python
+    req = ChangeFormFieldRequest(object_ref=field_ref, value="Jane Doe")
+    payload = req.to_dict()
+    ```
+    """
     object_ref: ObjectRef
     value: str
 
@@ -772,8 +1073,20 @@ class ChangeFormFieldRequest:
 @dataclass
 class FormFieldRef(ObjectRef):
     """
-    Represents a form field reference with additional form-specific properties.
-    Extends ObjectRef to include form field name and value.
+    Reference to a form field object with name and value.
+
+    Parameters (usually provided by the server):
+    - internal_id: Identifier of the form field object.
+    - position: Position of the field.
+    - type: One of `ObjectType.TEXT_FIELD`, `ObjectType.CHECK_BOX`, etc.
+    - name: Field name (as defined inside the PDF).
+    - value: Current field value (string representation).
+
+    Usage:
+    - You can pass a `FormFieldRef` to `ChangeFormFieldRequest` to update its value.
+    ```python
+    payload = ChangeFormFieldRequest(object_ref=field_ref, value="john@doe.com").to_dict()
+    ```
     """
     name: Optional[str] = None
     value: Optional[str] = None
@@ -841,8 +1154,23 @@ class TextStatus:
 
 class TextObjectRef(ObjectRef):
     """
-    Represents a text object reference with additional text-specific properties.
-    Extends ObjectRef to include text content, font information, and hierarchical structure.
+    Represents a text object with additional properties and optional hierarchy.
+
+    Parameters (typically provided by the server):
+    - internal_id: Identifier of the text object.
+    - position: Position of the text object.
+    - object_type: `ObjectType.TEXT_LINE` or another text-related type.
+    - text: Text content, when available.
+    - font_name: Name of the font used for the text.
+    - font_size: Size of the font in points.
+    - line_spacings: Optional list of line spacing values for multi-line objects.
+    - color: Text color.
+    - status: `TextStatus` providing modification/encoding info.
+
+    Usage:
+    - Instances are returned by find/snapshot APIs. You generally should not instantiate
+      them manually, but you may read their properties or pass their `ObjectRef`-like
+      identity to modification requests (e.g., `ModifyTextRequest`).
     """
 
     def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
@@ -890,8 +1218,18 @@ class TextObjectRef(ObjectRef):
 @dataclass
 class PageRef(ObjectRef):
     """
-    Represents a page reference with additional page-specific properties.
-    Extends ObjectRef to include page size and orientation.
+    Reference to a page with size and orientation metadata.
+
+    Parameters (usually provided by the server):
+    - internal_id: Identifier of the page object.
+    - position: Position referencing the page (often via `Position.at_page(page_index)`).
+    - type: Should be `ObjectType.PAGE`.
+    - page_size: `PageSize` of the page.
+    - orientation: `Orientation.PORTRAIT` or `Orientation.LANDSCAPE`.
+
+    Usage:
+    - Returned inside `PageSnapshot` objects. You can inspect page size/orientation
+      and use the page index for subsequent operations.
     """
     page_size: Optional[PageSize]
     orientation: Optional[Orientation]
@@ -908,7 +1246,22 @@ class PageRef(ObjectRef):
 @dataclass
 class CommandResult:
     """
-    Result object returned by certain API endpoints indicating the outcome of an operation.
+    Outcome returned by certain API endpoints.
+
+    Parameters:
+    - command_name: Name of the executed command on the server.
+    - element_id: Optional related element ID (when applicable).
+    - message: Informational message or error description.
+    - success: Whether the command succeeded.
+    - warning: Optional warning details.
+
+    Example:
+    ```python
+    # Parse from a server JSON response dict
+    result = CommandResult.from_dict(resp_json)
+    if not result.success:
+        print("Operation failed:", result.message)
+    ```
     """
     command_name: str
     element_id: str | None
@@ -936,6 +1289,14 @@ class CommandResult:
 class PageSnapshot:
     """
     Snapshot of a single page containing all elements and page metadata.
+
+    Parameters (provided by the server):
+    - page_ref: `PageRef` describing the page (size, orientation, etc.).
+    - elements: List of `ObjectRef` (and subclasses) present on the page.
+
+    Usage:
+    - Iterate over `elements` to find items to modify or move.
+    - Use `page_ref.position.page_index` as the page index for follow-up operations.
     """
     page_ref: PageRef
     elements: List[ObjectRef]
@@ -952,7 +1313,21 @@ class PageSnapshot:
 @dataclass
 class DocumentSnapshot:
     """
-    Snapshot of the entire document containing all pages and font information.
+    Snapshot of a document including pages and fonts used.
+
+    Parameters (provided by the server):
+    - page_count: Number of pages in the document.
+    - fonts: List of `FontRecommendation` entries summarizing fonts in the document.
+    - pages: Ordered list of `PageSnapshot` objects, one per page.
+
+    Usage:
+    ```python
+    # Iterate pages and elements
+    for page in snapshot.pages:
+        for el in page.elements:
+            if isinstance(el, TextObjectRef) and el.get_text():
+                print(el.get_text())
+    ```
     """
     page_count: int
     fonts: List[FontRecommendation]

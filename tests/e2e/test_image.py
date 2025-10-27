@@ -111,3 +111,37 @@ def test_add_image():
             .assert_image_at(50.1, 98, 6)
             .assert_number_of_images(1, 6)
         )
+
+
+def test_add_image_on_page_client():
+    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        images = pdf.select_images()
+        assert len(images) == 3
+        assert len(pdf.page(6).select_images()) == 0
+
+        img_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
+
+        pdf.page(6).new_image() \
+            .from_file(img_path) \
+            .at(x=50.1, y=98.0) \
+            .add()
+
+        images_after = pdf.select_images()
+        assert len(images_after) == 4
+
+        images_page6 = pdf.page(6).select_images()
+        assert len(images_page6) == 1
+
+        new_image = images_page6[0]
+        assert new_image.position.page_index == 6
+        assert new_image.internal_id == "IMAGE_000004"
+        assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
+        assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
+
+        (
+            PDFAssertions(pdf)
+            .assert_image_at(50.1, 98, 6)
+            .assert_number_of_images(1, 6)
+        )

@@ -16,12 +16,14 @@ from .models import (
     FontType, PathSegment, Line, Bezier, Path
 )
 from .paragraph_builder import ParagraphBuilder
+from .page_builder import PageBuilder
 from .path_builder import PathBuilder, LineBuilder, BezierBuilder
 
 __version__ = "1.0.0"
 __all__ = [
     "PDFDancer",
     "ParagraphBuilder",
+    "PageBuilder",
     "PathBuilder",
     "LineBuilder",
     "BezierBuilder",

@@ -832,6 +832,42 @@ class PageMoveRequest:
 
 
 @dataclass
+class AddPageRequest:
+    """Request to add a new page to the document.
+
+    Parameters:
+    - page_index: Optional zero-based index where the new page should be inserted.
+    - orientation: Optional page orientation (portrait or landscape).
+    - page_size: Optional size of the page.
+
+    Only populated fields are sent to the server to maintain backward compatibility
+    with default server behavior.
+    """
+    page_index: Optional[int] = None
+    orientation: Optional[Orientation] = None
+    page_size: Optional[PageSize] = None
+
+    def to_dict(self) -> dict:
+        payload: Dict[str, Any] = {}
+        if self.page_index is not None:
+            payload["pageIndex"] = int(self.page_index)
+        if self.orientation is not None:
+            orientation_value: Orientation
+            if isinstance(self.orientation, Orientation):
+                orientation_value = self.orientation
+            elif isinstance(self.orientation, str):
+                normalized = self.orientation.strip().upper()
+                orientation_value = Orientation(normalized)
+            else:
+                raise TypeError("Orientation must be an Orientation enum or string value")
+            payload["orientation"] = orientation_value.value
+        if self.page_size is not None:
+            page_size = PageSize.coerce(self.page_size)
+            payload["pageSize"] = page_size.to_dict()
+        return payload
+
+
+@dataclass
 class AddRequest:
     """Request to add a new object to the document.
 

@@ -127,12 +127,13 @@ from .exceptions import (
 from .image_builder import ImageBuilder, ImageOnPageBuilder
 from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
-    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddRequest, ModifyRequest, ModifyTextRequest,
+    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddPageRequest, AddRequest, ModifyRequest, ModifyTextRequest,
     ChangeFormFieldRequest, CommandResult,
     ShapeType, PositionMode, PageSize, Orientation,
     PageSnapshot, DocumentSnapshot, FontRecommendation, FontType
 )
 from .paragraph_builder import ParagraphPageBuilder
+from .page_builder import PageBuilder
 from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
 
 
@@ -1316,17 +1317,33 @@ class PDFDancer:
 
         return result
 
-    def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphBuilder(self)
+    def _add_page(self, request: Optional[AddPageRequest]) -> PageRef:
+        """
+        Internal helper to add a page with optional parameters.
+        """
+        request_data = None
+        if request is not None:
+            payload = request.to_dict()
+            request_data = payload or None
 
-    def new_page(self):
-        response = self._make_request('POST', '/pdf/page/add', data=None)
+        response = self._make_request('POST', '/pdf/page/add', data=request_data)
         result = self._parse_page_ref(response.json())
 
         # Invalidate snapshot caches after adding page
         self._invalidate_snapshots()
 
         return result
+
+    def new_paragraph(self) -> ParagraphBuilder:
+        return ParagraphBuilder(self)
+
+    def new_page(self, orientation=Orientation.PORTRAIT, size=PageSize.A4) -> PageBuilder:
+        builder = PageBuilder(self)
+        if orientation is not None:
+            builder.orientation(orientation)
+        if size is not None:
+            builder.page_size(size)
+        return builder
 
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)

@@ -118,7 +118,7 @@ def test_create_blank_pdf_add_page():
 
     with PDFDancer.new(token=token, base_url=base_url) as pdf:
         assert 1 == len(pdf.pages())
-        page_ref = pdf.new_page()
+        page_ref = pdf.new_page().add()
         assert 1 == page_ref.position.page_index
         assert Orientation.PORTRAIT == page_ref.orientation
         assert 2 == len(pdf.pages())

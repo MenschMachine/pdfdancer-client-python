@@ -196,6 +196,7 @@ class ObjectType(Enum):
     RADIO_BUTTON = "RADIO_BUTTON"
     BUTTON = "BUTTON"
     DROPDOWN = "DROPDOWN"
+    TEXT_ELEMENT = "TEXT_ELEMENT"
 
 
 class PositionMode(Enum):
@@ -660,6 +661,34 @@ class Image:
 
 
 @dataclass
+class TextLine:
+    """
+    One line of text to add to a page.
+
+    Parameters:
+    - position: Anchor position where the first line begins.
+    - text: the text
+      provide separate entries for multiple lines.
+    - font: Font to use for all text elements unless overridden later.
+    - color: Text color.
+
+    """
+    position: Optional[Position] = None
+    font: Optional[Font] = None
+    color: Optional[Color] = None
+    line_spacing: float = 1.2
+    text: str = ""
+
+    def get_position(self) -> Optional[Position]:
+        """Returns the position of this paragraph."""
+        return self.position
+
+    def set_position(self, position: Position) -> None:
+        """Sets the position of this paragraph."""
+        self.position = position
+
+
+@dataclass
 class Paragraph:
     """
     Multi-line text paragraph to add to a page.
@@ -687,7 +716,7 @@ class Paragraph:
     ```
     """
     position: Optional[Position] = None
-    text_lines: Optional[List[str]] = None
+    text_lines: Optional[List[TextLine]] = None
     font: Optional[Font] = None
     color: Optional[Color] = None
     line_spacing: float = 1.2
@@ -900,7 +929,7 @@ class AddRequest:
     def _object_to_dict(self, obj: Any) -> dict:
         """Convert PDF object to dictionary for JSON serialization."""
         import base64
-        from .models import Path as PathModel, Line, Bezier, PathSegment
+        from .models import Path as PathModel
 
         if isinstance(obj, PathModel):
             # Serialize Path object

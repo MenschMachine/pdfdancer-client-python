@@ -7,7 +7,7 @@ from tests.e2e.pdf_assertions import PDFAssertions
 
 
 def test_find_lines_by_position_multi():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         for i in range(0, 10):
@@ -18,65 +18,66 @@ def test_find_lines_by_position_multi():
 
 
 def test_find_lines_by_position():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         lines = pdf.select_text_lines()
-        assert len(lines) == 340
+        assert len(lines) == 36
 
         first = lines[0]
         assert first.internal_id == "TEXTLINE_000001"
         assert first.position is not None
-        assert pytest.approx(first.position.x(), rel=0, abs=1) == 326
-        assert pytest.approx(first.position.y(), rel=0, abs=1) == 706
+        assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
+        assert pytest.approx(first.position.y(), rel=0, abs=1) == 750
         assert first.object_ref().status is not None
         assert not first.object_ref().status.is_modified()
         assert first.object_ref().status.is_encodable()
 
         last = lines[-1]
-        assert last.internal_id == "TEXTLINE_000340"
+        assert last.internal_id == "TEXTLINE_000036"
         assert last.position is not None
-        assert pytest.approx(last.position.x(), rel=0, abs=2) == 548
-        assert pytest.approx(last.position.y(), rel=0, abs=2) == 35
+        assert pytest.approx(last.position.x(), rel=0, abs=2) == 69.3
+        assert pytest.approx(last.position.y(), rel=0, abs=2) == 45
         assert last.object_ref().status is not None
         assert not last.object_ref().status.is_modified()
         assert last.object_ref().status.is_encodable()
 
 
 def test_find_lines_by_text():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        lines = pdf.page(0).select_text_lines_starting_with("the complete")
+        lines = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")
         assert len(lines) == 1
 
         line = lines[0]
         assert line.internal_id == "TEXTLINE_000002"
-        assert pytest.approx(line.position.x(), rel=0, abs=1) == 54
-        assert pytest.approx(line.position.y(), rel=0, abs=2) == 606
+        assert pytest.approx(line.position.x(), rel=0, abs=1) == 65
+        assert pytest.approx(line.position.y(), rel=0, abs=2) == 706.8
 
 
 def test_delete_line():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
         line.delete()
-        assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
+        assert pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles.") == []
 
         (
             PDFAssertions(pdf)
-            .assert_textline_does_not_exist("The Complete")
+            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
         )
 
 
 def test_move_line():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     new_x = None
     new_y = None
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
         pos = line.position
         new_x = pos.x() + 100
         new_y = pos.y() + 18
@@ -91,15 +92,15 @@ def test_move_line():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_is_at("The Complete", new_x, new_y)
+            .assert_textline_is_at("This is regular Sans text showing alignment and styles.", new_x, new_y)
         )
 
 
 def test_modify_line():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("The Complete")[0]
+        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
         result = line.edit().replace(" replaced ").apply()
 
         # this should issue a warning about an modified text with an embedded font
@@ -108,10 +109,11 @@ def test_modify_line():
         assert "You are using an embedded font and modified the text." in result.warning
 
         # Validate replacements
-        assert pdf.page(0).select_text_lines_starting_with("The Complete") == []
+        assert pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles.") == []
+        assert pdf.page(0).select_paragraphs_starting_with(" replaced ") != []
         lines = pdf.page(0).select_text_lines_starting_with(" replaced ")
         assert lines != []
-        assert pdf.page(0).select_paragraphs_starting_with(" replaced ") != []
         assert lines[0] is not None
         assert lines[0].object_ref().status is not None
         assert lines[0].object_ref().status.is_encodable
@@ -119,17 +121,17 @@ def test_modify_line():
         assert lines[0].object_ref().status.is_modified
         (
             PDFAssertions(pdf)
-            .assert_textline_does_not_exist("The Complete")
+            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
             .assert_textline_exists(" replaced ")
             .assert_paragraph_exists(" replaced ")
         )
 
 
 def test_modify_line_multi():
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line_text = "The Complete"
+        line_text = "This is regular Sans text showing alignment and styles."
         for i in range(0, 10):
             line = pdf.page(0).select_text_lines_starting_with(line_text)[0]
             line_text = f"{i} The Complete C"

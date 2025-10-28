@@ -10,7 +10,7 @@ from tests.e2e import _require_env_and_fixture
 
 def test_page_snapshot_matches_select_paragraphs():
     """Test that page snapshot paragraph data matches select_paragraphs() results."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         page = pdf.page(0)
@@ -35,7 +35,7 @@ def test_page_snapshot_matches_select_paragraphs():
 
 def test_page_snapshot_matches_select_images():
     """Test that page snapshot image data matches select_images() results."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         page = pdf.page(0)
@@ -58,7 +58,7 @@ def test_page_snapshot_matches_select_images():
 
 def test_page_snapshot_matches_select_forms():
     """Test that page snapshot form data matches select_forms() results."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         page = pdf.page(0)
@@ -81,7 +81,7 @@ def test_page_snapshot_matches_select_forms():
 
 def test_page_snapshot_matches_select_form_fields():
     """Test that page snapshot form field data matches select_form_fields() results."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         page = pdf.page(0)
@@ -108,7 +108,7 @@ def test_page_snapshot_matches_select_form_fields():
 
 def test_page_snapshot_contains_all_element_types():
     """Test that page snapshot contains all expected element types with valid data."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         snapshot = pdf.get_page_snapshot(0)
@@ -131,7 +131,7 @@ def test_page_snapshot_contains_all_element_types():
 
 def test_document_snapshot_matches_all_pages():
     """Test that document snapshot matches individual page snapshots."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         doc_snapshot = pdf.get_document_snapshot()
@@ -153,7 +153,7 @@ def test_document_snapshot_matches_all_pages():
 
 def test_type_filter_matches_select_method():
     """Test that type filtering in snapshot matches select_* method results."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Get snapshot with PARAGRAPH filter
@@ -178,7 +178,7 @@ def test_type_filter_matches_select_method():
 
 def test_multiple_type_filters_combined():
     """Test that multiple type filters work correctly when combined."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Get snapshot with multiple type filter
@@ -203,13 +203,13 @@ def test_multiple_type_filters_combined():
 
 def test_total_element_count_matches_expected():
     """Test that total element count matches expected values."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        # ObviouslyAwesome.pdf - Python API filters certain types (638)
+        # Showcase.pdf - Python API filters certain types (638)
         all_elements = pdf.select_elements()
-        assert len(all_elements) == 638, \
-            "ObviouslyAwesome.pdf should have 638 total elements"
+        assert len(all_elements) == 99, \
+            "Showcase.pdf should have 99 total elements"
 
         doc_snapshot = pdf.get_document_snapshot()
         snapshot_total = sum(len(p.elements) for p in doc_snapshot.pages)
@@ -218,12 +218,12 @@ def test_total_element_count_matches_expected():
             "Document snapshot total should match select_elements() count"
 
         # Verify page count
-        assert len(pdf.pages()) == 12, "Should have 12 pages"
+        assert len(pdf.pages()) == 7, "Should have 7 pages"
 
 
 def test_snapshot_consistency_across_multiple_pages():
     """Test that snapshots are consistent across multiple pages."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         doc_snapshot = pdf.get_document_snapshot()
@@ -241,7 +241,7 @@ def test_snapshot_consistency_across_multiple_pages():
 @pytest.mark.skip(reason="TODO Not yet implemented")
 def test_document_snapshot_contains_fonts():
     """Test that document snapshot includes font information."""
-    base_url, token, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         doc_snapshot = pdf.get_document_snapshot()

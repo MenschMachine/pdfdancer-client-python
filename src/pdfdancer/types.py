@@ -224,9 +224,10 @@ class ParagraphEdit(BaseTextEdit):
 
     def _get_text_lines(self):
         if self._new_text is not None:
+            # this replaces the text of the entire paragraph with the new text, so this is fine
             return _process_text_lines(self._new_text)
         elif self._object_ref.text is not None:
-            # TODO this actually messes up existing text line internals
+            # no new text, so other properties changed, we need to keep the existing text lines
             return _process_text_lines(self._object_ref.text)
         else:
             raise Exception("Paragraph has no text")

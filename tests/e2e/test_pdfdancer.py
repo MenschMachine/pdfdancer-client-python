@@ -7,7 +7,7 @@ from tests.e2e import _require_env_and_fixture
 
 
 def test_env_vars():
-    base_url, _, pdf_path = _require_env_and_fixture("ObviouslyAwesome.pdf")
+    base_url, _, pdf_path = _require_env_and_fixture("Showcase.pdf")
     original_base_url_env = os.environ.get("PDFDANCER_BASE_URL")
     original_token_env = os.environ.get("PDFDANCER_TOKEN")
     try:

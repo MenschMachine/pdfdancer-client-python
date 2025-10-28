@@ -7,6 +7,7 @@ Provides session-based PDF manipulation operations with strict validation.
 
 import gzip
 import json
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -127,7 +128,8 @@ from .exceptions import (
 from .image_builder import ImageBuilder, ImageOnPageBuilder
 from .models import (
     ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
-    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddPageRequest, AddRequest, ModifyRequest, ModifyTextRequest,
+    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddPageRequest, AddRequest, ModifyRequest,
+    ModifyTextRequest,
     ChangeFormFieldRequest, CommandResult,
     ShapeType, PositionMode, PageSize, Orientation,
     PageSnapshot, DocumentSnapshot, FontRecommendation, FontType
@@ -1850,11 +1852,14 @@ class PDFDancer:
             status=status
         )
 
-        if isinstance(obj_data.get('children'), list) and len(obj_data['children']) > 0:
-            text_object.children = [
-                self._parse_text_object_ref(child_data, f"{internal_id or 'child'}-{index}")
-                for index, child_data in enumerate(obj_data['children'])
-            ]
+        try:
+            if isinstance(obj_data.get('children'), list) and len(obj_data['children']) > 0:
+                text_object.children = [
+                    self._parse_text_object_ref(child_data, f"{internal_id or 'child'}-{index}")
+                    for index, child_data in enumerate(obj_data['children'])
+                ]
+        except ValueError as e:
+            logging.exception(f"Failed to parse children of {internal_id}", e)
 
         return text_object
 

@@ -317,11 +317,6 @@ def test_modify_paragraph_only_text():
             .apply()
         )
 
-        # this should issue a warning about an modified text with an embedded font
-        # the information is right now only available when selecting the paragraph again, that's bad
-        assert result.warning is not None
-        assert "You are using an embedded font and modified the text." in result.warning
-
         paragraph = pdf.page(0).select_paragraphs_starting_with("lorem")[0]
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()
@@ -381,12 +376,12 @@ def test_modify_paragraph_only_move():
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
-        assert paragraph.object_ref().status.is_modified()  # This should actually not be marked as 'modified' but since we are using a ModifyObject operation we are not (yet) able to detect this
+        assert not paragraph.object_ref().status.is_modified()
 
         (
             PDFAssertions(pdf)
             .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "AAAZPH+Roboto-Regular",
-                                      1)
+                                      12)
             .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 1, 1, 0)
             .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
         )

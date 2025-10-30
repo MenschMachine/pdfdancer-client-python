@@ -720,6 +720,7 @@ class Paragraph:
     font: Optional[Font] = None
     color: Optional[Color] = None
     line_spacing: float = 1.2
+    line_spacings: Optional[List[float]] = None
 
     def get_position(self) -> Optional[Position]:
         """Returns the position of this paragraph."""
@@ -728,6 +729,34 @@ class Paragraph:
     def set_position(self, position: Position) -> None:
         """Sets the position of this paragraph."""
         self.position = position
+
+    def clear_lines(self) -> None:
+        """Removes all text lines from this paragraph."""
+        self.text_lines = []
+
+    def add_line(self, text_line: TextLine) -> None:
+        """Appends a text line to this paragraph."""
+        if self.text_lines is None:
+            self.text_lines = []
+        self.text_lines.append(text_line)
+
+    def get_lines(self) -> List[TextLine]:
+        """Returns the list of text lines, defaulting to an empty list."""
+        if self.text_lines is None:
+            self.text_lines = []
+        return self.text_lines
+
+    def set_lines(self, lines: List[TextLine]) -> None:
+        """Replaces the current text lines with the provided list."""
+        self.text_lines = list(lines)
+
+    def set_line_spacings(self, spacings: Optional[List[float]]) -> None:
+        """Sets the per-line spacing factors for this paragraph."""
+        self.line_spacings = list(spacings) if spacings else None
+
+    def get_line_spacings(self) -> Optional[List[float]]:
+        """Returns the per-line spacing factors if present."""
+        return list(self.line_spacings) if self.line_spacings else None
 
 
 # Request classes for API communication
@@ -964,37 +993,55 @@ class AddRequest:
                 "data": data_b64
             }
         elif isinstance(obj, Paragraph):
-            # Build lines -> List<TextLine> with minimal structure required by server
-            lines = []
+            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
+                if font:
+                    return {"name": font.name, "size": font.size}
+                return None
+
+            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
+                if color:
+                    return {"red": color.r, "green": color.g, "blue": color.b, "alpha": color.a}
+                return None
+
+            lines_payload = []
             if obj.text_lines:
                 for line in obj.text_lines:
+                    if isinstance(line, TextLine):
+                        line_text = line.text
+                        line_font = line.font or obj.font
+                        line_color = line.color or obj.color
+                        line_position = line.position or obj.position
+                    else:
+                        line_text = str(line)
+                        line_font = obj.font
+                        line_color = obj.color
+                        line_position = obj.position
+
                     text_element = {
-                        "text": line,
-                        "font": {"name": obj.font.name, "size": obj.font.size} if obj.font else None,
-                        "color": {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b,
-                                  "alpha": obj.color.a} if obj.color else None,
-                        "position": FindRequest._position_to_dict(obj.position) if obj.position else None
+                        "text": line_text,
+                        "font": _font_to_dict(line_font),
+                        "color": _color_to_dict(line_color),
+                        "position": FindRequest._position_to_dict(line_position) if line_position else None
                     }
-                    text_line = {
-                        "textElements": [text_element]
-                    }
-                    # TextLine has color and position
-                    if obj.color:
-                        text_line["color"] = {"red": obj.color.r, "green": obj.color.g, "blue": obj.color.b,
-                                              "alpha": obj.color.a}
-                    if obj.position:
-                        text_line["position"] = FindRequest._position_to_dict(obj.position)
-                    lines.append(text_line)
+                    text_line = {"textElements": [text_element]}
+                    if line_color:
+                        text_line["color"] = _color_to_dict(line_color)
+                    if line_position:
+                        text_line["position"] = FindRequest._position_to_dict(line_position)
+                    lines_payload.append(text_line)
+
             line_spacings = None
-            if hasattr(obj, "line_spacing") and obj.line_spacing is not None:
-                # Server expects a list
+            if getattr(obj, "line_spacings", None):
+                line_spacings = list(obj.line_spacings)
+            elif getattr(obj, "line_spacing", None) is not None:
                 line_spacings = [obj.line_spacing]
+
             return {
                 "type": "PARAGRAPH",
                 "position": FindRequest._position_to_dict(obj.position) if obj.position else None,
-                "lines": lines,
+                "lines": lines_payload if lines_payload else None,
                 "lineSpacings": line_spacings,
-                "font": {"name": obj.font.name, "size": obj.font.size} if obj.font else None
+                "font": _font_to_dict(obj.font)
             }
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")

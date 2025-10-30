@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import statistics
 import sys
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional
 
-from . import ObjectType, Position, ObjectRef, Point, Paragraph, Font, Color, FormFieldRef, TextObjectRef
-from .models import CommandResult
+from . import ObjectType, Position, ObjectRef, Point, FormFieldRef, TextObjectRef
 
 
 @dataclass
@@ -95,41 +93,6 @@ class FormObject(PDFObjectBase):
                 self.position == other.position)
 
 
-def _process_text_lines(text: str) -> List[str]:
-    """
-    Process text into lines for the paragraph.
-    This is a simplified version - the full implementation would handle
-    word wrapping, line breaks, and other text formatting based on the font
-    and paragraph width. TODO
-
-    Args:
-        text: The input text to process
-
-    Returns:
-        List of text lines for the paragraph
-    """
-    # Handle escaped newlines (\\n) as actual newlines
-    processed_text = text.replace('\\n', '\n')
-
-    # Simple implementation - split on newlines
-    # In the full version, this would implement proper text layout
-    lines = processed_text.split('\n')
-
-    # Remove empty lines at the end but preserve intentional line breaks
-    while lines and not lines[-1].strip():
-        lines.pop()
-
-    # Ensure at least one line
-    if not lines:
-        lines = ['']
-
-    return lines
-
-
-DEFAULT_LINE_SPACING = 1.2
-DEFAULT_COLOR = Color(0, 0, 0)
-
-
 class BaseTextEdit:
     """Common base for text-like editable objects (Paragraph, TextLine, etc.)"""
 
@@ -178,69 +141,6 @@ class BaseTextEdit:
         raise NotImplementedError("Subclasses must implement apply()")
 
 
-class ParagraphEdit(BaseTextEdit):
-    def apply(self) -> CommandResult:
-        if (
-                self._position is None
-                and self._line_spacing is None
-                and self._font_size is None
-                and self._font_name is None
-                and self._color is None
-        ):
-            # noinspection PyProtectedMember
-            result = self._target_obj._client._modify_paragraph(self._object_ref, self._new_text)
-            if result.warning:
-                print(f"WARNING: {result.warning}", file=sys.stderr)
-            return result
-        else:
-            new_paragraph = Paragraph(
-                position=self._position if self._position is not None else self._object_ref.position,
-                line_spacing=self._get_line_spacing(),
-                font=self._get_font(),
-                text_lines=self._get_text_lines(),
-                color=self._get_color(),
-            )
-            # noinspection PyProtectedMember
-            result = self._target_obj._client._modify_paragraph(self._object_ref, new_paragraph)
-            if result.warning:
-                print(f"WARNING: {result.warning}", file=sys.stderr)
-            return result
-
-    def _get_line_spacing(self) -> float:
-        if self._line_spacing is not None:
-            return self._line_spacing
-        elif self._object_ref.line_spacings is not None:
-            return statistics.mean(self._object_ref.line_spacings)
-        else:
-            return DEFAULT_LINE_SPACING
-
-    def _get_font(self):
-        if self._font_name is not None and self._font_size is not None:
-            return Font(name=self._font_name, size=self._font_size)
-        elif self._object_ref.font_name is not None and self._object_ref.font_size is not None:
-            return Font(name=self._object_ref.font_name, size=self._object_ref.font_size)
-        else:
-            raise Exception("Font is none")
-
-    def _get_text_lines(self):
-        if self._new_text is not None:
-            # this replaces the text of the entire paragraph with the new text, so this is fine
-            return _process_text_lines(self._new_text)
-        elif self._object_ref.text is not None:
-            # no new text, so other properties changed, we need to keep the existing text lines
-            return _process_text_lines(self._object_ref.text)
-        else:
-            raise Exception("Paragraph has no text")
-
-    def _get_color(self):
-        if self._color is not None:
-            return self._color
-        elif self._object_ref.color is not None:
-            return self._object_ref.color
-        else:
-            return DEFAULT_COLOR
-
-
 class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
         if (
@@ -274,8 +174,8 @@ class ParagraphObject(PDFObjectBase):
         """
         return getattr(self._object_ref, name)
 
-    def edit(self) -> ParagraphEdit:
-        return ParagraphEdit(self, self.object_ref())
+    def edit(self):
+        return ParagraphEditSession(self._client, self.object_ref())
 
     def object_ref(self) -> TextObjectRef:
         return self._object_ref
@@ -319,6 +219,114 @@ class TextLineObject(PDFObjectBase):
                 self._object_ref.line_spacings == other._object_ref.line_spacings and
                 self._object_ref.color == other._object_ref.color and
                 self._object_ref.children == other._object_ref.children)
+
+
+class ParagraphEditSession:
+    """
+    Fluent editing helper that reuses ParagraphBuilder for modifications while preserving
+    the legacy context-manager workflow (replace/font/color/etc.).
+    """
+
+    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
+        self._client = client
+        self._object_ref = object_ref
+        self._new_text = None
+        self._font_name = None
+        self._font_size = None
+        self._color = None
+        self._line_spacing = None
+        self._new_position = None
+        self._has_changes = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            return False
+        self.apply()
+        return False
+
+    def replace(self, text: str):
+        self._new_text = text
+        self._has_changes = True
+        return self
+
+    def font(self, font_name, font_size: float):
+        self._font_name = font_name
+        self._font_size = font_size
+        self._has_changes = True
+        return self
+
+    def color(self, color):
+        self._color = color
+        self._has_changes = True
+        return self
+
+    def line_spacing(self, spacing: float):
+        self._line_spacing = spacing
+        self._has_changes = True
+        return self
+
+    def move_to(self, x: float, y: float):
+        self._new_position = (x, y)
+        self._has_changes = True
+        return self
+
+    def apply(self):
+        if not self._has_changes:
+            return self._client._modify_paragraph(self._object_ref, None)
+
+        only_text_changed = (
+            self._new_text is not None and
+            self._font_name is None and
+            self._font_size is None and
+            self._color is None and
+            self._line_spacing is None and
+            self._new_position is None
+        )
+
+        if only_text_changed:
+            result = self._client._modify_paragraph(self._object_ref, self._new_text)
+            self._has_changes = False
+            return result
+
+        only_move = (
+            self._new_position is not None and
+            self._new_text is None and
+            self._font_name is None and
+            self._font_size is None and
+            self._color is None and
+            self._line_spacing is None
+        )
+
+        if only_move:
+            page_index = self._object_ref.position.page_index if self._object_ref.position else None
+            if page_index is None:
+                raise ValidationException("Paragraph position must include a page index to move")
+            position = Position.at_page_coordinates(page_index, *self._new_position)
+            result = self._client._move(self._object_ref, position)
+            self._has_changes = False
+            return result
+
+        from .paragraph_builder import ParagraphBuilder
+
+        builder = ParagraphBuilder.from_object_ref(self._client, self._object_ref)
+
+        if self._new_text is not None:
+            builder.text(self._new_text)
+        if self._font_name is not None and self._font_size is not None:
+            builder.font(self._font_name, self._font_size)
+        if self._color is not None:
+            builder.color(self._color)
+        if self._line_spacing is not None:
+            builder.line_spacing(self._line_spacing)
+        if self._new_position is not None:
+            builder.move_to(*self._new_position)
+
+        result = builder.modify(self._object_ref)
+        self._has_changes = False
+        return result
 
 
 class FormFieldEdit:

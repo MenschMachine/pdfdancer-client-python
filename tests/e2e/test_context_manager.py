@@ -140,8 +140,8 @@ def test_context_manager_edit_move_only():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "IXKSWR+Poppins-Bold",
-                                      1)
+            .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "AAAZPH+Roboto-Regular",
+                                      12)
             .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 150, 300, 0,
                                     epsilon=0.22)
         )

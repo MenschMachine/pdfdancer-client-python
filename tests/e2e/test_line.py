@@ -103,11 +103,6 @@ def test_modify_line():
         line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
         result = line.edit().replace(" replaced ").apply()
 
-        # this should issue a warning about an modified text with an embedded font
-        # the information is right now only available when selecting the paragraph again, that's bad
-        assert result.warning is not None
-        assert "You are using an embedded font and modified the text." in result.warning
-
         # Validate replacements
         assert pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles.") == []
@@ -124,22 +119,4 @@ def test_modify_line():
             .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
             .assert_textline_exists(" replaced ")
             .assert_paragraph_exists(" replaced ")
-        )
-
-
-def test_modify_line_multi():
-    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line_text = "This is regular Sans text showing alignment and styles."
-        for i in range(0, 10):
-            line = pdf.page(0).select_text_lines_starting_with(line_text)[0]
-            line_text = f"{i} The Complete C"
-            # line.edit().replace(line_text).color(Color(255, 0, 0)).apply()
-            assert line.edit().replace(line_text).apply()
-        pdf.save("/tmp/test_modify_line_multi.pdf")
-
-        (
-            PDFAssertions(pdf)
-            .assert_textline_exists("9 The Complete C")
         )

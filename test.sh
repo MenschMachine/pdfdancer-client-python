@@ -17,6 +17,75 @@ PARALLEL=""
 PYTEST_ARGS=()
 PYTHON_CMD=""
 
+# Server URL parsing - handles various formats flexibly
+parse_server_url() {
+    local input="$1"
+    local protocol="https"
+    local hostname=""
+    local port=""
+
+    # Remove leading/trailing whitespace
+    input=$(echo "$input" | xargs)
+
+    # Check if input has protocol specified
+    if [[ "$input" =~ ^(https?):// ]]; then
+        protocol="${BASH_REMATCH[1]}"
+        input="${input#${protocol}://}"
+    fi
+
+    # Split hostname and port
+    if [[ "$input" =~ ^(\[?[^\]:]+\]?):([0-9]+)$ ]]; then
+        # Has explicit port: hostname:port or [ipv6]:port
+        hostname="${BASH_REMATCH[1]}"
+        port="${BASH_REMATCH[2]}"
+    elif [[ "$input" =~ ^(\[?[^\]:]+\]?)$ ]]; then
+        # No port specified: just hostname
+        hostname="${BASH_REMATCH[1]}"
+        # Use default ports
+        if [[ "$protocol" == "http" ]]; then
+            port="80"
+        else
+            port="443"
+        fi
+    else
+        echo "Invalid server format: $input" >&2
+        return 1
+    fi
+
+    # Clean IPv6 brackets if present
+    hostname="${hostname#[}"
+    hostname="${hostname%]}"
+
+    # Validate hostname is not empty
+    if [[ -z "$hostname" ]]; then
+        echo "Empty hostname in: $input" >&2
+        return 1
+    fi
+
+    echo "$protocol://$hostname:$port"
+}
+
+# Parse comma-separated list of server URLs
+parse_servers_list() {
+    local servers_input="$1"
+    local parsed_servers=()
+
+    # Split by comma and process each server
+    IFS=',' read -ra server_items <<< "$servers_input"
+
+    for server_item in "${server_items[@]}"; do
+        local parsed
+        if ! parsed=$(parse_server_url "$server_item"); then
+            echo "Error parsing server: $server_item" >&2
+            return 1
+        fi
+        parsed_servers+=("$parsed")
+    done
+
+    # Return space-separated list
+    echo "${parsed_servers[*]}"
+}
+
 # Determine which python executable to use (prefer active venv)
 detect_python_command() {
     if [[ -n "${PDFDANCER_PYTHON:-}" && -x "${PDFDANCER_PYTHON}" ]]; then
@@ -66,26 +135,50 @@ generate_logfile() {
 # Show help
 show_help() {
     cat << EOF
-Usage: $0 [OPTIONS] [-- PYTEST_ARGS]
+Usage: $0 [OPTIONS] [PYTEST_ARGS]
 
 Run pytest against configurable servers with parallel execution support.
 
-OPTIONS:
-    --servers SERVERS       Comma-separated list of hostname:port (default: localhost:8080)
-    --token TOKEN          API token for authentication (required)
-    -p, --parallel N       Number of parallel workers per server (default: 1)
-    -F, --fail-fast        Stop on first server failure
-    -S, --stdout           Show output on stdout in addition to logfile
-    -l, --logfile PATH     Specify logfile path (default: random file in /tmp/)
-    -h, --help             Show this help message
+SHORT OPTIONS:
+    -s SERVERS             Comma-separated list of server URLs (default: localhost:8080)
+    -t TOKEN              API token for authentication (optional)
+    -p N                  Number of parallel workers per server (default: 1)
+    -F                    Stop on first server failure
+    -S                    Show output on stdout in addition to logfile
+    -l PATH               Specify logfile path (default: random file in /tmp/)
+    -h                    Show this help message
+
+LONG OPTIONS (use either format):
+    --servers SERVERS or --servers=SERVERS
+                          Comma-separated list of server URLs
+    --token TOKEN or --token=TOKEN
+                          API token for authentication (optional)
+    --parallel N or --parallel=N
+                          Number of parallel workers per server
+    --fail-fast           Stop on first server failure
+    --stdout              Show output on stdout in addition to logfile
+    --logfile PATH or --logfile=PATH
+                          Specify logfile path
+    --help                Show this help message
 
 ENVIRONMENT:
-    PDFDANCER_TOKEN        Fallback token if --token not provided
+    PDFDANCER_TOKEN        Token if --token/-t not provided
+
+SERVER URL FORMATS:
+    localhost:8080                  Hostname with port (auto-detects https)
+    localhost                       Hostname only (uses https:443)
+    https://localhost:8080          Protocol, hostname, and port
+    https://localhost               Protocol and hostname (uses default port)
+    http://server:9000              HTTP with custom port
+    http://server                   HTTP without port (uses port 80)
+    127.0.0.1:8080                  IP address with port
+    [::1]:8080                      IPv6 address with port
 
 EXAMPLES:
-    $0 --token abc123 --servers server1:8080,server2:9090 -p 4
-    $0 --token abc123 -S -F -- -x -v tests/
-    $0 --token abc123 --logfile /tmp/my-tests.log -- tests/test_models.py
+    $0 -s localhost:8080 -t abc123
+    $0 -s https://localhost:8443,server2:9000
+    $0 -s localhost -t abc123 -S -F tests/
+    $0 -l /tmp/my-tests.log -p 4 -- -x -v tests/test_models.py
 
 PYTEST_ARGS:
     All arguments after -- are passed directly to pytest
@@ -93,50 +186,102 @@ PYTEST_ARGS:
 EOF
 }
 
-# Parse command line arguments
+# Parse command line arguments using getopts
 parse_args() {
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --servers)
-                SERVERS="$2"
-                shift 2
+    local OPTIND opt
+
+    while getopts "s:t:p:FSl:h-:" opt; do
+        case $opt in
+            s)
+                SERVERS="$OPTARG"
                 ;;
-            --token)
-                TOKEN="$2"
-                shift 2
+            t)
+                TOKEN="$OPTARG"
                 ;;
-            -p|--parallel)
-                PARALLEL="$2"
-                shift 2
+            p)
+                PARALLEL="$OPTARG"
                 ;;
-            -F|--fail-fast)
+            F)
                 FAIL_FAST=true
-                shift
                 ;;
-            -S|--stdout)
+            S)
                 STDOUT_OUTPUT=true
-                shift
                 ;;
-            -l|--logfile)
-                LOGFILE="$2"
-                shift 2
+            l)
+                LOGFILE="$OPTARG"
                 ;;
-            -h|--help)
+            h)
                 show_help
                 exit 0
                 ;;
-            --)
-                shift
-                PYTEST_ARGS=("$@")
-                break
+            -)
+                # Handle long options
+                case "${OPTARG}" in
+                    servers=*)
+                        SERVERS="${OPTARG#*=}"
+                        ;;
+                    servers)
+                        # Handle --servers VALUE (not --servers=VALUE)
+                        SERVERS="${!OPTIND}"
+                        ((OPTIND++))
+                        ;;
+                    token=*)
+                        TOKEN="${OPTARG#*=}"
+                        ;;
+                    token)
+                        # Handle --token VALUE (not --token=VALUE)
+                        TOKEN="${!OPTIND}"
+                        ((OPTIND++))
+                        ;;
+                    parallel=*)
+                        PARALLEL="${OPTARG#*=}"
+                        ;;
+                    parallel)
+                        # Handle --parallel VALUE (not --parallel=VALUE)
+                        PARALLEL="${!OPTIND}"
+                        ((OPTIND++))
+                        ;;
+                    fail-fast)
+                        FAIL_FAST=true
+                        ;;
+                    stdout)
+                        STDOUT_OUTPUT=true
+                        ;;
+                    logfile=*)
+                        LOGFILE="${OPTARG#*=}"
+                        ;;
+                    logfile)
+                        # Handle --logfile VALUE (not --logfile=VALUE)
+                        LOGFILE="${!OPTIND}"
+                        ((OPTIND++))
+                        ;;
+                    help)
+                        show_help
+                        exit 0
+                        ;;
+                    *)
+                        echo "Error: Unknown option --${OPTARG}" >&2
+                        echo "Use --help for usage information" >&2
+                        exit 1
+                        ;;
+                esac
                 ;;
             *)
-                echo "Error: Unknown option $1" >&2
+                echo "Error: Invalid option -$OPTARG" >&2
                 echo "Use --help for usage information" >&2
                 exit 1
                 ;;
         esac
     done
+
+    # Handle remaining arguments (pytest args after --)
+    shift $((OPTIND - 1))
+    if [[ $# -gt 0 && "$1" == "--" ]]; then
+        shift
+        PYTEST_ARGS=("$@")
+    elif [[ $# -gt 0 ]]; then
+        PYTEST_ARGS=("$@")
+    fi
 }
 
 # Validate arguments
@@ -154,15 +299,12 @@ validate_args() {
         LOGFILE=$(generate_logfile)
     fi
     
-    # Check for token
+    # Check for token (optional - use from args or environment)
     if [[ -z "$TOKEN" ]]; then
         if [[ -n "${PDFDANCER_TOKEN:-}" ]]; then
             TOKEN="$PDFDANCER_TOKEN"
         else
-            echo "Error: No token provided. Use --token or set PDFDANCER_TOKEN environment variable." >&2
-            echo "" >&2
-            show_help
-            exit 1
+            TOKEN=""
         fi
     fi
     
@@ -172,35 +314,36 @@ validate_args() {
         exit 1
     fi
     
-    # Validate servers format
-    if [[ ! "$SERVERS" =~ ^[a-zA-Z0-9.-]+:[0-9]+(,[a-zA-Z0-9.-]+:[0-9]+)*$ ]]; then
-        echo "Error: Invalid servers format. Use hostname:port,hostname:port format" >&2
+    # Parse and validate servers format
+    local parsed_servers
+    if ! parsed_servers=$(parse_servers_list "$SERVERS"); then
+        echo "Error: Invalid servers format" >&2
+        echo "Supported formats:" >&2
+        echo "  • localhost:8080 (hostname:port)" >&2
+        echo "  • localhost (hostname, uses https:443)" >&2
+        echo "  • https://localhost:8080 (protocol://hostname:port)" >&2
+        echo "  • https://localhost (protocol://hostname, uses default port)" >&2
+        echo "  • [::1]:8080 (IPv6 with port)" >&2
         exit 1
     fi
+    # Update SERVERS to use the normalized, parsed format
+    SERVERS="$parsed_servers"
 }
 
-# Test server connectivity and determine protocol
+# Test server connectivity
 test_server_connectivity() {
-    local server="$1"
-    local protocol=""
+    local server_url="$1"
 
-    echo "🔍 Testing connectivity to $server..." >&2
+    echo "🔍 Testing connectivity to $server_url..." >&2
 
-    # Try HTTP first (more common for local development)
-    if curl -s --connect-timeout 3 --max-time 8 --fail "http://$server/version" >/dev/null 2>&1; then
-        protocol="http"
-        echo "✅ Server $server is available via HTTP" >&2
-    # Try HTTPS
-    elif curl -s --connect-timeout 3 --max-time 8 --fail "https://$server/version" >/dev/null 2>&1; then
-        protocol="https"
-        echo "✅ Server $server is available via HTTPS" >&2
+    if curl -s --connect-timeout 3 --max-time 8 --fail "$server_url/version" >/dev/null 2>&1; then
+        echo "✅ Server $server_url is reachable" >&2
+        return 0
     else
-        echo "❌ Cannot connect to $server (tried both http and https)" >&2
-        echo "   Make sure the PDFDancer server is running at $server" >&2
+        echo "❌ Cannot connect to $server_url" >&2
+        echo "   Make sure the PDFDancer server is running and accessible" >&2
         return 1
     fi
-
-    echo "$protocol"
 }
 
 # Log message with server prefix
@@ -219,10 +362,9 @@ log_message() {
 
 # Run pytest with GNU parallel
 run_pytest_with_gnu_parallel() {
-    local server="$1"
-    local protocol="$2"
-    local server_url="$protocol://$server"
+    local server_url="$1"
     local python_cmd="${PYTHON_CMD:-python}"
+    local server="${server_url##*/}"  # Extract hostname:port for logging
 
     log_message "$server" "Starting pytest with $PARALLEL workers using GNU parallel"
     log_message "$server" "Server URL: $server_url"
@@ -282,11 +424,10 @@ run_pytest_with_gnu_parallel() {
 
 # Run pytest on a single server
 run_pytest_on_server() {
-    local server="$1"
-    local protocol="$2"
-    local strategy="${3:-sequential}"
-    local server_url="$protocol://$server"
-    
+    local server_url="$1"
+    local strategy="${2:-sequential}"
+    local server="${server_url##*/}"  # Extract hostname:port for logging
+
     log_message "$server" "Starting pytest with $PARALLEL workers"
     log_message "$server" "Server URL: $server_url"
     log_message "$server" "Pytest args: ${PYTEST_ARGS[*]:-tests/ -v}"
@@ -449,38 +590,37 @@ main() {
     echo "   • Log file: $LOGFILE"
     echo ""
     
-    # Convert servers string to array
-    IFS=',' read -ra SERVER_ARRAY <<< "$SERVERS"
+    # Convert servers string to array (space-separated after parsing)
+    read -ra SERVER_ARRAY <<< "$SERVERS"
 
     local overall_exit_code=0
     local failed_servers=()
-    
+
     # Test each server
     local server_count=0
     local total_servers=${#SERVER_ARRAY[@]}
 
-    for server in "${SERVER_ARRAY[@]}"; do
+    for server_url in "${SERVER_ARRAY[@]}"; do
         ((server_count++))
-        echo "🎯 Testing Server $server_count/$total_servers: $server"
+        local server="${server_url##*/}"  # Extract hostname:port for display
+        echo "🎯 Testing Server $server_count/$total_servers: $server_url"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        log_message "$server" "=== Starting tests for $server ==="
+        log_message "$server" "=== Starting tests for $server_url ==="
 
-        # Test connectivity and get protocol
-        local protocol
-        if ! protocol=$(test_server_connectivity "$server"); then
+        # Test connectivity
+        if ! test_server_connectivity "$server_url"; then
             echo "" >&2
-            echo "❌ ERROR: Server $server is not available!" >&2
+            echo "❌ ERROR: Server $server_url is not available!" >&2
             echo "   Please ensure the PDFDancer server is running and accessible." >&2
             echo "" >&2
             exit 1
         fi
 
-        echo "🔗 Server URL: $protocol://$server"
-        log_message "$server" "✓ Connectivity test passed (using $protocol)"
-        
+        log_message "$server" "✓ Connectivity test passed"
+
         # Run pytest (either with pytest-xdist, GNU parallel, or sequentially)
         if [[ "$parallel_strategy" == "gnu" ]]; then
-            if ! run_pytest_with_gnu_parallel "$server" "$protocol"; then
+            if ! run_pytest_with_gnu_parallel "$server_url"; then
                 failed_servers+=("$server")
                 overall_exit_code=1
 
@@ -490,7 +630,7 @@ main() {
                 fi
             fi
         else
-            if ! run_pytest_on_server "$server" "$protocol" "$parallel_strategy"; then
+            if ! run_pytest_on_server "$server_url" "$parallel_strategy"; then
                 failed_servers+=("$server")
                 overall_exit_code=1
 
@@ -500,8 +640,8 @@ main() {
                 fi
             fi
         fi
-        
-        log_message "$server" "=== Completed tests for $server ==="
+
+        log_message "$server" "=== Completed tests for $server_url ==="
         echo "" >> "$LOGFILE"
     done
     

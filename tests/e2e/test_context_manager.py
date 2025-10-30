@@ -10,7 +10,7 @@ def test_context_manager_basic_usage():
     """Test basic context manager usage with PDFDancer.open()"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraphs = pdf.select_paragraphs()
         assert len(paragraphs) == 24
 
@@ -19,7 +19,7 @@ def test_context_manager_edit_text_only():
     """Test context manager with paragraph.edit() - text replacement only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with (PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf):
+    with (PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf):
         paragraph = \
             pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -39,7 +39,7 @@ def test_context_manager_edit_font_only():
     """Test context manager with font change only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -57,7 +57,7 @@ def test_context_manager_edit_text_and_font():
     """Test context manager with text replacement and font change"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -77,7 +77,7 @@ def test_context_manager_edit_all_properties():
     """Test context manager with all properties: text, font, color, line spacing, position"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -102,7 +102,7 @@ def test_context_manager_edit_color_only():
     """Test context manager with color change only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -117,7 +117,7 @@ def test_context_manager_edit_line_spacing_only():
     """Test context manager with line spacing change only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -131,7 +131,7 @@ def test_context_manager_edit_move_only():
     """Test context manager with position change only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -151,7 +151,7 @@ def test_context_manager_multiple_edits_sequential():
     """Test multiple sequential edits using context manager"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # First edit
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
@@ -176,7 +176,7 @@ def test_context_manager_edit_multiple_paragraphs():
     """Test editing multiple paragraphs using context manager"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraphs = pdf.page(0).select_paragraphs()
 
         # Edit first paragraph
@@ -200,7 +200,7 @@ def test_context_manager_edit_with_exception_no_apply():
     """Test that apply() is NOT called when exception occurs in context manager"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -218,7 +218,7 @@ def test_context_manager_nested_pdf_and_edit():
     """Test nested context managers: PDFDancer.open() and paragraph.edit()"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -240,7 +240,7 @@ def test_context_manager_edit_preserves_position_when_not_specified():
     """Test that position is preserved when not explicitly changed"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
         original_x = paragraph.position.x()
@@ -257,7 +257,7 @@ def test_context_manager_edit_chaining():
     """Test fluent chaining within context manager"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -277,7 +277,7 @@ def test_context_manager_edit_standard_fonts():
     """Test context manager with standard fonts"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -292,7 +292,7 @@ def test_context_manager_edit_with_multiline_text():
     """Test context manager with multiline text replacement"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -311,7 +311,7 @@ def test_context_manager_edit_empty_text():
     """Test context manager with empty text replacement"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraph = \
         pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -351,7 +351,7 @@ def test_context_manager_vs_manual_apply():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     # Test with context manager
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf1:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf1:
         paragraph = \
         pdf1.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 
@@ -363,7 +363,7 @@ def test_context_manager_vs_manual_apply():
         result1 = pdf1.get_bytes()
 
     # Test with manual apply()
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf2:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf2:
         paragraph = \
         pdf2.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
 

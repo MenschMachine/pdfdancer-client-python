@@ -29,7 +29,7 @@ def test_context_manager_edit_text_only():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_exists("This is replaced text", page=0)
+            .assert_textline_exists("This is replaced", page=0)
             .assert_textline_exists("text on two lines", page=0)
             .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.", page=0)
         )

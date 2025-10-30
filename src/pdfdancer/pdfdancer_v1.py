@@ -2002,7 +2002,7 @@ class PDFDancer:
             even_odd_fill=even_odd_fill
         )
 
-    def _parse_font_recommendation(self, data: dict) -> FontRecommendation:
+    def _parse_document_font_info(self, data: dict) -> FontRecommendation:
         """Parse JSON data into FontRecommendation instance."""
         font_type_str = data.get('fontType', 'SYSTEM')
         font_type = FontType(font_type_str)
@@ -2059,7 +2059,7 @@ class PDFDancer:
     def _parse_document_snapshot(self, data: dict) -> DocumentSnapshot:
         """Parse JSON data into DocumentSnapshot instance."""
         page_count = data.get('pageCount', 0)
-        fonts = [self._parse_font_recommendation(font_data) for font_data in data.get('fonts', [])]
+        fonts = [self._parse_document_font_info(font_data) for font_data in data.get('fonts', [])]
         pages = [self._parse_page_snapshot(page_data) for page_data in data.get('pages', [])]
 
         return DocumentSnapshot(

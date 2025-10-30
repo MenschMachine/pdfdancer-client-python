@@ -367,7 +367,7 @@ def test_modify_paragraph_only_move():
 
         (
             paragraph.edit()
-            .move_to(1, 1)
+            .move_to(40, 40)
             .apply()
         )
 
@@ -382,7 +382,7 @@ def test_modify_paragraph_only_move():
             PDFAssertions(pdf)
             .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "AAAZPH+Roboto-Regular",
                                       12)
-            .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 1, 1, 0)
+            .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 40, 40, 0)
             .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
         )
 

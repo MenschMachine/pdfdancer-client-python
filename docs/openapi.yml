@@ -172,8 +172,46 @@ paths:
             application/json:
               schema:
                 type: string
+  /keys/anon:
+    post:
+      operationId: issueAnonymousKey
+      parameters:
+      - name: X-Fingerprint
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: v
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: api-version
+        in: query
+        description: API version
+        schema:
+          type: string
+      - name: X-API-VERSION
+        in: header
+        description: API version
+        schema:
+          type: string
+      - name: Accept-Version
+        in: header
+        description: API version
+        schema:
+          type: string
+      responses:
+        "200":
+          description: issueAnonymousKey 200 response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiTokenCreateResponse"
   /me/tenant:
     get:
+      summary: Get current user's tenant information.
+      description: Get current user's tenant information.
       operationId: getTenant
       parameters:
       - name: v
@@ -198,13 +236,15 @@ paths:
           type: string
       responses:
         "200":
-          description: getTenant 200 response
+          description: User's tenant with role
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserTenantResponse"
   /me/tokens:
     get:
+      summary: List all API tokens for user's tenant.
+      description: List all API tokens for user's tenant.
       operationId: listTokens
       parameters:
       - name: v
@@ -229,7 +269,7 @@ paths:
           type: string
       responses:
         "200":
-          description: listTokens 200 response
+          description: List of API tokens (without raw token values)
           content:
             application/json:
               schema:
@@ -237,6 +277,8 @@ paths:
                 items:
                   $ref: "#/components/schemas/ApiTokenListResponse"
     post:
+      summary: Create a new API token for user's tenant.
+      description: Create a new API token for user's tenant.
       operationId: createToken
       parameters:
       - name: v
@@ -260,6 +302,7 @@ paths:
         schema:
           type: string
       requestBody:
+        description: token creation request
         content:
           application/json:
             schema:
@@ -267,17 +310,20 @@ paths:
         required: true
       responses:
         "200":
-          description: createToken 200 response
+          description: Created token with raw token value (shown only once)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiTokenCreateResponse"
   /me/tokens/{tokenId}:
     get:
+      summary: Get a single API token by ID.
+      description: Get a single API token by ID.
       operationId: getToken
       parameters:
       - name: tokenId
         in: path
+        description: token ID to retrieve
         required: true
         schema:
           type: string
@@ -303,16 +349,19 @@ paths:
           type: string
       responses:
         "200":
-          description: getToken 200 response
+          description: Token details (without raw token value)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiTokenListResponse"
     delete:
+      summary: Revoke an API token.
+      description: Revoke an API token.
       operationId: revokeToken
       parameters:
       - name: tokenId
         in: path
+        description: token ID to revoke
         required: true
         schema:
           type: string
@@ -338,7 +387,7 @@ paths:
           type: string
       responses:
         "200":
-          description: revokeToken 200 response
+          description: 204 No Content on success
   /pdf/add:
     post:
       summary: Adds new objects to the PDF document.
@@ -708,6 +757,12 @@ paths:
         description: API version
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPageRequest"
+        required: true
       responses:
         "200":
           description: HTTP response containing the object reference for the newly
@@ -1053,6 +1108,10 @@ paths:
                 $ref: "#/components/schemas/CommandResult"
   /ping:
     get:
+      summary: Basic health check endpoint that confirms server availability.
+      description: Basic health check endpoint that confirms server availability.
+        This endpoint provides a simple way for monitoring systems to verify that
+        the API server is running and capable of handling requests.
       operationId: index
       parameters:
       - name: v
@@ -1077,7 +1136,7 @@ paths:
           type: string
       responses:
         "200":
-          description: index 200 response
+          description: a simple "Pong" response indicating the server is operational
           content:
             text/plain:
               schema:
@@ -1369,6 +1428,12 @@ paths:
                 format: binary
   /test:
     get:
+      summary: Authenticated test endpoint that verifies API token authentication
+        is working.
+      description: Authenticated test endpoint that verifies API token authentication
+        is working. This endpoint requires a valid API token (Bearer) and serves as
+        a way to test that the authentication mechanism is functioning properly without
+        affecting any actual application data.
       operationId: test
       parameters:
       - name: v
@@ -1393,7 +1458,7 @@ paths:
           type: string
       responses:
         "200":
-          description: test 200 response
+          description: a confirmation message indicating successful authentication
           content:
             text/plain:
               schema:
@@ -1499,6 +1564,20 @@ paths:
                 format: binary
 components:
   schemas:
+    AddPageRequest:
+      required:
+      - orientation
+      - pageIndex
+      - pageSize
+      type: object
+      properties:
+        pageIndex:
+          type: integer
+          format: int32
+        orientation:
+          $ref: "#/components/schemas/Orientation"
+        pageSize:
+          $ref: "#/components/schemas/PageSize"
     AddRequest:
       required:
       - object
@@ -1520,6 +1599,7 @@ components:
           type: string
         expiresAt:
           type: string
+      description: Request to create a new API token.
     ApiTokenCreateResponse:
       required:
       - metadata
@@ -1530,6 +1610,8 @@ components:
           type: string
         metadata:
           $ref: "#/components/schemas/ApiTokenCreateResponse.ApiTokenMetadata"
+      description: Response when creating a new API token. Contains the raw token
+        (shown only once) plus metadata.
     ApiTokenCreateResponse.ApiTokenMetadata:
       required:
       - createdAt
@@ -1571,6 +1653,7 @@ components:
           type: string
         expiresAt:
           type: string
+      description: Response for listing API tokens (does not include the raw token).
     Authentication:
       required:
       - attributes
@@ -1632,19 +1715,31 @@ components:
       type: object
       properties:
         origin:
-          $ref: "#/components/schemas/Point"
+          description: Returns the origin point of this bounding rectangle. The origin
+            represents the bottom-left corner in PDF coordinate system.
+          allOf:
+          - $ref: "#/components/schemas/Point"
         x:
           type: number
+          description: X-coordinate of the rectangle's origin (left edge).
           format: double
         "y":
           type: number
+          description: Y-coordinate of the rectangle's origin (bottom edge in PDF
+            coordinates).
           format: double
         width:
           type: number
+          description: Width of the rectangle extending rightward from the origin.
           format: double
         height:
           type: number
+          description: Height of the rectangle extending upward from the origin.
           format: double
+      description: "Represents a rectangular area defined by getPosition and dimensions.\
+        \ This class encapsulates bounding box information for PDF objects, providing\
+        \ spatial extent data used for positioning, collision detection, and layout\
+        \ operations within PDF documents."
     ChangeFormFieldRequest:
       required:
       - ref
@@ -1660,16 +1755,26 @@ components:
       properties:
         red:
           type: integer
+          description: Red color component (0-255).
           format: int32
         green:
           type: integer
+          description: Green color component (0-255).
           format: int32
         blue:
           type: integer
+          description: Blue color component (0-255).
           format: int32
         alpha:
           type: integer
+          description: "Alpha (transparency) component (0-255, where 255 is fully\
+            \ opaque)."
           format: int32
+      description: "Represents color information using RGBA (Red, Green, Blue, Alpha)\
+        \ color model. This class encapsulates color data for PDF objects, supporting\
+        \ both opaque and transparent colors with integer values ranging from 0-255\
+        \ for each component. Provides convenient constructors and utility methods\
+        \ for color manipulation."
     CommandResult:
       required:
       - commandName
@@ -1703,6 +1808,7 @@ components:
         initialPageCount:
           type: integer
           format: int32
+      description: Request to create a new blank PDF session.
     DeleteRequest:
       required:
       - objectRef
@@ -1713,6 +1819,16 @@ components:
       description: Request record for deleting PDF objects from a document. This immutable
         record encapsulates the object reference needed to identify and remove specific
         PDF objects from a document during editing operations.
+    DocumentFontInfoDto:
+      required:
+      - documentFontName
+      - systemFontName
+      type: object
+      properties:
+        documentFontName:
+          type: string
+        systemFontName:
+          type: string
     DocumentSnapshot:
       required:
       - fonts
@@ -1726,7 +1842,7 @@ components:
         fonts:
           type: array
           items:
-            $ref: "#/components/schemas/FontRecommendationDto"
+            $ref: "#/components/schemas/DocumentFontInfoDto"
         pages:
           type: array
           items:
@@ -1748,30 +1864,27 @@ components:
           $ref: "#/components/schemas/Position"
         hint:
           type: string
+      description: "Request record for searching PDF objects within a document. This\
+        \ immutable record encapsulates search criteria for locating PDF objects based\
+        \ on type, getPosition constraints, and optional search hints, enabling flexible\
+        \ and efficient object discovery within PDF documents."
     Font:
       type: object
       properties:
         name:
           type: string
+          description: "Font family name (e.g., \"Arial\", \"Times New Roman\", \"\
+            Helvetica\")."
         size:
           type: number
+          description: Font size in points.
           format: double
         embedded:
           type: boolean
-    FontRecommendationDto:
-      required:
-      - fontName
-      - fontType
-      - similarityScore
-      type: object
-      properties:
-        fontName:
-          type: string
-        fontType:
-          $ref: "#/components/schemas/FontType"
-        similarityScore:
-          type: number
-          format: double
+      description: "Represents font properties for text rendering in PDF documents.\
+        \ This class encapsulates font characteristics including typeface name, size,\
+        \ and styling attributes such as bold, italic, and underline formatting. Used\
+        \ throughout the API for consistent text formatting and style management."
     FontType:
       type: string
       enum:
@@ -1962,10 +2075,35 @@ components:
       - $ref: "#/components/schemas/FormFieldRef"
     ObjectType:
       type: string
+      description: "Enumeration of PDF object types supported by the PDFDancer API.\
+        \ This enum categorizes the different types of objects that can exist within\
+        \ a PDF document, enabling type-safe operations and filtering across the API.\
+        \ Each type represents a distinct category of PDF content with specific manipulation\
+        \ capabilities and properties."
+      x-enum-descriptions:
+      - Root PDF document object containing all pages and metadata
+      - Individual page within the PDF document
+      - Single character or glyph element
+      - Text paragraph or block element
+      - Embedded image or graphics element
+      - Vector path or shape element
+      - Linear path segment
+      - Rectangular shape element
+      - Bezier curve path element
+      - Clipping region or mask
+      - FormXObject container
+      - Interactive acroform field element
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
+      - ""
       enum:
       - PDF
       - PAGE
-      - CHARACTER
+      - TEXT_ELEMENT
       - PARAGRAPH
       - IMAGE
       - PATH
@@ -1984,6 +2122,10 @@ components:
       - CHECKBOX
     Orientation:
       type: string
+      description: Enumeration of page orientations.
+      x-enum-descriptions:
+      - Portrait orientation (height \> width)
+      - Landscape orientation (width \> height)
       enum:
       - PORTRAIT
       - LANDSCAPE
@@ -2041,6 +2183,10 @@ components:
         toPageIndex:
           type: integer
           format: int32
+      description: "Request record for reordering pages within a PDF document. This\
+        \ immutable record specifies a page movement operation, defining which page\
+        \ should be moved and where it should be repositioned in the document's page\
+        \ sequence."
     PageRef:
       required:
       - orientation
@@ -2065,9 +2211,12 @@ components:
         height:
           type: number
           format: double
+      description: "Represents PDF page dimensions, supporting both standard sizes\
+        \ and custom dimensions. Dimensions are specified in points (1/72 inch)."
     PageSnapshot:
       required:
       - elements
+      - fonts
       - pageRef
       type: object
       properties:
@@ -2077,6 +2226,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ObjectRef"
+        fonts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentFontInfoDto"
       description: "Represents a complete snapshot of a single PDF page including\
         \ its metadata and all elements. This response aggregates page information\
         \ and all contained objects (paragraphs, images, etc.) into a single response,\
@@ -2188,6 +2341,10 @@ components:
         "y":
           type: number
           format: double
+      description: "Immutable point record representing 2D coordinates. This record\
+        \ provides a simple and efficient way to represent coordinate pairs within\
+        \ PDF documents, with conversion utilities for interoperability with Java's\
+        \ standard geometry classes."
     Position:
       type: object
       properties:
@@ -2199,26 +2356,54 @@ components:
           type: string
         x:
           type: number
+          description: "Returns the X coordinate of this getPosition. If no bounding\
+            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         "y":
           type: number
+          description: "Returns the Y coordinate of this getPosition. If no bounding\
+            \ rectangle is defined, returns -1 as a sentinel value."
           format: double
         pageIndex:
           type: integer
+          description: Returns the page number where this getPosition is located.
           format: int32
         shape:
-          $ref: "#/components/schemas/Position.ShapeType"
+          description: Returns the geometric shape type of this getPosition.
+          allOf:
+          - $ref: "#/components/schemas/Position.ShapeType"
         mode:
-          $ref: "#/components/schemas/Position.PositionMode"
+          description: Returns the getPosition matching mode.
+          allOf:
+          - $ref: "#/components/schemas/Position.PositionMode"
         boundingRect:
-          $ref: "#/components/schemas/BoundingRect"
+          description: Returns the bounding rectangle defining the spatial extent
+            of this getPosition.
+          allOf:
+          - $ref: "#/components/schemas/BoundingRect"
+      description: "Represents spatial positioning and location information for PDF\
+        \ objects. This class encapsulates various ways to specify object locations\
+        \ within PDF documents, including page-based coordinates, bounding rectangles,\
+        \ and different positioning modes. It supports both precise coordinate positioning\
+        \ and area-based location specifications."
     Position.PositionMode:
       type: string
+      description: Defines how getPosition matching should be performed when searching
+        for objects.
+      x-enum-descriptions:
+      - Objects that intersect with the specified getPosition area
+      - Objects completely contained within the specified getPosition area
       enum:
       - INTERSECT
       - CONTAINS
     Position.ShapeType:
       type: string
+      description: Defines the geometric shape type used for getPosition specification.
+      x-enum-descriptions:
+      - Single point coordinate
+      - Linear shape between two points
+      - Circular area with radius
+      - Rectangular area with width and height
       enum:
       - POINT
       - LINE
@@ -2278,13 +2463,21 @@ components:
       properties:
         width:
           type: number
+          description: Returns the width dimension.
           format: double
         height:
           type: number
+          description: Returns the height dimension.
           format: double
         area:
           type: number
+          description: "Calculates and returns the total area. This method computes\
+            \ the area by multiplying width and height, useful for size comparisons\
+            \ and layout calculations."
           format: double
+      description: "Represents dimensional measurements with width and height properties.\
+        \ This class encapsulates size information for PDF objects (images, forms,\
+        \ etc.), providing both individual dimension access and calculated area methods."
     Subscription:
       required:
       - end
@@ -2357,7 +2550,6 @@ components:
             type: string
     TextStatus:
       required:
-      - fontRecommendation
       - fontType
       type: object
       properties:
@@ -2367,12 +2559,13 @@ components:
           type: boolean
         fontType:
           $ref: "#/components/schemas/FontType"
-        fontRecommendation:
-          $ref: "#/components/schemas/FontRecommendationDto"
+        fontInfoDto:
+          $ref: "#/components/schemas/DocumentFontInfoDto"
         warning:
           type: string
     TextTypeObjectRef:
       required:
+      - children
       - color
       - fontName
       - fontSize
@@ -2434,6 +2627,7 @@ components:
           type: string
         status:
           type: string
+      description: Response containing user's tenant information with their role.
     VersionResponse:
       required:
       - color

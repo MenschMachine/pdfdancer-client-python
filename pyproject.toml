@@ -48,6 +48,9 @@ Repository = "https://github.com/MenschMachine/pdfdancer-client-python"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.isort]
+profile = "black"
+
 [tool.black]
 line-length = 88
 target-version = ['py310']
@@ -55,3 +58,7 @@ target-version = ['py310']
 [tool.mypy]
 python_version = "3.10"
 strict = true
+
+[tool.poetry.scripts]
+lint = "bash -c 'flake8 src && mypy src'"
+format = "bash -c 'black src && isort src'"

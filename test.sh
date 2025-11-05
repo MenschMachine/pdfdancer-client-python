@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Default values
-DEFAULT_SERVERS="localhost:8080"
+DEFAULT_SERVERS="http://localhost:8080"
 DEFAULT_PARALLEL=1
 LOGFILE=""
 STDOUT_OUTPUT=false

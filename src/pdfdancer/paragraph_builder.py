@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Union, TYPE_CHECKING
 
 from . import StandardFonts
 from .exceptions import ValidationException
@@ -21,6 +21,9 @@ from .models import (
     Point,
     ObjectRef,
 )
+
+if TYPE_CHECKING:
+    from .pdfdancer_v1 import PDFDancer
 
 DEFAULT_LINE_SPACING_FACTOR = 1.2
 DEFAULT_TEXT_COLOR = Color(0, 0, 0)

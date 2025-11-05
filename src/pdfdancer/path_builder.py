@@ -3,10 +3,15 @@ PathBuilder for the PDFDancer Python client.
 Provides fluent interface for constructing vector paths with lines and curves.
 """
 
-from typing import Optional, List
+from __future__ import annotations
+
+from typing import Optional, List, TYPE_CHECKING
 
 from .exceptions import ValidationException
 from .models import Path, Line, Bezier, PathSegment, Point, Color, Position
+
+if TYPE_CHECKING:
+    from .pdfdancer_v1 import PDFDancer
 
 
 class PathBuilder:

@@ -33,6 +33,10 @@ jobs:
           venv/bin/pip install --upgrade pip
           venv/bin/pip install -e ".[dev]"
 
+      - name: Run linter
+        run: |
+          venv/bin/python -m flake8 src/
+
       - name: Run tests
         run: |
           PDFDANCER_BASE_URL=https://api-staging.pdfdancer.com \
@@ -74,6 +78,11 @@ jobs:
           venv/bin/pip install --upgrade pip
           venv/bin/pip install -e ".[dev]"
 
+      - name: Run linter (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          venv/bin/python -m flake8 src/
+
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -98,6 +107,11 @@ jobs:
         run: |
           venv\Scripts\pip install --upgrade pip
           venv\Scripts\pip install -e ".[dev]"
+
+      - name: Run linter (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          venv\Scripts\python -m flake8 src/
 
       - name: Run tests (Windows)
         if: runner.os == 'Windows'

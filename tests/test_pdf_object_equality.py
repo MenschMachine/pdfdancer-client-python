@@ -107,12 +107,26 @@ class TestPDFObjectEquality:
         position = Position.at_page(0)
         color = Color(255, 0, 0)
 
-        text_ref1 = TextObjectRef("id123", position, ObjectType.PARAGRAPH,
-                                  text="Hello", font_name="Arial", font_size=12.0,
-                                  line_spacings=[1.2], color=color)
-        text_ref2 = TextObjectRef("id123", position, ObjectType.PARAGRAPH,
-                                  text="Hello", font_name="Arial", font_size=12.0,
-                                  line_spacings=[1.2], color=color)
+        text_ref1 = TextObjectRef(
+            "id123",
+            position,
+            ObjectType.PARAGRAPH,
+            text="Hello",
+            font_name="Arial",
+            font_size=12.0,
+            line_spacings=[1.2],
+            color=color,
+        )
+        text_ref2 = TextObjectRef(
+            "id123",
+            position,
+            ObjectType.PARAGRAPH,
+            text="Hello",
+            font_name="Arial",
+            font_size=12.0,
+            line_spacings=[1.2],
+            color=color,
+        )
 
         obj1 = ParagraphObject(mock_client, text_ref1)
         obj2 = ParagraphObject(mock_client, text_ref2)
@@ -150,8 +164,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        text_ref1 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, font_name="Arial")
-        text_ref2 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, font_name="Helvetica")
+        text_ref1 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, font_name="Arial"
+        )
+        text_ref2 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, font_name="Helvetica"
+        )
 
         obj1 = ParagraphObject(mock_client, text_ref1)
         obj2 = ParagraphObject(mock_client, text_ref2)
@@ -163,8 +181,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        text_ref1 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, font_size=12.0)
-        text_ref2 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, font_size=14.0)
+        text_ref1 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, font_size=12.0
+        )
+        text_ref2 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, font_size=14.0
+        )
 
         obj1 = ParagraphObject(mock_client, text_ref1)
         obj2 = ParagraphObject(mock_client, text_ref2)
@@ -176,8 +198,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        text_ref1 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, color=Color(255, 0, 0))
-        text_ref2 = TextObjectRef("id123", position, ObjectType.PARAGRAPH, color=Color(0, 255, 0))
+        text_ref1 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, color=Color(255, 0, 0)
+        )
+        text_ref2 = TextObjectRef(
+            "id123", position, ObjectType.PARAGRAPH, color=Color(0, 255, 0)
+        )
 
         obj1 = ParagraphObject(mock_client, text_ref1)
         obj2 = ParagraphObject(mock_client, text_ref2)
@@ -215,8 +241,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        obj1 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1")
-        obj2 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1")
+        obj1 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
+        obj2 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
 
         assert obj1 == obj2
 
@@ -225,8 +255,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        obj1 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1")
-        obj2 = FormFieldObject(mock_client, "id456", ObjectType.TEXT_FIELD, position, "name1", "value1")
+        obj1 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
+        obj2 = FormFieldObject(
+            mock_client, "id456", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
 
         assert obj1 != obj2
 
@@ -235,8 +269,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        obj1 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1")
-        obj2 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name2", "value1")
+        obj1 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
+        obj2 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name2", "value1"
+        )
 
         assert obj1 != obj2
 
@@ -245,8 +283,12 @@ class TestPDFObjectEquality:
         mock_client = Mock()
         position = Position.at_page(0)
 
-        obj1 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1")
-        obj2 = FormFieldObject(mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value2")
+        obj1 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value1"
+        )
+        obj2 = FormFieldObject(
+            mock_client, "id123", ObjectType.TEXT_FIELD, position, "name1", "value2"
+        )
 
         assert obj1 != obj2
 

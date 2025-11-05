@@ -19,9 +19,10 @@ def test_context_manager_edit_text_only():
     """Test context manager with paragraph.edit() - text replacement only"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    with (PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf):
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         # Context manager automatically calls apply() on success
         with paragraph.edit() as editor:
@@ -31,7 +32,9 @@ def test_context_manager_edit_text_only():
             PDFAssertions(pdf)
             .assert_textline_exists("This is replaced", page=0)
             .assert_textline_exists("text on two lines", page=0)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.", page=0)
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles.", page=0
+            )
         )
 
 
@@ -40,16 +43,24 @@ def test_context_manager_edit_font_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.font("Helvetica", 28)
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "Helvetica", 28)
-            .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
+            .assert_textline_has_font(
+                "This is regular Sans text showing alignment and styles.",
+                "Helvetica",
+                28,
+            )
+            .assert_textline_has_color(
+                "This is regular Sans text showing alignment and styles.",
+                Color(0, 0, 0),
+            )
         )
 
 
@@ -58,8 +69,9 @@ def test_context_manager_edit_text_and_font():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("New Text\nHere")
@@ -69,7 +81,9 @@ def test_context_manager_edit_text_and_font():
             PDFAssertions(pdf)
             .assert_textline_has_font("New Text", "Helvetica", 16)
             .assert_textline_has_font("Here", "Helvetica", 16)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
         )
 
 
@@ -78,8 +92,9 @@ def test_context_manager_edit_all_properties():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("Fully\nModified")
@@ -103,14 +118,16 @@ def test_context_manager_edit_color_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.color(Color(0, 255, 0))
 
-        PDFAssertions(pdf).assert_textline_has_color("This is regular Sans text showing alignment and styles.",
-                                                     Color(0, 255, 0))
+        PDFAssertions(pdf).assert_textline_has_color(
+            "This is regular Sans text showing alignment and styles.", Color(0, 255, 0)
+        )
 
 
 def test_context_manager_edit_line_spacing_only():
@@ -118,13 +135,16 @@ def test_context_manager_edit_line_spacing_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.line_spacing(2.0)
 
-        PDFAssertions(pdf).assert_textline_exists("This is regular Sans text showing alignment and styles.")
+        PDFAssertions(pdf).assert_textline_exists(
+            "This is regular Sans text showing alignment and styles."
+        )
 
 
 def test_context_manager_edit_move_only():
@@ -132,18 +152,27 @@ def test_context_manager_edit_move_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.move_to(150, 300)
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "AAAZPH+Roboto-Regular",
-                                      12)
-            .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 150, 300, 0,
-                                    epsilon=0.22)
+            .assert_textline_has_font(
+                "This is regular Sans text showing alignment and styles.",
+                "AAAZPH+Roboto-Regular",
+                12,
+            )
+            .assert_paragraph_is_at(
+                "This is regular Sans text showing alignment and styles.",
+                150,
+                300,
+                0,
+                epsilon=0.22,
+            )
         )
 
 
@@ -153,8 +182,9 @@ def test_context_manager_multiple_edits_sequential():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # First edit
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         with paragraph.edit() as editor:
             editor.replace("First Edit")
 
@@ -168,7 +198,9 @@ def test_context_manager_multiple_edits_sequential():
             PDFAssertions(pdf)
             .assert_textline_has_font("Second Edit", "Helvetica", 20)
             .assert_textline_does_not_exist("First Edit")
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
         )
 
 
@@ -201,8 +233,9 @@ def test_context_manager_edit_with_exception_no_apply():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         # Simulate an exception - apply() should not be called
         with pytest.raises(ValueError):
@@ -211,7 +244,9 @@ def test_context_manager_edit_with_exception_no_apply():
                 raise ValueError("Test exception")
 
         # Original text should still exist since apply() was not called
-        PDFAssertions(pdf).assert_textline_exists("This is regular Sans text showing alignment and styles.")
+        PDFAssertions(pdf).assert_textline_exists(
+            "This is regular Sans text showing alignment and styles."
+        )
 
 
 def test_context_manager_nested_pdf_and_edit():
@@ -219,8 +254,9 @@ def test_context_manager_nested_pdf_and_edit():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("Nested Context\nManager Test")
@@ -241,8 +277,9 @@ def test_context_manager_edit_preserves_position_when_not_specified():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         original_x = paragraph.position.x()
         original_y = paragraph.position.y()
 
@@ -250,7 +287,9 @@ def test_context_manager_edit_preserves_position_when_not_specified():
             editor.replace("Position Preserved")
             editor.font("Helvetica", 14)
 
-        PDFAssertions(pdf).assert_paragraph_is_at("Position Preserved", original_x, original_y, 0)
+        PDFAssertions(pdf).assert_paragraph_is_at(
+            "Position Preserved", original_x, original_y, 0
+        )
 
 
 def test_context_manager_edit_chaining():
@@ -258,11 +297,14 @@ def test_context_manager_edit_chaining():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
-            editor.replace("Chained\nEdits").font("Helvetica", 15).color(Color(128, 128, 128)).line_spacing(1.8)
+            editor.replace("Chained\nEdits").font("Helvetica", 15).color(
+                Color(128, 128, 128)
+            ).line_spacing(1.8)
 
         (
             PDFAssertions(pdf)
@@ -278,14 +320,17 @@ def test_context_manager_edit_standard_fonts():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("Times Roman")
             editor.font(StandardFonts.TIMES_ROMAN.value, 16)
 
-        PDFAssertions(pdf).assert_textline_has_font("Times Roman", StandardFonts.TIMES_ROMAN.value, 16)
+        PDFAssertions(pdf).assert_textline_has_font(
+            "Times Roman", StandardFonts.TIMES_ROMAN.value, 16
+        )
 
 
 def test_context_manager_edit_with_multiline_text():
@@ -293,8 +338,9 @@ def test_context_manager_edit_with_multiline_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("Line 1\nLine 2")
@@ -312,14 +358,17 @@ def test_context_manager_edit_empty_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("")
             editor.font("Helvetica", 12)
 
-        PDFAssertions(pdf).assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+        PDFAssertions(pdf).assert_textline_does_not_exist(
+            "This is regular Sans text showing alignment and styles."
+        )
 
 
 def test_context_manager_example_from_docs():
@@ -327,8 +376,9 @@ def test_context_manager_example_from_docs():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        paragraph = \
-        pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         # Context manager automatically calls apply() on success
         with paragraph.edit() as editor:
@@ -342,7 +392,9 @@ def test_context_manager_example_from_docs():
             PDFAssertions(pdf)
             .assert_textline_has_font("Awesomely", "Helvetica", 12)
             .assert_textline_has_font("Obvious!", "Helvetica", 12)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
         )
 
 
@@ -352,8 +404,9 @@ def test_context_manager_vs_manual_apply():
 
     # Test with context manager
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf1:
-        paragraph = \
-        pdf1.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf1.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         with paragraph.edit() as editor:
             editor.replace("Test Text")
@@ -364,10 +417,13 @@ def test_context_manager_vs_manual_apply():
 
     # Test with manual apply()
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf2:
-        paragraph = \
-        pdf2.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf2.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
-        paragraph.edit().replace("Test Text").font("Helvetica", 14).color(Color(255, 0, 0)).apply()
+        paragraph.edit().replace("Test Text").font("Helvetica", 14).color(
+            Color(255, 0, 0)
+        ).apply()
 
         result2 = pdf2.get_bytes()
 

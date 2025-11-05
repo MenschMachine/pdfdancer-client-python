@@ -75,9 +75,15 @@ class TestStandardFonts:
 
         # Modified fonts should have hyphens
         modified_fonts = [
-            f for f in StandardFonts
-            if f not in [StandardFonts.HELVETICA, StandardFonts.COURIER,
-                         StandardFonts.SYMBOL, StandardFonts.ZAPF_DINGBATS]
+            f
+            for f in StandardFonts
+            if f
+            not in [
+                StandardFonts.HELVETICA,
+                StandardFonts.COURIER,
+                StandardFonts.SYMBOL,
+                StandardFonts.ZAPF_DINGBATS,
+            ]
         ]
         for font in modified_fonts:
             assert "-" in font.value
@@ -114,7 +120,11 @@ class TestStandardFonts:
 
     def test_symbol_family_count(self):
         """Test that there are exactly 2 symbol fonts."""
-        symbol_fonts = [f for f in StandardFonts if f in [StandardFonts.SYMBOL, StandardFonts.ZAPF_DINGBATS]]
+        symbol_fonts = [
+            f
+            for f in StandardFonts
+            if f in [StandardFonts.SYMBOL, StandardFonts.ZAPF_DINGBATS]
+        ]
         assert len(symbol_fonts) == 2
 
     def test_font_value_string_representation(self):

@@ -30,14 +30,14 @@ class Fingerprint:
         install_salt = cls._get_or_create_salt()
 
         fingerprint_data = (
-                ip_hash +
-                uid_hash +
-                os_type +
-                sdk_language +
-                timezone +
-                locale_str +
-                domain_hash +
-                install_salt
+            ip_hash
+            + uid_hash
+            + os_type
+            + sdk_language
+            + timezone
+            + locale_str
+            + domain_hash
+            + install_salt
         )
 
         return cls._hash(fingerprint_data)
@@ -63,7 +63,7 @@ class Fingerprint:
         """Get timezone name."""
         try:
             tz = datetime.now().astimezone().tzinfo
-            timezone_name = getattr(tz, 'key', str(tz))
+            timezone_name = getattr(tz, "key", str(tz))
             return timezone_name
         except Exception:
             return "unknown"
@@ -118,4 +118,4 @@ class Fingerprint:
         Returns:
             Hexadecimal SHA256 hash
         """
-        return hashlib.sha256(value.encode('utf-8')).hexdigest()
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()

@@ -8,6 +8,7 @@ These tests:
 4. Save and reload the PDF
 5. Make comprehensive assertions that the PDF contains exactly what we built
 """
+
 import pytest
 
 from pdfdancer import Color, Orientation, PageSize, PDFDancer, Point
@@ -27,15 +28,13 @@ class TestPathBuilderSimplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Build and add a horizontal line with absolute coordinates
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(50, 100), Point(250, 150)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            2.0
+        ).add_line(Point(50, 100), Point(250, 150)).add()
 
         # Save and reload to verify persistence
         assertions = PDFAssertions(pdf)
@@ -52,15 +51,13 @@ class TestPathBuilderSimplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Thick vertical line with absolute coordinates
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(5.0) \
-            .add_line(Point(100, 50), Point(100, 300)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            5.0
+        ).add_line(Point(100, 50), Point(100, 300)).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -74,16 +71,13 @@ class TestPathBuilderSimplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Dashed diagonal line with absolute coordinates
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.5) \
-            .dash_pattern([10.0, 5.0]) \
-            .add_line(Point(50, 50), Point(250, 250)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.5
+        ).dash_pattern([10.0, 5.0]).add_line(Point(50, 50), Point(250, 250)).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -101,20 +95,18 @@ class TestPathBuilderBezierCurves:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Smooth S-curve using Bezier with absolute coordinates
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 255, 0)) \
-            .stroke_width(2.0) \
-            .add_bezier(
-                Point(100, 300),  # Start
-                Point(150, 400),  # Control 1
-                Point(250, 400),  # Control 2
-                Point(300, 300)   # End
-            ) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+            2.0
+        ).add_bezier(
+            Point(100, 300),  # Start
+            Point(150, 400),  # Control 1
+            Point(250, 400),  # Control 2
+            Point(300, 300),  # End
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -128,21 +120,15 @@ class TestPathBuilderBezierCurves:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Curve with fill (semi-transparent)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0, 255)) \
-            .fill_color(Color(255, 255, 0, 128)) \
-            .stroke_width(1.0) \
-            .add_bezier(
-                Point(0, 0),
-                Point(25, 50),
-                Point(75, 50),
-                Point(100, 0)
-            ) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0, 255)).fill_color(
+            Color(255, 255, 0, 128)
+        ).stroke_width(1.0).add_bezier(
+            Point(0, 0), Point(25, 50), Point(75, 50), Point(100, 0)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -160,22 +146,17 @@ class TestPathBuilderComplexPaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Complex path: line → curve → line
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(100, 0)) \
-            .add_bezier(
-                Point(100, 0),
-                Point(125, 25),
-                Point(125, 75),
-                Point(100, 100)
-            ) \
-            .add_line(Point(100, 100), Point(0, 100)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
+            Point(0, 0), Point(100, 0)
+        ).add_bezier(
+            Point(100, 0), Point(125, 25), Point(125, 75), Point(100, 100)
+        ).add_line(
+            Point(100, 100), Point(0, 100)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -189,18 +170,19 @@ class TestPathBuilderComplexPaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rectangle (closed shape)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(150, 0)) \
-            .add_line(Point(150, 0), Point(150, 100)) \
-            .add_line(Point(150, 100), Point(0, 100)) \
-            .add_line(Point(0, 100), Point(0, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            2.0
+        ).add_line(Point(0, 0), Point(150, 0)).add_line(
+            Point(150, 0), Point(150, 100)
+        ).add_line(
+            Point(150, 100), Point(0, 100)
+        ).add_line(
+            Point(0, 100), Point(0, 0)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -214,7 +196,7 @@ class TestPathBuilderComplexPaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rounded rectangle
@@ -222,38 +204,32 @@ class TestPathBuilderComplexPaths:
         width = 120.0
         height = 80.0
 
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 255)) \
-            .stroke_width(2.0) \
-            .add_line(Point(radius, 0), Point(width - radius, 0)) \
-            .add_bezier(
-                Point(width - radius, 0),
-                Point(width, 0),
-                Point(width, 0),
-                Point(width, radius)
-            ) \
-            .add_line(Point(width, radius), Point(width, height - radius)) \
-            .add_bezier(
-                Point(width, height - radius),
-                Point(width, height),
-                Point(width, height),
-                Point(width - radius, height)
-            ) \
-            .add_line(Point(width - radius, height), Point(radius, height)) \
-            .add_bezier(
-                Point(radius, height),
-                Point(0, height),
-                Point(0, height),
-                Point(0, height - radius)
-            ) \
-            .add_line(Point(0, height - radius), Point(0, radius)) \
-            .add_bezier(
-                Point(0, radius),
-                Point(0, 0),
-                Point(0, 0),
-                Point(radius, 0)
-            ) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
+            2.0
+        ).add_line(Point(radius, 0), Point(width - radius, 0)).add_bezier(
+            Point(width - radius, 0),
+            Point(width, 0),
+            Point(width, 0),
+            Point(width, radius),
+        ).add_line(
+            Point(width, radius), Point(width, height - radius)
+        ).add_bezier(
+            Point(width, height - radius),
+            Point(width, height),
+            Point(width, height),
+            Point(width - radius, height),
+        ).add_line(
+            Point(width - radius, height), Point(radius, height)
+        ).add_bezier(
+            Point(radius, height),
+            Point(0, height),
+            Point(0, height),
+            Point(0, height - radius),
+        ).add_line(
+            Point(0, height - radius), Point(0, radius)
+        ).add_bezier(
+            Point(0, radius), Point(0, 0), Point(0, 0), Point(radius, 0)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -271,29 +247,23 @@ class TestPathBuilderMultiplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Red line
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(100, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            2.0
+        ).add_line(Point(0, 0), Point(100, 0)).add()
 
         # Green line
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 255, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(100, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+            2.0
+        ).add_line(Point(0, 0), Point(100, 0)).add()
 
         # Blue line
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(100, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            2.0
+        ).add_line(Point(0, 0), Point(100, 0)).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -308,29 +278,23 @@ class TestPathBuilderMultiplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Thin line (0.5pt)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(0.5) \
-            .add_line(Point(0, 0), Point(150, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(0.5).add_line(
+            Point(0, 0), Point(150, 0)
+        ).add()
 
         # Medium line (2.0pt)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(150, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
+            Point(0, 0), Point(150, 0)
+        ).add()
 
         # Thick line (5.0pt)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(5.0) \
-            .add_line(Point(0, 0), Point(150, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(5.0).add_line(
+            Point(0, 0), Point(150, 0)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -344,32 +308,23 @@ class TestPathBuilderMultiplePaths:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Solid line
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.5) \
-            .solid() \
-            .add_line(Point(0, 0), Point(200, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.5
+        ).solid().add_line(Point(0, 0), Point(200, 0)).add()
 
         # Dashed line (simple pattern)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.5) \
-            .dash_pattern([10.0, 5.0]) \
-            .add_line(Point(0, 0), Point(200, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.5
+        ).dash_pattern([10.0, 5.0]).add_line(Point(0, 0), Point(200, 0)).add()
 
         # Dashed line (complex pattern)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.5) \
-            .dash_pattern([15.0, 5.0, 3.0, 5.0]) \
-            .add_line(Point(0, 0), Point(200, 0)) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.5
+        ).dash_pattern([15.0, 5.0, 3.0, 5.0]).add_line(Point(0, 0), Point(200, 0)).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -388,15 +343,13 @@ class TestPathBuilderPageSpecific:
             orientation=Orientation.PORTRAIT,
             initial_page_count=3,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Add path to page 1 using page-specific builder
-        pdf.page(1).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_line(Point(0, 0), Point(100, 100)) \
-            .add()
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            2.0
+        ).add_line(Point(0, 0), Point(100, 100)).add()
 
         assertions = PDFAssertions(pdf)
         # Page 0 should have no paths
@@ -418,13 +371,12 @@ class TestPathBuilderValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Try to add empty path
         with pytest.raises(Exception) as exc_info:
-            pdf.page(0).new_path() \
-                .add()
+            pdf.page(0).new_path().add()
 
         assert "at least one segment" in str(exc_info.value).lower()
 
@@ -436,14 +388,16 @@ class TestPathBuilderValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Try to set negative stroke width
         with pytest.raises(Exception) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_width(-1.0) \
-                .add_line(Point(0, 0), Point(100, 100)) \
-                .add()
+            pdf.page(0).new_path().stroke_width(-1.0).add_line(
+                Point(0, 0), Point(100, 100)
+            ).add()
 
-        assert "positive" in str(exc_info.value).lower() or "width" in str(exc_info.value).lower()
+        assert (
+            "positive" in str(exc_info.value).lower()
+            or "width" in str(exc_info.value).lower()
+        )

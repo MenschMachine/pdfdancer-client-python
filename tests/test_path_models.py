@@ -1,6 +1,7 @@
 """
 Tests for Path, Line, Bezier, and PathSegment models.
 """
+
 import pytest
 
 from pdfdancer import Bezier, Color, Line, Path, PathSegment, Point, Position
@@ -35,7 +36,7 @@ class TestPathSegment:
             fill_color=fill_color,
             stroke_width=2.0,
             dash_array=[5.0, 3.0],
-            dash_phase=1.0
+            dash_phase=1.0,
         )
 
         assert segment.get_stroke_color() == stroke_color
@@ -64,12 +65,7 @@ class TestLine:
         p1 = Point(100.0, 100.0)
         stroke_color = Color(0, 0, 0)
 
-        line = Line(
-            p0=p0,
-            p1=p1,
-            stroke_color=stroke_color,
-            stroke_width=1.0
-        )
+        line = Line(p0=p0, p1=p1, stroke_color=stroke_color, stroke_width=1.0)
 
         assert line.get_p0() == p0
         assert line.get_p1() == p1
@@ -90,7 +86,7 @@ class TestLine:
             p1=Point(50.0, 50.0),
             stroke_width=2.0,
             dash_array=[10.0, 5.0, 2.0, 5.0],
-            dash_phase=0.0
+            dash_phase=0.0,
         )
 
         assert line.get_dash_array() == [10.0, 5.0, 2.0, 5.0]
@@ -108,12 +104,7 @@ class TestBezier:
         p3 = Point(200.0, 0.0)
 
         bezier = Bezier(
-            p0=p0,
-            p1=p1,
-            p2=p2,
-            p3=p3,
-            stroke_color=Color(0, 0, 255),
-            stroke_width=1.5
+            p0=p0, p1=p1, p2=p2, p3=p3, stroke_color=Color(0, 0, 255), stroke_width=1.5
         )
 
         assert bezier.get_p0() == p0
@@ -139,7 +130,7 @@ class TestBezier:
             p2=Point(75.0, 50.0),
             p3=Point(100.0, 0.0),
             stroke_color=Color(255, 0, 0),
-            fill_color=Color(255, 255, 0, 128)
+            fill_color=Color(255, 255, 0, 128),
         )
 
         assert bezier.get_stroke_color().r == 255
@@ -157,13 +148,10 @@ class TestPath:
             p0=Point(100.0, 0.0),
             p1=Point(150.0, 50.0),
             p2=Point(150.0, 100.0),
-            p3=Point(100.0, 150.0)
+            p3=Point(100.0, 150.0),
         )
 
-        path = Path(
-            path_segments=[line, bezier],
-            even_odd_fill=False
-        )
+        path = Path(path_segments=[line, bezier], even_odd_fill=False)
 
         segments = path.get_path_segments()
         assert segments is not None
@@ -177,10 +165,7 @@ class TestPath:
         position = Position.at_page_coordinates(0, 50.0, 50.0)
         line = Line(p0=Point(0.0, 0.0), p1=Point(50.0, 50.0))
 
-        path = Path(
-            position=position,
-            path_segments=[line]
-        )
+        path = Path(position=position, path_segments=[line])
 
         assert path.get_position() == position
         assert path.get_position().page_index == 0
@@ -200,10 +185,7 @@ class TestPath:
         line3 = Line(p0=Point(100.0, 100.0), p1=Point(0.0, 100.0))
         line4 = Line(p0=Point(0.0, 100.0), p1=Point(0.0, 0.0))
 
-        path = Path(
-            path_segments=[line1, line2, line3, line4],
-            even_odd_fill=True
-        )
+        path = Path(path_segments=[line1, line2, line3, line4], even_odd_fill=True)
 
         assert path.get_even_odd_fill() is True
         assert len(path.get_path_segments()) == 4
@@ -229,7 +211,7 @@ class TestPathIntegration:
                 p0=Point(0.0, 0.0),
                 p1=Point(100.0, 0.0),
                 stroke_color=Color(0, 0, 0),
-                stroke_width=2.0
+                stroke_width=2.0,
             ),
             Bezier(
                 p0=Point(100.0, 0.0),
@@ -237,20 +219,18 @@ class TestPathIntegration:
                 p2=Point(125.0, 75.0),
                 p3=Point(100.0, 100.0),
                 stroke_color=Color(0, 0, 0),
-                stroke_width=2.0
+                stroke_width=2.0,
             ),
             Line(
                 p0=Point(100.0, 100.0),
                 p1=Point(0.0, 100.0),
                 stroke_color=Color(0, 0, 0),
-                stroke_width=2.0
-            )
+                stroke_width=2.0,
+            ),
         ]
 
         path = Path(
-            path_segments=segments,
-            position=Position.at_page(0),
-            even_odd_fill=False
+            path_segments=segments, position=Position.at_page(0), even_odd_fill=False
         )
 
         assert len(path.get_path_segments()) == 3
@@ -266,7 +246,7 @@ class TestPathIntegration:
             stroke_color=Color(255, 0, 0),
             stroke_width=1.0,
             dash_array=dash_pattern,
-            dash_phase=0.0
+            dash_phase=0.0,
         )
 
         path = Path(path_segments=[line])

@@ -21,7 +21,7 @@ class PathBuilder:
     All coordinates are absolute page coordinates.
     """
 
-    def __init__(self, client: 'PDFDancer', page_index: int):
+    def __init__(self, client: "PDFDancer", page_index: int):
         """
         Initialize the path builder with a client reference and page index.
 
@@ -42,7 +42,7 @@ class PathBuilder:
         self._current_dash_array: Optional[List[float]] = None
         self._current_dash_phase: Optional[float] = None
 
-    def stroke_color(self, color: Color) -> 'PathBuilder':
+    def stroke_color(self, color: Color) -> "PathBuilder":
         """
         Set the stroke color for subsequent segments.
 
@@ -55,7 +55,7 @@ class PathBuilder:
         self._current_stroke_color = color
         return self
 
-    def fill_color(self, color: Color) -> 'PathBuilder':
+    def fill_color(self, color: Color) -> "PathBuilder":
         """
         Set the fill color for subsequent segments.
 
@@ -68,7 +68,7 @@ class PathBuilder:
         self._current_fill_color = color
         return self
 
-    def stroke_width(self, width: float) -> 'PathBuilder':
+    def stroke_width(self, width: float) -> "PathBuilder":
         """
         Set the stroke width for subsequent segments.
 
@@ -83,7 +83,9 @@ class PathBuilder:
         self._current_stroke_width = width
         return self
 
-    def dash_pattern(self, dash_array: List[float], dash_phase: float = 0.0) -> 'PathBuilder':
+    def dash_pattern(
+        self, dash_array: List[float], dash_phase: float = 0.0
+    ) -> "PathBuilder":
         """
         Set a dash pattern for subsequent segments.
 
@@ -98,7 +100,7 @@ class PathBuilder:
         self._current_dash_phase = dash_phase
         return self
 
-    def solid(self) -> 'PathBuilder':
+    def solid(self) -> "PathBuilder":
         """
         Set segments to solid (no dash pattern).
 
@@ -109,7 +111,7 @@ class PathBuilder:
         self._current_dash_phase = None
         return self
 
-    def add_line(self, p0: Point, p1: Point) -> 'PathBuilder':
+    def add_line(self, p0: Point, p1: Point) -> "PathBuilder":
         """
         Add a straight line segment to the path.
 
@@ -127,12 +129,12 @@ class PathBuilder:
             fill_color=self._current_fill_color,
             stroke_width=self._current_stroke_width,
             dash_array=self._current_dash_array,
-            dash_phase=self._current_dash_phase
+            dash_phase=self._current_dash_phase,
         )
         self._segments.append(line)
         return self
 
-    def add_bezier(self, p0: Point, p1: Point, p2: Point, p3: Point) -> 'PathBuilder':
+    def add_bezier(self, p0: Point, p1: Point, p2: Point, p3: Point) -> "PathBuilder":
         """
         Add a cubic Bezier curve segment to the path.
 
@@ -154,12 +156,14 @@ class PathBuilder:
             fill_color=self._current_fill_color,
             stroke_width=self._current_stroke_width,
             dash_array=self._current_dash_array,
-            dash_phase=self._current_dash_phase
+            dash_phase=self._current_dash_phase,
         )
         self._segments.append(bezier)
         return self
 
-    def add_rectangle(self, x: float, y: float, width: float, height: float) -> 'PathBuilder':
+    def add_rectangle(
+        self, x: float, y: float, width: float, height: float
+    ) -> "PathBuilder":
         """
         Convenient method to add a rectangle as four line segments to the path.
 
@@ -191,7 +195,7 @@ class PathBuilder:
 
         return self
 
-    def even_odd_fill(self, enabled: bool = True) -> 'PathBuilder':
+    def even_odd_fill(self, enabled: bool = True) -> "PathBuilder":
         """
         Set the fill rule to even-odd (vs nonzero winding).
 
@@ -224,7 +228,7 @@ class PathBuilder:
         path = Path(
             position=position,
             path_segments=self._segments,
-            even_odd_fill=self._even_odd_fill
+            even_odd_fill=self._even_odd_fill,
         )
 
         # Add it using the client's internal method
@@ -238,7 +242,7 @@ class LineBuilder:
     Mirrors the Java client LineBuilder API.
     """
 
-    def __init__(self, client: 'PDFDancer', page_index: int):
+    def __init__(self, client: "PDFDancer", page_index: int):
         """
         Initialize the line builder.
 
@@ -259,7 +263,7 @@ class LineBuilder:
         self._dash_array: Optional[List[float]] = None
         self._dash_phase: Optional[float] = None
 
-    def from_point(self, x: float, y: float) -> 'LineBuilder':
+    def from_point(self, x: float, y: float) -> "LineBuilder":
         """
         Set the starting point of the line (absolute page coordinates).
 
@@ -273,7 +277,7 @@ class LineBuilder:
         self._p0 = Point(x, y)
         return self
 
-    def to_point(self, x: float, y: float) -> 'LineBuilder':
+    def to_point(self, x: float, y: float) -> "LineBuilder":
         """
         Set the ending point of the line (absolute page coordinates).
 
@@ -287,7 +291,7 @@ class LineBuilder:
         self._p1 = Point(x, y)
         return self
 
-    def stroke_color(self, color: Color) -> 'LineBuilder':
+    def stroke_color(self, color: Color) -> "LineBuilder":
         """
         Set the stroke color.
 
@@ -300,7 +304,7 @@ class LineBuilder:
         self._stroke_color = color
         return self
 
-    def fill_color(self, color: Color) -> 'LineBuilder':
+    def fill_color(self, color: Color) -> "LineBuilder":
         """
         Set the fill color.
 
@@ -313,7 +317,7 @@ class LineBuilder:
         self._fill_color = color
         return self
 
-    def stroke_width(self, width: float) -> 'LineBuilder':
+    def stroke_width(self, width: float) -> "LineBuilder":
         """
         Set the stroke width.
 
@@ -328,7 +332,9 @@ class LineBuilder:
         self._stroke_width = width
         return self
 
-    def dash_pattern(self, dash_array: List[float], dash_phase: float = 0.0) -> 'LineBuilder':
+    def dash_pattern(
+        self, dash_array: List[float], dash_phase: float = 0.0
+    ) -> "LineBuilder":
         """
         Set a dash pattern.
 
@@ -343,7 +349,7 @@ class LineBuilder:
         self._dash_phase = dash_phase
         return self
 
-    def solid(self) -> 'LineBuilder':
+    def solid(self) -> "LineBuilder":
         """
         Set line to solid (no dash pattern).
 
@@ -377,18 +383,14 @@ class LineBuilder:
             fill_color=self._fill_color,
             stroke_width=self._stroke_width,
             dash_array=self._dash_array,
-            dash_phase=self._dash_phase
+            dash_phase=self._dash_phase,
         )
 
         # Create position with only page index set
         position = Position.at_page_coordinates(self._page_index, 0, 0)
 
         # Wrap in Path with single segment
-        path = Path(
-            position=position,
-            path_segments=[line],
-            even_odd_fill=False
-        )
+        path = Path(position=position, path_segments=[line], even_odd_fill=False)
 
         # Add it using the client's internal method
         # noinspection PyProtectedMember
@@ -401,7 +403,7 @@ class BezierBuilder:
     Mirrors the Java client BezierBuilder API.
     """
 
-    def __init__(self, client: 'PDFDancer', page_index: int):
+    def __init__(self, client: "PDFDancer", page_index: int):
         """
         Initialize the bezier builder.
 
@@ -424,7 +426,7 @@ class BezierBuilder:
         self._dash_array: Optional[List[float]] = None
         self._dash_phase: Optional[float] = None
 
-    def from_point(self, x: float, y: float) -> 'BezierBuilder':
+    def from_point(self, x: float, y: float) -> "BezierBuilder":
         """
         Set the starting point of the curve (absolute page coordinates).
 
@@ -438,7 +440,7 @@ class BezierBuilder:
         self._p0 = Point(x, y)
         return self
 
-    def control_point_1(self, x: float, y: float) -> 'BezierBuilder':
+    def control_point_1(self, x: float, y: float) -> "BezierBuilder":
         """
         Set the first control point (absolute page coordinates).
 
@@ -452,7 +454,7 @@ class BezierBuilder:
         self._p1 = Point(x, y)
         return self
 
-    def control_point_2(self, x: float, y: float) -> 'BezierBuilder':
+    def control_point_2(self, x: float, y: float) -> "BezierBuilder":
         """
         Set the second control point (absolute page coordinates).
 
@@ -466,7 +468,7 @@ class BezierBuilder:
         self._p2 = Point(x, y)
         return self
 
-    def to_point(self, x: float, y: float) -> 'BezierBuilder':
+    def to_point(self, x: float, y: float) -> "BezierBuilder":
         """
         Set the ending point of the curve (absolute page coordinates).
 
@@ -480,7 +482,7 @@ class BezierBuilder:
         self._p3 = Point(x, y)
         return self
 
-    def stroke_color(self, color: Color) -> 'BezierBuilder':
+    def stroke_color(self, color: Color) -> "BezierBuilder":
         """
         Set the stroke color.
 
@@ -493,7 +495,7 @@ class BezierBuilder:
         self._stroke_color = color
         return self
 
-    def fill_color(self, color: Color) -> 'BezierBuilder':
+    def fill_color(self, color: Color) -> "BezierBuilder":
         """
         Set the fill color.
 
@@ -506,7 +508,7 @@ class BezierBuilder:
         self._fill_color = color
         return self
 
-    def stroke_width(self, width: float) -> 'BezierBuilder':
+    def stroke_width(self, width: float) -> "BezierBuilder":
         """
         Set the stroke width.
 
@@ -521,7 +523,9 @@ class BezierBuilder:
         self._stroke_width = width
         return self
 
-    def dash_pattern(self, dash_array: List[float], dash_phase: float = 0.0) -> 'BezierBuilder':
+    def dash_pattern(
+        self, dash_array: List[float], dash_phase: float = 0.0
+    ) -> "BezierBuilder":
         """
         Set a dash pattern.
 
@@ -536,7 +540,7 @@ class BezierBuilder:
         self._dash_phase = dash_phase
         return self
 
-    def solid(self) -> 'BezierBuilder':
+    def solid(self) -> "BezierBuilder":
         """
         Set curve to solid (no dash pattern).
 
@@ -558,11 +562,17 @@ class BezierBuilder:
             ValidationException: If required properties are missing
         """
         if self._p0 is None:
-            raise ValidationException("Bezier start point must be set using from_point()")
+            raise ValidationException(
+                "Bezier start point must be set using from_point()"
+            )
         if self._p1 is None:
-            raise ValidationException("Bezier first control point must be set using control_point_1()")
+            raise ValidationException(
+                "Bezier first control point must be set using control_point_1()"
+            )
         if self._p2 is None:
-            raise ValidationException("Bezier second control point must be set using control_point_2()")
+            raise ValidationException(
+                "Bezier second control point must be set using control_point_2()"
+            )
         if self._p3 is None:
             raise ValidationException("Bezier end point must be set using to_point()")
 
@@ -576,18 +586,14 @@ class BezierBuilder:
             fill_color=self._fill_color,
             stroke_width=self._stroke_width,
             dash_array=self._dash_array,
-            dash_phase=self._dash_phase
+            dash_phase=self._dash_phase,
         )
 
         # Create position with only page index set
         position = Position.at_page_coordinates(self._page_index, 0, 0)
 
         # Wrap in Path with single segment
-        path = Path(
-            position=position,
-            path_segments=[bezier],
-            even_odd_fill=False
-        )
+        path = Path(position=position, path_segments=[bezier], even_odd_fill=False)
 
         # Add it using the client's internal method
         # noinspection PyProtectedMember
@@ -600,7 +606,7 @@ class RectangleBuilder:
     Provides a convenient way to create a rectangle path with a single builder.
     """
 
-    def __init__(self, client: 'PDFDancer', page_index: int):
+    def __init__(self, client: "PDFDancer", page_index: int):
         """
         Initialize the rectangle builder.
 
@@ -624,7 +630,7 @@ class RectangleBuilder:
         self._dash_phase: Optional[float] = None
         self._even_odd_fill: bool = False
 
-    def at_coordinates(self, x: float, y: float) -> 'RectangleBuilder':
+    def at_coordinates(self, x: float, y: float) -> "RectangleBuilder":
         """
         Set the bottom-left corner position of the rectangle.
 
@@ -639,7 +645,7 @@ class RectangleBuilder:
         self._y = y
         return self
 
-    def with_size(self, width: float, height: float) -> 'RectangleBuilder':
+    def with_size(self, width: float, height: float) -> "RectangleBuilder":
         """
         Set the dimensions of the rectangle.
 
@@ -654,7 +660,7 @@ class RectangleBuilder:
         self._height = height
         return self
 
-    def stroke_color(self, color: Color) -> 'RectangleBuilder':
+    def stroke_color(self, color: Color) -> "RectangleBuilder":
         """
         Set the stroke color.
 
@@ -667,7 +673,7 @@ class RectangleBuilder:
         self._stroke_color = color
         return self
 
-    def fill_color(self, color: Color) -> 'RectangleBuilder':
+    def fill_color(self, color: Color) -> "RectangleBuilder":
         """
         Set the fill color.
 
@@ -680,7 +686,7 @@ class RectangleBuilder:
         self._fill_color = color
         return self
 
-    def stroke_width(self, width: float) -> 'RectangleBuilder':
+    def stroke_width(self, width: float) -> "RectangleBuilder":
         """
         Set the stroke width.
 
@@ -695,7 +701,9 @@ class RectangleBuilder:
         self._stroke_width = width
         return self
 
-    def dash_pattern(self, dash_array: List[float], dash_phase: float = 0.0) -> 'RectangleBuilder':
+    def dash_pattern(
+        self, dash_array: List[float], dash_phase: float = 0.0
+    ) -> "RectangleBuilder":
         """
         Set a dash pattern.
 
@@ -710,7 +718,7 @@ class RectangleBuilder:
         self._dash_phase = dash_phase
         return self
 
-    def solid(self) -> 'RectangleBuilder':
+    def solid(self) -> "RectangleBuilder":
         """
         Set rectangle to solid (no dash pattern).
 
@@ -721,7 +729,7 @@ class RectangleBuilder:
         self._dash_phase = None
         return self
 
-    def even_odd_fill(self, enabled: bool = True) -> 'RectangleBuilder':
+    def even_odd_fill(self, enabled: bool = True) -> "RectangleBuilder":
         """
         Set the fill rule to even-odd (vs nonzero winding).
 
@@ -745,9 +753,13 @@ class RectangleBuilder:
             ValidationException: If required properties are missing
         """
         if self._x is None or self._y is None:
-            raise ValidationException("Rectangle position must be set using at_coordinates()")
+            raise ValidationException(
+                "Rectangle position must be set using at_coordinates()"
+            )
         if self._width is None or self._height is None:
-            raise ValidationException("Rectangle dimensions must be set using with_size()")
+            raise ValidationException(
+                "Rectangle dimensions must be set using with_size()"
+            )
         if self._width <= 0:
             raise ValidationException("Rectangle width must be positive")
         if self._height <= 0:
@@ -768,7 +780,7 @@ class RectangleBuilder:
                 fill_color=self._fill_color,
                 stroke_width=self._stroke_width,
                 dash_array=self._dash_array,
-                dash_phase=self._dash_phase
+                dash_phase=self._dash_phase,
             ),
             Line(
                 p0=bottom_right,
@@ -777,7 +789,7 @@ class RectangleBuilder:
                 fill_color=self._fill_color,
                 stroke_width=self._stroke_width,
                 dash_array=self._dash_array,
-                dash_phase=self._dash_phase
+                dash_phase=self._dash_phase,
             ),
             Line(
                 p0=top_right,
@@ -786,7 +798,7 @@ class RectangleBuilder:
                 fill_color=self._fill_color,
                 stroke_width=self._stroke_width,
                 dash_array=self._dash_array,
-                dash_phase=self._dash_phase
+                dash_phase=self._dash_phase,
             ),
             Line(
                 p0=top_left,
@@ -795,8 +807,8 @@ class RectangleBuilder:
                 fill_color=self._fill_color,
                 stroke_width=self._stroke_width,
                 dash_array=self._dash_array,
-                dash_phase=self._dash_phase
-            )
+                dash_phase=self._dash_phase,
+            ),
         ]
 
         # Create position with only page index set
@@ -804,9 +816,7 @@ class RectangleBuilder:
 
         # Wrap in Path with four line segments
         path = Path(
-            position=position,
-            path_segments=lines,
-            even_odd_fill=self._even_odd_fill
+            position=position, path_segments=lines, even_odd_fill=self._even_odd_fill
         )
 
         # Add it using the client's internal method

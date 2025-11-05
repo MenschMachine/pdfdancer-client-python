@@ -20,10 +20,7 @@ def test_find_paths():
         assert pytest.approx(p1.position.x(), rel=0, abs=1) == 80
         assert pytest.approx(p1.position.y(), rel=0, abs=1) == 720
 
-        (
-            PDFAssertions(pdf)
-            .assert_path_is_at("PATH_000001", 80, 720)
-        )
+        (PDFAssertions(pdf).assert_path_is_at("PATH_000001", 80, 720))
 
 
 def test_find_paths_by_position():
@@ -53,11 +50,7 @@ def test_delete_path():
         # Remaining paths should be 8 total
         assert len(pdf.select_paths()) == 8
 
-        (
-            PDFAssertions(pdf)
-            .assert_no_path_at(80, 720)
-            .assert_number_of_paths(8)
-        )
+        (PDFAssertions(pdf).assert_no_path_at(80, 720).assert_number_of_paths(8))
 
 
 def test_move_path():

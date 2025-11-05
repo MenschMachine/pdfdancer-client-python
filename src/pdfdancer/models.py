@@ -54,29 +54,33 @@ class PageSize:
     }
 
     # Convenience aliases populated after class definition; annotated for type checkers.
-    A4: ClassVar['PageSize']
-    LETTER: ClassVar['PageSize']
-    LEGAL: ClassVar['PageSize']
-    TABLOID: ClassVar['PageSize']
-    A3: ClassVar['PageSize']
-    A5: ClassVar['PageSize']
+    A4: ClassVar["PageSize"]
+    LETTER: ClassVar["PageSize"]
+    LEGAL: ClassVar["PageSize"]
+    TABLOID: ClassVar["PageSize"]
+    A3: ClassVar["PageSize"]
+    A5: ClassVar["PageSize"]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.width, (int, float)) or not isinstance(self.height, (int, float)):
+        if not isinstance(self.width, (int, float)) or not isinstance(
+            self.height, (int, float)
+        ):
             raise TypeError("Page width and height must be numeric")
         if self.width <= 0 or self.height <= 0:
             raise ValueError("Page width and height must be positive values")
 
         width = float(self.width)
         height = float(self.height)
-        object.__setattr__(self, 'width', width)
-        object.__setattr__(self, 'height', height)
+        object.__setattr__(self, "width", width)
+        object.__setattr__(self, "height", height)
 
         if self.name is not None:
             if not isinstance(self.name, str):
                 raise TypeError("Page size name must be a string when provided")
             normalized_name = self.name.strip().upper()
-            object.__setattr__(self, 'name', normalized_name if normalized_name else None)
+            object.__setattr__(
+                self, "name", normalized_name if normalized_name else None
+            )
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -87,7 +91,7 @@ class PageSize:
         }
 
     @classmethod
-    def from_name(cls, name: str) -> 'PageSize':
+    def from_name(cls, name: str) -> "PageSize":
         """Create a page size from a known standard name."""
         if not name or not isinstance(name, str):
             raise ValueError("Page size name must be a non-empty string")
@@ -98,17 +102,17 @@ class PageSize:
         return cls(name=normalized, width=width, height=height)
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> 'PageSize':
+    def from_dict(cls, data: Mapping[str, Any]) -> "PageSize":
         """Create a page size from a dictionary-like object."""
-        width = data.get('width') if isinstance(data, Mapping) else None
-        height = data.get('height') if isinstance(data, Mapping) else None
+        width = data.get("width") if isinstance(data, Mapping) else None
+        height = data.get("height") if isinstance(data, Mapping) else None
         if width is None or height is None:
             raise ValueError("Page size dictionary must contain 'width' and 'height'")
-        name = data.get('name') if isinstance(data, Mapping) else None
+        name = data.get("name") if isinstance(data, Mapping) else None
         return cls(name=name, width=width, height=height)
 
     @classmethod
-    def coerce(cls, value: Union['PageSize', str, Mapping[str, Any]]) -> 'PageSize':
+    def coerce(cls, value: Union["PageSize", str, Mapping[str, Any]]) -> "PageSize":
         """Normalize various page size inputs into a PageSize instance."""
         if isinstance(value, cls):
             return value
@@ -135,6 +139,7 @@ PageSize.A5 = PageSize.from_name("A5")
 
 class Orientation(Enum):
     """Page orientation options."""
+
     PORTRAIT = "PORTRAIT"
     LANDSCAPE = "LANDSCAPE"
 
@@ -166,6 +171,7 @@ class StandardFonts(Enum):
     - SYMBOL: Symbol font for mathematical and special characters
     - ZAPF_DINGBATS: Zapf Dingbats font for decorative symbols
     """
+
     TIMES_ROMAN = "Times-Roman"
     TIMES_BOLD = "Times-Bold"
     TIMES_ITALIC = "Times-Italic"
@@ -184,6 +190,7 @@ class StandardFonts(Enum):
 
 class ObjectType(Enum):
     """Server object type discriminator used in refs, requests, and snapshots."""
+
     FORM_FIELD = "FORM_FIELD"
     IMAGE = "IMAGE"
     FORM_X_OBJECT = "FORM_X_OBJECT"
@@ -201,12 +208,16 @@ class ObjectType(Enum):
 
 class PositionMode(Enum):
     """Defines how position matching should be performed when searching for objects."""
+
     INTERSECT = "INTERSECT"  # Objects that intersect with the specified position area
-    CONTAINS = "CONTAINS"  # Objects completely contained within the specified position area
+    CONTAINS = (
+        "CONTAINS"  # Objects completely contained within the specified position area
+    )
 
 
 class ShapeType(Enum):
     """Defines the geometric shape type used for position specification."""
+
     POINT = "POINT"  # Single point coordinate
     LINE = "LINE"  # Linear shape between two points
     CIRCLE = "CIRCLE"  # Circular area with radius
@@ -216,6 +227,7 @@ class ShapeType(Enum):
 @dataclass
 class Point:
     """Represents a 2D point with x and y coordinates."""
+
     x: float
     y: float
 
@@ -225,6 +237,7 @@ class BoundingRect:
     """
     Represents a bounding rectangle with position and dimensions.
     """
+
     x: float
     y: float
     width: float
@@ -280,6 +293,7 @@ class Position:
     pos.bounding_rect = BoundingRect(x=100, y=100, width=200, height=50)
     ```
     """
+
     page_index: Optional[int] = None
     shape: Optional[ShapeType] = None
     mode: Optional[PositionMode] = None
@@ -289,14 +303,14 @@ class Position:
     name: Optional[str] = None
 
     @staticmethod
-    def at_page(page_index: int) -> 'Position':
+    def at_page(page_index: int) -> "Position":
         """
         Creates a position specification for an entire page.
         """
         return Position(page_index=page_index, mode=PositionMode.CONTAINS)
 
     @staticmethod
-    def at_page_coordinates(page_index: int, x: float, y: float) -> 'Position':
+    def at_page_coordinates(page_index: int, x: float, y: float) -> "Position":
         """
         Creates a position specification for specific coordinates on a page.
         """
@@ -305,7 +319,7 @@ class Position:
         return position
 
     @staticmethod
-    def by_name(name: str) -> 'Position':
+    def by_name(name: str) -> "Position":
         """
         Creates a position specification for finding objects by name.
         """
@@ -313,7 +327,7 @@ class Position:
         position.name = name
         return position
 
-    def at_coordinates(self, point: Point) -> 'Position':
+    def at_coordinates(self, point: Point) -> "Position":
         """
         Sets the position to a specific point location.
         """
@@ -322,17 +336,17 @@ class Position:
         self.bounding_rect = BoundingRect(point.x, point.y, 0, 0)
         return self
 
-    def with_text_starts(self, text: str) -> 'Position':
+    def with_text_starts(self, text: str) -> "Position":
         self.text_starts_with = text
         return self
 
-    def move_x(self, x_offset: float) -> 'Position':
+    def move_x(self, x_offset: float) -> "Position":
         """Move the position horizontally by the specified offset."""
         if self.bounding_rect:
             self.at_coordinates(Point(self.x() + x_offset, self.y()))
         return self
 
-    def move_y(self, y_offset: float) -> 'Position':
+    def move_y(self, y_offset: float) -> "Position":
         """Move the position vertically by the specified offset."""
         if self.bounding_rect:
             self.at_coordinates(Point(self.x(), self.y() + y_offset))
@@ -369,6 +383,7 @@ class ObjectRef:
     payload = MoveRequest(object_ref=obj_ref, position=new_pos).to_dict()
     ```
     """
+
     internal_id: str
     position: Position
     type: ObjectType
@@ -399,7 +414,7 @@ class ObjectRef:
         return {
             "internalId": self.internal_id,
             "position": FindRequest._position_to_dict(self.position),
-            "type": type_value
+            "type": type_value,
         }
 
 
@@ -422,6 +437,7 @@ class Color:
     semi_transparent_black = Color(0, 0, 0, a=128)
     ```
     """
+
     r: int
     g: int
     b: int
@@ -430,7 +446,9 @@ class Color:
     def __post_init__(self):
         for component in [self.r, self.g, self.b, self.a]:
             if not 0 <= component <= 255:
-                raise ValueError(f"Color component must be between 0 and 255, got {component}")
+                raise ValueError(
+                    f"Color component must be between 0 and 255, got {component}"
+                )
 
 
 @dataclass
@@ -452,6 +470,7 @@ class Font:
     body_font = Font(name="MyEmbeddedFont", size=10.5)
     ```
     """
+
     name: str
     size: float
 
@@ -476,6 +495,7 @@ class PathSegment:
     - Concrete subclasses are `Line` and `Bezier`.
     - Used inside `Path.path_segments` and serialized by `AddRequest`.
     """
+
     stroke_color: Optional[Color] = None
     fill_color: Optional[Color] = None
     stroke_width: Optional[float] = None
@@ -520,6 +540,7 @@ class Line(PathSegment):
     path = Path(path_segments=[line])
     ```
     """
+
     p0: Optional[Point] = None
     p1: Optional[Point] = None
 
@@ -550,6 +571,7 @@ class Bezier(PathSegment):
     )
     ```
     """
+
     p0: Optional[Point] = None
     p1: Optional[Point] = None
     p2: Optional[Point] = None
@@ -598,6 +620,7 @@ class Path:
     payload = AddRequest(tri).to_dict()
     ```
     """
+
     position: Optional[Position] = None
     path_segments: Optional[List[PathSegment]] = None
     even_odd_fill: Optional[bool] = None
@@ -645,6 +668,7 @@ class Image:
     payload = AddRequest(img).to_dict()
     ```
     """
+
     position: Optional[Position] = None
     format: Optional[str] = None
     width: Optional[float] = None
@@ -673,6 +697,7 @@ class TextLine:
     - color: Text color.
 
     """
+
     position: Optional[Position] = None
     font: Optional[Font] = None
     color: Optional[Color] = None
@@ -715,6 +740,7 @@ class Paragraph:
     payload = AddRequest(para).to_dict()
     ```
     """
+
     position: Optional[Position] = None
     text_lines: Optional[List[TextLine]] = None
     font: Optional[Font] = None
@@ -778,6 +804,7 @@ class FindRequest:
     payload = req.to_dict()
     ```
     """
+
     object_type: Optional[ObjectType]
     position: Optional[Position]
     hint: Optional[str] = None
@@ -786,8 +813,10 @@ class FindRequest:
         """Convert to dictionary for JSON serialization."""
         return {
             "objectType": self.object_type.value if self.object_type else None,
-            "position": self._position_to_dict(self.position) if self.position else None,
-            "hint": self.hint
+            "position": (
+                self._position_to_dict(self.position) if self.position else None
+            ),
+            "hint": self.hint,
         }
 
     @staticmethod
@@ -796,7 +825,7 @@ class FindRequest:
         result = {
             "pageIndex": position.page_index,
             "textStartsWith": position.text_starts_with,
-            "textPattern": position.text_pattern
+            "textPattern": position.text_pattern,
         }
         if position.name:
             result["name"] = position.name
@@ -809,7 +838,7 @@ class FindRequest:
                 "x": position.bounding_rect.x,
                 "y": position.bounding_rect.y,
                 "width": position.bounding_rect.width,
-                "height": position.bounding_rect.height
+                "height": position.bounding_rect.height,
             }
         return result
 
@@ -826,14 +855,13 @@ class DeleteRequest:
     payload = DeleteRequest(object_ref=obj_ref).to_dict()
     ```
     """
+
     object_ref: ObjectRef
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
-        return {
-            "objectRef": self.object_ref.to_dict()
-        }
+        return {"objectRef": self.object_ref.to_dict()}
 
 
 @dataclass
@@ -851,6 +879,7 @@ class MoveRequest:
     payload = req.to_dict()
     ```
     """
+
     object_ref: ObjectRef
     position: Position
 
@@ -860,7 +889,7 @@ class MoveRequest:
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
             "objectRef": self.object_ref.to_dict(),
-            "newPosition": FindRequest._position_to_dict(self.position)
+            "newPosition": FindRequest._position_to_dict(self.position),
         }
 
 
@@ -879,13 +908,14 @@ class PageMoveRequest:
     payload = req.to_dict()
     ```
     """
+
     from_page_index: int
     to_page_index: int
 
     def to_dict(self) -> dict:
         return {
             "fromPageIndex": self.from_page_index,
-            "toPageIndex": self.to_page_index
+            "toPageIndex": self.to_page_index,
         }
 
 
@@ -901,6 +931,7 @@ class AddPageRequest:
     Only populated fields are sent to the server to maintain backward compatibility
     with default server behavior.
     """
+
     page_index: Optional[int] = None
     orientation: Optional[Orientation] = None
     page_size: Optional[PageSize] = None
@@ -917,7 +948,9 @@ class AddPageRequest:
                 normalized = self.orientation.strip().upper()
                 orientation_value = Orientation(normalized)
             else:
-                raise TypeError("Orientation must be an Orientation enum or string value")
+                raise TypeError(
+                    "Orientation must be an Orientation enum or string value"
+                )
             payload["orientation"] = orientation_value.value
         if self.page_size is not None:
             page_size = PageSize.coerce(self.page_size)
@@ -934,7 +967,7 @@ class AddRequest:
 
     Usage:
     ```python
-    para = Paragraph(position=Position.at_page_coordinates(0, 72, 700), text_lines=["Hello"]) 
+    para = Paragraph(position=Position.at_page_coordinates(0, 72, 700), text_lines=["Hello"])
     req = AddRequest(para)
     payload = req.to_dict()  # ready to send to the server API
     ```
@@ -943,6 +976,7 @@ class AddRequest:
     - Serialization details (like base64 for image `data`, or per-segment position for paths)
       are handled for you in `to_dict()`.
     """
+
     pdf_object: Any  # Can be Image, Paragraph, etc.
 
     def to_dict(self) -> dict:
@@ -951,9 +985,7 @@ class AddRequest:
         (with a 'type' discriminator).
         """
         obj = self.pdf_object
-        return {
-            "object": self._object_to_dict(obj)
-        }
+        return {"object": self._object_to_dict(obj)}
 
     def _object_to_dict(self, obj: Any) -> dict:
         """Convert PDF object to dictionary for JSON serialization."""
@@ -969,14 +1001,20 @@ class AddRequest:
                     seg_dict = self._segment_to_dict(seg)
                     # Include per-segment position to satisfy backend validation (matches Java client)
                     if obj.position:
-                        seg_dict["position"] = FindRequest._position_to_dict(obj.position)
+                        seg_dict["position"] = FindRequest._position_to_dict(
+                            obj.position
+                        )
                     segments.append(seg_dict)
 
             return {
                 "type": "PATH",
-                "position": FindRequest._position_to_dict(obj.position) if obj.position else None,
+                "position": (
+                    FindRequest._position_to_dict(obj.position)
+                    if obj.position
+                    else None
+                ),
                 "pathSegments": segments if segments else None,
-                "evenOddFill": obj.even_odd_fill
+                "evenOddFill": obj.even_odd_fill,
             }
         elif isinstance(obj, Image):
             size = None
@@ -988,12 +1026,17 @@ class AddRequest:
                 data_b64 = base64.b64encode(obj.data).decode("ascii")
             return {
                 "type": "IMAGE",
-                "position": FindRequest._position_to_dict(obj.position) if obj.position else None,
+                "position": (
+                    FindRequest._position_to_dict(obj.position)
+                    if obj.position
+                    else None
+                ),
                 "format": obj.format,
                 "size": size,
-                "data": data_b64
+                "data": data_b64,
             }
         elif isinstance(obj, Paragraph):
+
             def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
                 if font:
                     return {"name": font.name, "size": font.size}
@@ -1001,7 +1044,12 @@ class AddRequest:
 
             def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
                 if color:
-                    return {"red": color.r, "green": color.g, "blue": color.b, "alpha": color.a}
+                    return {
+                        "red": color.r,
+                        "green": color.g,
+                        "blue": color.b,
+                        "alpha": color.a,
+                    }
                 return None
 
             lines_payload = []
@@ -1022,13 +1070,19 @@ class AddRequest:
                         "text": line_text,
                         "font": _font_to_dict(line_font),
                         "color": _color_to_dict(line_color),
-                        "position": FindRequest._position_to_dict(line_position) if line_position else None
+                        "position": (
+                            FindRequest._position_to_dict(line_position)
+                            if line_position
+                            else None
+                        ),
                     }
                     text_line = {"textElements": [text_element]}
                     if line_color:
                         text_line["color"] = _color_to_dict(line_color)
                     if line_position:
-                        text_line["position"] = FindRequest._position_to_dict(line_position)
+                        text_line["position"] = FindRequest._position_to_dict(
+                            line_position
+                        )
                     lines_payload.append(text_line)
 
             line_spacings = None
@@ -1039,15 +1093,19 @@ class AddRequest:
 
             return {
                 "type": "PARAGRAPH",
-                "position": FindRequest._position_to_dict(obj.position) if obj.position else None,
+                "position": (
+                    FindRequest._position_to_dict(obj.position)
+                    if obj.position
+                    else None
+                ),
                 "lines": lines_payload if lines_payload else None,
                 "lineSpacings": line_spacings,
-                "font": _font_to_dict(obj.font)
+                "font": _font_to_dict(obj.font),
             }
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 
-    def _segment_to_dict(self, segment: 'PathSegment') -> dict:
+    def _segment_to_dict(self, segment: "PathSegment") -> dict:
         """Convert a PathSegment (Line or Bezier) to dictionary for JSON serialization."""
         from .models import Bezier, Line
 
@@ -1059,7 +1117,7 @@ class AddRequest:
                 "red": segment.stroke_color.r,
                 "green": segment.stroke_color.g,
                 "blue": segment.stroke_color.b,
-                "alpha": segment.stroke_color.a
+                "alpha": segment.stroke_color.a,
             }
 
         if segment.fill_color:
@@ -1067,7 +1125,7 @@ class AddRequest:
                 "red": segment.fill_color.r,
                 "green": segment.fill_color.g,
                 "blue": segment.fill_color.b,
-                "alpha": segment.fill_color.a
+                "alpha": segment.fill_color.a,
             }
 
         if segment.stroke_width is not None:
@@ -1113,11 +1171,12 @@ class ModifyRequest:
 
     Example:
     ```python
-    new_para = Paragraph(position=old.position, text_lines=["Updated text"]) 
+    new_para = Paragraph(position=old.position, text_lines=["Updated text"])
     req = ModifyRequest(object_ref=old, new_object=new_para)
     payload = req.to_dict()
     ```
     """
+
     object_ref: ObjectRef
     new_object: Any
 
@@ -1126,7 +1185,7 @@ class ModifyRequest:
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
             "ref": self.object_ref.to_dict(),
-            "newObject": AddRequest(None)._object_to_dict(self.new_object)
+            "newObject": AddRequest(None)._object_to_dict(self.new_object),
         }
 
 
@@ -1144,16 +1203,14 @@ class ModifyTextRequest:
     payload = req.to_dict()
     ```
     """
+
     object_ref: ObjectRef
     new_text: str
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
-        return {
-            "ref": self.object_ref.to_dict(),
-            "newTextLine": self.new_text
-        }
+        return {"ref": self.object_ref.to_dict(), "newTextLine": self.new_text}
 
 
 @dataclass
@@ -1171,16 +1228,14 @@ class ChangeFormFieldRequest:
     payload = req.to_dict()
     ```
     """
+
     object_ref: ObjectRef
     value: str
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
-        return {
-            "ref": self.object_ref.to_dict(),
-            "value": self.value
-        }
+        return {"ref": self.object_ref.to_dict(), "value": self.value}
 
 
 @dataclass
@@ -1201,6 +1256,7 @@ class FormFieldRef(ObjectRef):
     payload = ChangeFormFieldRequest(object_ref=field_ref, value="john@doe.com").to_dict()
     ```
     """
+
     name: Optional[str] = None
     value: Optional[str] = None
 
@@ -1215,6 +1271,7 @@ class FormFieldRef(ObjectRef):
 
 class FontType(Enum):
     """Font type classification from the PDF."""
+
     SYSTEM = "SYSTEM"
     STANDARD = "STANDARD"
     EMBEDDED = "EMBEDDED"
@@ -1223,15 +1280,16 @@ class FontType(Enum):
 @dataclass
 class FontRecommendation:
     """Represents a font recommendation with similarity score."""
+
     font_name: str
-    font_type: 'FontType'
+    font_type: "FontType"
     similarity_score: float
 
     def get_font_name(self) -> str:
         """Get the recommended font name."""
         return self.font_name
 
-    def get_font_type(self) -> 'FontType':
+    def get_font_type(self) -> "FontType":
         """Get the recommended font type."""
         return self.font_type
 
@@ -1243,6 +1301,7 @@ class FontRecommendation:
 @dataclass
 class TextStatus:
     """Status information for text objects."""
+
     modified: bool
     encodable: bool
     font_type: FontType
@@ -1286,10 +1345,18 @@ class TextObjectRef(ObjectRef):
       identity to modification requests (e.g., `ModifyTextRequest`).
     """
 
-    def __init__(self, internal_id: str, position: Position, object_type: ObjectType,
-                 text: Optional[str] = None, font_name: Optional[str] = None,
-                 font_size: Optional[float] = None, line_spacings: Optional[List[float]] = None,
-                 color: Optional[Color] = None, status: Optional[TextStatus] = None):
+    def __init__(
+        self,
+        internal_id: str,
+        position: Position,
+        object_type: ObjectType,
+        text: Optional[str] = None,
+        font_name: Optional[str] = None,
+        font_size: Optional[float] = None,
+        line_spacings: Optional[List[float]] = None,
+        color: Optional[Color] = None,
+        status: Optional[TextStatus] = None,
+    ):
         super().__init__(internal_id, position, object_type)
         self.text = text
         self.font_name = font_name
@@ -1297,7 +1364,7 @@ class TextObjectRef(ObjectRef):
         self.line_spacings = line_spacings
         self.color = color
         self.status = status
-        self.children: List['TextObjectRef'] = []
+        self.children: List["TextObjectRef"] = []
 
     def get_text(self) -> Optional[str]:
         """Get the text content."""
@@ -1319,7 +1386,7 @@ class TextObjectRef(ObjectRef):
         """Get the color."""
         return self.color
 
-    def get_children(self) -> List['TextObjectRef']:
+    def get_children(self) -> List["TextObjectRef"]:
         """Get the child text objects."""
         return self.children
 
@@ -1344,6 +1411,7 @@ class PageRef(ObjectRef):
     - Returned inside `PageSnapshot` objects. You can inspect page size/orientation
       and use the page index for subsequent operations.
     """
+
     page_size: Optional[PageSize]
     orientation: Optional[Orientation]
 
@@ -1376,6 +1444,7 @@ class CommandResult:
         print("Operation failed:", result.message)
     ```
     """
+
     command_name: str
     element_id: str | None
     message: str | None
@@ -1383,19 +1452,25 @@ class CommandResult:
     warning: str | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'CommandResult':
+    def from_dict(cls, data: dict) -> "CommandResult":
         """Create a CommandResult from a dictionary response."""
         return cls(
-            command_name=data.get('commandName', ''),
-            element_id=data.get('elementId', ''),
-            message=data.get('message', ''),
-            success=data.get('success', False),
-            warning=data.get('warning', '')
+            command_name=data.get("commandName", ""),
+            element_id=data.get("elementId", ""),
+            message=data.get("message", ""),
+            success=data.get("success", False),
+            warning=data.get("warning", ""),
         )
 
     @classmethod
-    def empty(cls, command_name: str, element_id: str | None) -> 'CommandResult':
-        return CommandResult(command_name=command_name, element_id=element_id, message=None, success=True, warning=None)
+    def empty(cls, command_name: str, element_id: str | None) -> "CommandResult":
+        return CommandResult(
+            command_name=command_name,
+            element_id=element_id,
+            message=None,
+            success=True,
+            warning=None,
+        )
 
 
 @dataclass
@@ -1411,6 +1486,7 @@ class PageSnapshot:
     - Iterate over `elements` to find items to modify or move.
     - Use `page_ref.position.page_index` as the page index for follow-up operations.
     """
+
     page_ref: PageRef
     elements: List[ObjectRef]
 
@@ -1442,6 +1518,7 @@ class DocumentSnapshot:
                 print(el.get_text())
     ```
     """
+
     page_count: int
     fonts: List[FontRecommendation]
     pages: List[PageSnapshot]

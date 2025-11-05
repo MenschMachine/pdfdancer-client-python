@@ -8,6 +8,7 @@ These tests demonstrate detailed path manipulation including:
 - Bezier segment properties (control points, fill)
 - Complex paths with mixed segment types
 """
+
 import pytest
 
 from pdfdancer import (
@@ -31,7 +32,9 @@ class TestPathBasicOperations:
         """Test selecting paths with detailed verification."""
         base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
-        with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
             # Select all paths
             paths = pdf.select_paths()
             assert len(paths) > 0, "Should have at least one path"
@@ -39,13 +42,14 @@ class TestPathBasicOperations:
             # Verify each path has the correct type
             for path in paths:
                 # PathObject wraps ObjectRef, access type through object_ref()
-                ref = path.object_ref() if hasattr(path, 'object_ref') else path
-                assert ref.type == ObjectType.PATH, \
-                    f"Path {path.internal_id} should have type PATH"
-                assert path.position is not None, \
-                    f"Path {path.internal_id} should have position"
-                assert path.internal_id is not None, \
-                    f"Path should have internal_id"
+                ref = path.object_ref() if hasattr(path, "object_ref") else path
+                assert (
+                    ref.type == ObjectType.PATH
+                ), f"Path {path.internal_id} should have type PATH"
+                assert (
+                    path.position is not None
+                ), f"Path {path.internal_id} should have position"
+                assert path.internal_id is not None, f"Path should have internal_id"
 
             # Use PDFAssertions to verify path count
             assertions = PDFAssertions(pdf)
@@ -55,7 +59,9 @@ class TestPathBasicOperations:
         """Test verifying path existence at specific coordinates."""
         base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
-        with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
             assertions = PDFAssertions(pdf)
 
             # Assert path exists at known coordinates
@@ -71,7 +77,9 @@ class TestPathBasicOperations:
         """Test verifying path bounding box dimensions."""
         base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
-        with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
             # Get first path
             paths = pdf.page(0).select_paths_at(80, 720)
             assert len(paths) == 1
@@ -93,8 +101,7 @@ class TestPathBasicOperations:
                 if bbox.width > 0 and bbox.height > 0:
                     assertions = PDFAssertions(pdf)
                     assertions.assert_path_bounding_box(
-                        bbox.x, bbox.y, bbox.width, bbox.height,
-                        page=0, epsilon=1.0
+                        bbox.x, bbox.y, bbox.width, bbox.height, page=0, epsilon=1.0
                     )
                 else:
                     # For degenerate bounding boxes, just verify coordinates
@@ -105,7 +112,9 @@ class TestPathBasicOperations:
         """Test deleting a path with before/after verification."""
         base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
-        with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
             assertions = PDFAssertions(pdf)
 
             # Verify initial state
@@ -126,14 +135,17 @@ class TestPathBasicOperations:
             # Verify the specific path ID no longer exists
             remaining_paths = pdf.select_paths()
             remaining_ids = [p.internal_id for p in remaining_paths]
-            assert path_id not in remaining_ids, \
-                f"Deleted path {path_id} should not exist in remaining paths"
+            assert (
+                path_id not in remaining_ids
+            ), f"Deleted path {path_id} should not exist in remaining paths"
 
     def test_move_path_comprehensive(self):
         """Test moving a path with detailed position verification."""
         base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
-        with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
             # Get original path
             original_path = pdf.page(0).select_paths_at(80, 720)[0]
             original_id = original_path.internal_id
@@ -170,12 +182,7 @@ class TestPathSegmentInspection:
         p1 = Point(100.0, 100.0)
         stroke_color = Color(255, 0, 0)
 
-        line = Line(
-            p0=p0,
-            p1=p1,
-            stroke_color=stroke_color,
-            stroke_width=2.5
-        )
+        line = Line(p0=p0, p1=p1, stroke_color=stroke_color, stroke_width=2.5)
 
         # Create assertions helper (without PDF context for model testing)
         # We'll test the assertion methods directly
@@ -201,7 +208,7 @@ class TestPathSegmentInspection:
             p3=p3,
             stroke_color=stroke_color,
             fill_color=fill_color,
-            stroke_width=1.5
+            stroke_width=1.5,
         )
 
         # Verify all control points
@@ -222,7 +229,7 @@ class TestPathSegmentInspection:
             p0=Point(0, 0),
             p1=Point(100, 0),
             stroke_color=Color(0, 0, 0),
-            stroke_width=3.0
+            stroke_width=3.0,
         )
 
         dashed_line = Line(
@@ -231,7 +238,7 @@ class TestPathSegmentInspection:
             stroke_color=Color(255, 0, 0),
             stroke_width=2.0,
             dash_array=[10.0, 5.0, 2.0, 5.0],
-            dash_phase=0.0
+            dash_phase=0.0,
         )
 
         # Verify solid line has no dash pattern
@@ -250,7 +257,7 @@ class TestPathSegmentInspection:
             p0=Point(0, 0),
             p1=Point(100, 0),
             stroke_color=Color(0, 0, 0),
-            stroke_width=2.0
+            stroke_width=2.0,
         )
 
         bezier = Bezier(
@@ -259,20 +266,17 @@ class TestPathSegmentInspection:
             p2=Point(125, 75),
             p3=Point(100, 100),
             stroke_color=Color(0, 0, 0),
-            stroke_width=2.0
+            stroke_width=2.0,
         )
 
         line2 = Line(
             p0=Point(100, 100),
             p1=Point(0, 100),
             stroke_color=Color(0, 0, 0),
-            stroke_width=2.0
+            stroke_width=2.0,
         )
 
-        path = Path(
-            path_segments=[line1, bezier, line2],
-            even_odd_fill=False
-        )
+        path = Path(path_segments=[line1, bezier, line2], even_odd_fill=False)
 
         # Verify segment count
         assert len(path.get_path_segments()) == 3
@@ -295,9 +299,7 @@ class TestPathAssertionMethods:
         """Test assertion method for verifying line segment points."""
         # This is a unit test for the assertion method itself
         line = Line(
-            p0=Point(10.5, 20.5),
-            p1=Point(100.3, 200.7),
-            stroke_color=Color(255, 0, 0)
+            p0=Point(10.5, 20.5), p1=Point(100.3, 200.7), stroke_color=Color(255, 0, 0)
         )
 
         # Create a mock PDF for assertions
@@ -318,7 +320,7 @@ class TestPathAssertionMethods:
             p0=Point(0.0, 0.0),
             p1=Point(33.33, 66.67),
             p2=Point(133.33, 66.67),
-            p3=Point(200.0, 0.0)
+            p3=Point(200.0, 0.0),
         )
 
         # Verify all four control points
@@ -345,7 +347,7 @@ class TestPathAssertionMethods:
             p2=Point(150, 100),
             p3=Point(200, 0),
             stroke_color=stroke_color,
-            fill_color=fill_color
+            fill_color=fill_color,
         )
 
         # Verify stroke color
@@ -372,7 +374,7 @@ class TestPathAssertionMethods:
             p1=Point(200, 0),
             stroke_width=2.0,
             dash_array=dash_array,
-            dash_phase=dash_phase
+            dash_phase=dash_phase,
         )
 
         # Verify dash pattern
@@ -386,11 +388,7 @@ class TestPathAssertionMethods:
 
     def test_assert_segment_is_solid(self):
         """Test assertion method for verifying solid (non-dashed) segments."""
-        solid_line = Line(
-            p0=Point(0, 0),
-            p1=Point(100, 100),
-            stroke_width=1.0
-        )
+        solid_line = Line(p0=Point(0, 0), p1=Point(100, 100), stroke_width=1.0)
 
         # Should have no dash array or empty dash array
         dash_array = solid_line.get_dash_array()
@@ -400,10 +398,7 @@ class TestPathAssertionMethods:
         """Test assertion method for verifying segment types."""
         line = Line(p0=Point(0, 0), p1=Point(100, 100))
         bezier = Bezier(
-            p0=Point(0, 0),
-            p1=Point(50, 100),
-            p2=Point(150, 100),
-            p3=Point(200, 0)
+            p0=Point(0, 0), p1=Point(50, 100), p2=Point(150, 100), p3=Point(200, 0)
         )
 
         # Verify types
@@ -421,24 +416,16 @@ class TestComplexPathScenarios:
 
     def test_path_with_varying_stroke_widths(self):
         """Test a path with segments of varying stroke widths."""
-        thin_line = Line(
-            p0=Point(0, 0),
-            p1=Point(100, 0),
-            stroke_width=0.5
-        )
+        thin_line = Line(p0=Point(0, 0), p1=Point(100, 0), stroke_width=0.5)
 
-        thick_line = Line(
-            p0=Point(0, 10),
-            p1=Point(100, 10),
-            stroke_width=5.0
-        )
+        thick_line = Line(p0=Point(0, 10), p1=Point(100, 10), stroke_width=5.0)
 
         medium_curve = Bezier(
             p0=Point(0, 20),
             p1=Point(50, 70),
             p2=Point(50, 70),
             p3=Point(100, 20),
-            stroke_width=2.0
+            stroke_width=2.0,
         )
 
         # Verify each has different stroke width
@@ -451,13 +438,13 @@ class TestComplexPathScenarios:
         opaque = Line(
             p0=Point(0, 0),
             p1=Point(100, 0),
-            stroke_color=Color(255, 0, 0, 255)  # Fully opaque
+            stroke_color=Color(255, 0, 0, 255),  # Fully opaque
         )
 
         semi_transparent = Line(
             p0=Point(0, 10),
             p1=Point(100, 10),
-            stroke_color=Color(0, 255, 0, 128)  # 50% transparent
+            stroke_color=Color(0, 255, 0, 128),  # 50% transparent
         )
 
         nearly_transparent = Bezier(
@@ -465,7 +452,7 @@ class TestComplexPathScenarios:
             p1=Point(50, 70),
             p2=Point(50, 70),
             p3=Point(100, 20),
-            fill_color=Color(0, 0, 255, 32)  # ~12.5% opaque
+            fill_color=Color(0, 0, 255, 32),  # ~12.5% opaque
         )
 
         # Verify alpha values
@@ -481,10 +468,7 @@ class TestComplexPathScenarios:
         bottom = Line(p0=Point(100, 100), p1=Point(0, 100), stroke_width=1.0)
         left = Line(p0=Point(0, 100), p1=Point(0, 0), stroke_width=1.0)
 
-        path = Path(
-            path_segments=[top, right, bottom, left],
-            even_odd_fill=False
-        )
+        path = Path(path_segments=[top, right, bottom, left], even_odd_fill=False)
 
         # Verify it's a closed shape (end point of last segment == start of first)
         segments = path.get_path_segments()
@@ -513,29 +497,29 @@ class TestComplexPathScenarios:
 
         # Simulate API response for a path with mixed segments
         path_json = {
-            'position': {
-                'pageIndex': 0,
-                'boundingRect': {'x': 50.0, 'y': 50.0, 'width': 200.0, 'height': 150.0}
+            "position": {
+                "pageIndex": 0,
+                "boundingRect": {"x": 50.0, "y": 50.0, "width": 200.0, "height": 150.0},
             },
-            'pathSegments': [
+            "pathSegments": [
                 {
-                    'segmentType': 'LINE',
-                    'p0': {'x': 50.0, 'y': 50.0},
-                    'p1': {'x': 250.0, 'y': 50.0},
-                    'strokeColor': {'red': 0, 'green': 0, 'blue': 0, 'alpha': 255},
-                    'strokeWidth': 2.0
+                    "segmentType": "LINE",
+                    "p0": {"x": 50.0, "y": 50.0},
+                    "p1": {"x": 250.0, "y": 50.0},
+                    "strokeColor": {"red": 0, "green": 0, "blue": 0, "alpha": 255},
+                    "strokeWidth": 2.0,
                 },
                 {
-                    'segmentType': 'BEZIER',
-                    'p0': {'x': 250.0, 'y': 50.0},
-                    'p1': {'x': 275.0, 'y': 100.0},
-                    'p2': {'x': 275.0, 'y': 150.0},
-                    'p3': {'x': 250.0, 'y': 200.0},
-                    'strokeColor': {'red': 0, 'green': 0, 'blue': 0, 'alpha': 255},
-                    'strokeWidth': 2.0
-                }
+                    "segmentType": "BEZIER",
+                    "p0": {"x": 250.0, "y": 50.0},
+                    "p1": {"x": 275.0, "y": 100.0},
+                    "p2": {"x": 275.0, "y": 150.0},
+                    "p3": {"x": 250.0, "y": 200.0},
+                    "strokeColor": {"red": 0, "green": 0, "blue": 0, "alpha": 255},
+                    "strokeWidth": 2.0,
+                },
             ],
-            'evenOddFill': False
+            "evenOddFill": False,
         }
 
         # Parse the path

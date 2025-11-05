@@ -30,7 +30,13 @@ class PDFObjectBase:
     providing shared behavior such as position, deletion, and movement.
     """
 
-    def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position):
+    def __init__(
+        self,
+        client: "PDFDancer",
+        internal_id: str,
+        object_type: ObjectType,
+        position: Position,
+    ):
         self._client = client
         self.position = position
         self.internal_id = internal_id
@@ -55,13 +61,14 @@ class PDFObjectBase:
         """Move this object to a new position."""
         return self._client._move(
             self.object_ref(),
-            Position.at_page_coordinates(self.position.page_index, x, y)
+            Position.at_page_coordinates(self.position.page_index, x, y),
         )
 
 
 # -------------------------------------------------------------------
 # Subclasses
 # -------------------------------------------------------------------
+
 
 class PathObject(PDFObjectBase):
     """Represents a vector path object inside a PDF page."""
@@ -74,27 +81,33 @@ class PathObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, PathObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+        )
 
 
 class ImageObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, ImageObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+        )
 
 
 class FormObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, FormObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+        )
 
 
 class BaseTextEdit:
@@ -148,13 +161,15 @@ class BaseTextEdit:
 class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
         if (
-                self._line_spacing is None
-                and self._font_size is None
-                and self._font_name is None
-                and self._color is None
+            self._line_spacing is None
+            and self._font_size is None
+            and self._font_name is None
+            and self._color is None
         ):
             # noinspection PyProtectedMember
-            result = self._target_obj._client._modify_text_line(self._object_ref, self._new_text)
+            result = self._target_obj._client._modify_text_line(
+                self._object_ref, self._new_text
+            )
             if result.warning:
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
@@ -167,8 +182,10 @@ class TextLineEdit(BaseTextEdit):
 class ParagraphObject(PDFObjectBase):
     """Represents a paragraph text block inside a PDF page."""
 
-    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
-        super().__init__(client, object_ref.internal_id, object_ref.type, object_ref.position)
+    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
+        super().__init__(
+            client, object_ref.internal_id, object_ref.type, object_ref.position
+        )
         self._object_ref = object_ref
 
     def __getattr__(self, name):
@@ -187,22 +204,26 @@ class ParagraphObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, ParagraphObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position and
-                self._object_ref.text == other._object_ref.text and
-                self._object_ref.font_name == other._object_ref.font_name and
-                self._object_ref.font_size == other._object_ref.font_size and
-                self._object_ref.line_spacings == other._object_ref.line_spacings and
-                self._object_ref.color == other._object_ref.color and
-                self._object_ref.children == other._object_ref.children)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+            and self._object_ref.text == other._object_ref.text
+            and self._object_ref.font_name == other._object_ref.font_name
+            and self._object_ref.font_size == other._object_ref.font_size
+            and self._object_ref.line_spacings == other._object_ref.line_spacings
+            and self._object_ref.color == other._object_ref.color
+            and self._object_ref.children == other._object_ref.children
+        )
 
 
 class TextLineObject(PDFObjectBase):
     """Represents a single line of text inside a PDF page."""
 
-    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
-        super().__init__(client, object_ref.internal_id, object_ref.type, object_ref.position)
+    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
+        super().__init__(
+            client, object_ref.internal_id, object_ref.type, object_ref.position
+        )
         self._object_ref = object_ref
 
     def edit(self) -> TextLineEdit:
@@ -214,15 +235,17 @@ class TextLineObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, TextLineObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position and
-                self._object_ref.text == other._object_ref.text and
-                self._object_ref.font_name == other._object_ref.font_name and
-                self._object_ref.font_size == other._object_ref.font_size and
-                self._object_ref.line_spacings == other._object_ref.line_spacings and
-                self._object_ref.color == other._object_ref.color and
-                self._object_ref.children == other._object_ref.children)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+            and self._object_ref.text == other._object_ref.text
+            and self._object_ref.font_name == other._object_ref.font_name
+            and self._object_ref.font_size == other._object_ref.font_size
+            and self._object_ref.line_spacings == other._object_ref.line_spacings
+            and self._object_ref.color == other._object_ref.color
+            and self._object_ref.children == other._object_ref.children
+        )
 
 
 class ParagraphEditSession:
@@ -231,7 +254,7 @@ class ParagraphEditSession:
     the legacy context-manager workflow (replace/font/color/etc.).
     """
 
-    def __init__(self, client: 'PDFDancer', object_ref: TextObjectRef):
+    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
         self._client = client
         self._object_ref = object_ref
         self._new_text = None
@@ -282,12 +305,12 @@ class ParagraphEditSession:
             return self._client._modify_paragraph(self._object_ref, None)
 
         only_text_changed = (
-            self._new_text is not None and
-            self._font_name is None and
-            self._font_size is None and
-            self._color is None and
-            self._line_spacing is None and
-            self._new_position is None
+            self._new_text is not None
+            and self._font_name is None
+            and self._font_size is None
+            and self._color is None
+            and self._line_spacing is None
+            and self._new_position is None
         )
 
         if only_text_changed:
@@ -296,18 +319,24 @@ class ParagraphEditSession:
             return result
 
         only_move = (
-            self._new_position is not None and
-            self._new_text is None and
-            self._font_name is None and
-            self._font_size is None and
-            self._color is None and
-            self._line_spacing is None
+            self._new_position is not None
+            and self._new_text is None
+            and self._font_name is None
+            and self._font_size is None
+            and self._color is None
+            and self._line_spacing is None
         )
 
         if only_move:
-            page_index = self._object_ref.position.page_index if self._object_ref.position else None
+            page_index = (
+                self._object_ref.position.page_index
+                if self._object_ref.position
+                else None
+            )
             if page_index is None:
-                raise ValidationException("Paragraph position must include a page index to move")
+                raise ValidationException(
+                    "Paragraph position must include a page index to move"
+                )
             position = Position.at_page_coordinates(page_index, *self._new_position)
             result = self._client._move(self._object_ref, position)
             self._has_changes = False
@@ -334,22 +363,31 @@ class ParagraphEditSession:
 
 
 class FormFieldEdit:
-    def __init__(self, form_field: 'FormFieldObject', object_ref: FormFieldRef):
+    def __init__(self, form_field: "FormFieldObject", object_ref: FormFieldRef):
         self.form_field = form_field
         self.object_ref = object_ref
 
-    def value(self, new_value: str) -> 'FormFieldEdit':
+    def value(self, new_value: str) -> "FormFieldEdit":
         self.form_field.value = new_value
         return self
 
     def apply(self) -> bool:
         # noinspection PyProtectedMember
-        return self.form_field._client._change_form_field(self.object_ref, self.form_field.value)
+        return self.form_field._client._change_form_field(
+            self.object_ref, self.form_field.value
+        )
 
 
 class FormFieldObject(PDFObjectBase):
-    def __init__(self, client: 'PDFDancer', internal_id: str, object_type: ObjectType, position: Position,
-                 field_name: str, field_value: str):
+    def __init__(
+        self,
+        client: "PDFDancer",
+        internal_id: str,
+        object_type: ObjectType,
+        position: Position,
+        field_name: str,
+        field_value: str,
+    ):
         super().__init__(client, internal_id, object_type, position)
         self.name = field_name
         self.value = field_value
@@ -366,8 +404,10 @@ class FormFieldObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, FormFieldObject):
             return False
-        return (self.internal_id == other.internal_id and
-                self.object_type == other.object_type and
-                self.position == other.position and
-                self.name == other.name and
-                self.value == other.value)
+        return (
+            self.internal_id == other.internal_id
+            and self.object_type == other.object_type
+            and self.position == other.position
+            and self.name == other.name
+            and self.value == other.value
+        )

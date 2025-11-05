@@ -89,10 +89,7 @@ def test_add_image():
 
         img_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
 
-        pdf.new_image() \
-            .from_file(img_path) \
-            .at(page=6, x=50.1, y=98.0) \
-            .add()
+        pdf.new_image().from_file(img_path).at(page=6, x=50.1, y=98.0).add()
 
         images_after = pdf.select_images()
         assert len(images_after) == 13
@@ -106,11 +103,7 @@ def test_add_image():
         assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
 
-        (
-            PDFAssertions(pdf)
-            .assert_image_at(50.1, 98, 6)
-            .assert_number_of_images(2, 6)
-        )
+        (PDFAssertions(pdf).assert_image_at(50.1, 98, 6).assert_number_of_images(2, 6))
 
 
 def test_add_image_on_page_client():
@@ -123,10 +116,7 @@ def test_add_image_on_page_client():
 
         img_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
 
-        pdf.page(6).new_image() \
-            .from_file(img_path) \
-            .at(x=50.1, y=98.0) \
-            .add()
+        pdf.page(6).new_image().from_file(img_path).at(x=50.1, y=98.0).add()
 
         images_after = pdf.select_images()
         assert len(images_after) == 13
@@ -140,8 +130,4 @@ def test_add_image_on_page_client():
         assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
 
-        (
-            PDFAssertions(pdf)
-            .assert_image_at(50.1, 98, 6)
-            .assert_number_of_images(2, 6)
-        )
+        (PDFAssertions(pdf).assert_image_at(50.1, 98, 6).assert_number_of_images(2, 6))

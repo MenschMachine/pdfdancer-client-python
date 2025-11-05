@@ -45,9 +45,7 @@ def test_delete_form_fields():
         assert len(all_form_fields) == 9
         assert all(f.internal_id != to_delete.internal_id for f in all_form_fields)
 
-        (
-            PDFAssertions(pdf).assert_number_of_form_fields(9)
-        )
+        (PDFAssertions(pdf).assert_number_of_form_fields(9))
 
 
 def test_move_form_field():

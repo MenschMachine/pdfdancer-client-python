@@ -37,7 +37,7 @@ class ParagraphBuilder:
     scenarios stay predictable.
     """
 
-    def __init__(self, client: 'PDFDancer'):
+    def __init__(self, client: "PDFDancer"):
         if client is None:
             raise ValidationException("Client cannot be null")
 
@@ -65,7 +65,7 @@ class ParagraphBuilder:
             and self._line_spacing_factor is None
         )
 
-    def text(self, text: str, color: Optional[Color] = None) -> 'ParagraphBuilder':
+    def text(self, text: str, color: Optional[Color] = None) -> "ParagraphBuilder":
         if text is None:
             raise ValidationException("Text cannot be null")
         self._text = text
@@ -74,10 +74,8 @@ class ParagraphBuilder:
         return self
 
     def font(
-            self,
-            font: Union[Font, str, StandardFonts],
-            font_size: Optional[float] = None
-    ) -> 'ParagraphBuilder':
+        self, font: Union[Font, str, StandardFonts], font_size: Optional[float] = None
+    ) -> "ParagraphBuilder":
         """
         Configure the font either by providing a `Font` instance or name + size.
         """
@@ -89,7 +87,9 @@ class ParagraphBuilder:
             if font is None:
                 raise ValidationException("Font name cannot be null")
             if font_size is None:
-                raise ValidationException("Font size must be provided when setting font by name")
+                raise ValidationException(
+                    "Font size must be provided when setting font by name"
+                )
             resolved_font = Font(str(font), font_size)
 
         self._font = resolved_font
@@ -97,7 +97,9 @@ class ParagraphBuilder:
         self._font_explicitly_changed = True
         return self
 
-    def font_file(self, ttf_file: Union[Path, str], font_size: float) -> 'ParagraphBuilder':
+    def font_file(
+        self, ttf_file: Union[Path, str], font_size: float
+    ) -> "ParagraphBuilder":
         if ttf_file is None:
             raise ValidationException("TTF file cannot be null")
         if font_size <= 0:
@@ -113,7 +115,7 @@ class ParagraphBuilder:
             raise ValidationException(f"TTF file is empty: {ttf_path}")
 
         try:
-            with open(ttf_path, 'rb') as handle:
+            with open(ttf_path, "rb") as handle:
                 handle.read(1)
         except (IOError, OSError) as exc:
             raise ValidationException(f"TTF file is not readable: {ttf_path}") from exc
@@ -131,44 +133,52 @@ class ParagraphBuilder:
         if position and self._paragraph.get_position() is None:
             self._paragraph.set_position(deepcopy(position))
 
-    def target(self, object_ref: ObjectRef) -> 'ParagraphBuilder':
+    def target(self, object_ref: ObjectRef) -> "ParagraphBuilder":
         if object_ref is None:
             raise ValidationException("Object reference cannot be null")
         self._target_object_ref = object_ref
         return self
 
-    def line_spacing(self, spacing: float) -> 'ParagraphBuilder':
+    def line_spacing(self, spacing: float) -> "ParagraphBuilder":
         if spacing <= 0:
             raise ValidationException(f"Line spacing must be positive, got {spacing}")
         self._line_spacing_factor = spacing
         return self
 
-    def color(self, color: Color) -> 'ParagraphBuilder':
+    def color(self, color: Color) -> "ParagraphBuilder":
         if color is None:
             raise ValidationException("Color cannot be null")
         self._text_color = color
         return self
 
-    def move_to(self, x: float, y: float) -> 'ParagraphBuilder':
+    def move_to(self, x: float, y: float) -> "ParagraphBuilder":
         """
         Move the paragraph anchor to new coordinates on the same page.
         """
         position = self._paragraph.get_position()
-        if position is None and self._target_object_ref and self._target_object_ref.position:
+        if (
+            position is None
+            and self._target_object_ref
+            and self._target_object_ref.position
+        ):
             position = deepcopy(self._target_object_ref.position)
             self._paragraph.set_position(position)
 
         if position is None:
-            raise ValidationException("Cannot move paragraph without an existing position")
+            raise ValidationException(
+                "Cannot move paragraph without an existing position"
+            )
 
         page_index = position.page_index
         if page_index is None:
-            raise ValidationException("Paragraph position must include a page index to move")
+            raise ValidationException(
+                "Paragraph position must include a page index to move"
+            )
 
         self._position_changed = True
         return self.at(page_index, x, y)
 
-    def at_position(self, position: Position) -> 'ParagraphBuilder':
+    def at_position(self, position: Position) -> "ParagraphBuilder":
         if position is None:
             raise ValidationException("Position cannot be null")
         # Defensive copy so builder mutations do not alter original references
@@ -176,10 +186,12 @@ class ParagraphBuilder:
         self._position_changed = True
         return self
 
-    def at(self, page_index: int, x: float, y: float) -> 'ParagraphBuilder':
+    def at(self, page_index: int, x: float, y: float) -> "ParagraphBuilder":
         return self.at_position(Position.at_page_coordinates(page_index, x, y))
 
-    def add_text_line(self, text_line: Union[TextLine, TextObjectRef, str]) -> 'ParagraphBuilder':
+    def add_text_line(
+        self, text_line: Union[TextLine, TextObjectRef, str]
+    ) -> "ParagraphBuilder":
         self._paragraph.add_line(self._coerce_text_line(text_line))
         return self
 
@@ -193,7 +205,9 @@ class ParagraphBuilder:
     def modify(self, object_ref: Optional[ObjectRef] = None):
         target_ref = object_ref or self._target_object_ref
         if target_ref is None:
-            raise ValidationException("Object reference must be provided to modify a paragraph")
+            raise ValidationException(
+                "Object reference must be provided to modify a paragraph"
+            )
 
         if self.only_text_changed():
             # Backend accepts plain text updates for simple edits
@@ -210,13 +224,19 @@ class ParagraphBuilder:
         if self._paragraph.get_position() is None:
             raise ValidationException("Position must be set before building paragraph")
 
-        if self._target_object_ref is None and self._font is None and self._paragraph.font is None:
+        if (
+            self._target_object_ref is None
+            and self._font is None
+            and self._paragraph.font is None
+        ):
             raise ValidationException("Font must be set before building paragraph")
 
         if self._text is not None:
             self._finalize_lines_from_text()
         elif not self._paragraph.text_lines:
-            raise ValidationException("Either text must be provided or existing lines supplied")
+            raise ValidationException(
+                "Either text must be provided or existing lines supplied"
+            )
         else:
             self._finalize_existing_lines()
 
@@ -277,7 +297,9 @@ class ParagraphBuilder:
                 )
             )
         self._paragraph.set_lines(lines)
-        self._paragraph.set_line_spacings([spacing] * (len(lines) - 1) if len(lines) > 1 else None)
+        self._paragraph.set_line_spacings(
+            [spacing] * (len(lines) - 1) if len(lines) > 1 else None
+        )
         self._paragraph.line_spacing = spacing
 
     def _finalize_existing_lines(self) -> None:
@@ -290,7 +312,9 @@ class ParagraphBuilder:
             if existing_spacings:
                 spacing_for_calc = existing_spacings[0]
         if spacing_for_calc is None:
-            spacing_for_calc = self._paragraph.line_spacing or DEFAULT_LINE_SPACING_FACTOR
+            spacing_for_calc = (
+                self._paragraph.line_spacing or DEFAULT_LINE_SPACING_FACTOR
+            )
 
         updated_lines: List[TextLine] = []
         for index, line in enumerate(lines):
@@ -307,9 +331,19 @@ class ParagraphBuilder:
                 updated_lines.append(
                     TextLine(
                         position=line_position,
-                        font=self._font if self._font is not None else self._original_font,
-                        color=self._text_color or self._original_color or DEFAULT_TEXT_COLOR,
-                        line_spacing=spacing_override if spacing_override is not None else spacing_for_calc,
+                        font=(
+                            self._font
+                            if self._font is not None
+                            else self._original_font
+                        ),
+                        color=self._text_color
+                        or self._original_color
+                        or DEFAULT_TEXT_COLOR,
+                        line_spacing=(
+                            spacing_override
+                            if spacing_override is not None
+                            else spacing_for_calc
+                        ),
                         text=str(line),
                     )
                 )
@@ -318,10 +352,11 @@ class ParagraphBuilder:
 
         if spacing_override is not None:
             self._paragraph.set_line_spacings(
-                [spacing_override] * (len(updated_lines) - 1) if len(updated_lines) > 1 else None
+                [spacing_override] * (len(updated_lines) - 1)
+                if len(updated_lines) > 1
+                else None
             )
             self._paragraph.line_spacing = spacing_override
-
 
     def _reposition_lines(self) -> None:
         if self._text is not None:
@@ -362,7 +397,9 @@ class ParagraphBuilder:
                     continue
                 line.position.at_coordinates(Point(current_x + dx, current_y + dy))
 
-    def _coerce_text_line(self, source: Union[TextLine, TextObjectRef, str]) -> TextLine:
+    def _coerce_text_line(
+        self, source: Union[TextLine, TextObjectRef, str]
+    ) -> TextLine:
         if isinstance(source, TextLine):
             return source
 
@@ -401,8 +438,10 @@ class ParagraphBuilder:
 
         if isinstance(source, str):
             current_index = len(self._paragraph.get_lines())
-            spacing = self._line_spacing_factor if self._line_spacing_factor is not None else (
-                self._paragraph.line_spacing or DEFAULT_LINE_SPACING_FACTOR
+            spacing = (
+                self._line_spacing_factor
+                if self._line_spacing_factor is not None
+                else (self._paragraph.line_spacing or DEFAULT_LINE_SPACING_FACTOR)
             )
             line_position = self._calculate_line_position(current_index, spacing)
             return TextLine(
@@ -416,15 +455,17 @@ class ParagraphBuilder:
         raise ValidationException(f"Unsupported text line type: {type(source)}")
 
     def _split_text(self, text: str) -> List[str]:
-        processed = text.replace('\r\n', '\n').replace('\r', '\n').replace('\\n', '\n')
-        parts = processed.split('\n')
-        while parts and parts[-1] == '':
+        processed = text.replace("\r\n", "\n").replace("\r", "\n").replace("\\n", "\n")
+        parts = processed.split("\n")
+        while parts and parts[-1] == "":
             parts.pop()
         if not parts:
-            parts = ['']
+            parts = [""]
         return parts
 
-    def _calculate_line_position(self, line_index: int, spacing_factor: float) -> Optional[Position]:
+    def _calculate_line_position(
+        self, line_index: int, spacing_factor: float
+    ) -> Optional[Position]:
         paragraph_position = self._paragraph.get_position()
         if paragraph_position is None:
             return None
@@ -454,7 +495,9 @@ class ParagraphBuilder:
             font_name = self._client.register_font(ttf_file)
             return Font(font_name, font_size)
         except Exception as exc:
-            raise ValidationException(f"Failed to register font file {ttf_file}: {exc}") from exc
+            raise ValidationException(
+                f"Failed to register font file {ttf_file}: {exc}"
+            ) from exc
 
     def _build(self) -> Paragraph:
         """
@@ -463,7 +506,9 @@ class ParagraphBuilder:
         return self._finalize_paragraph()
 
     @classmethod
-    def from_object_ref(cls, client: 'PDFDancer', object_ref: TextObjectRef) -> 'ParagraphBuilder':
+    def from_object_ref(
+        cls, client: "PDFDancer", object_ref: TextObjectRef
+    ) -> "ParagraphBuilder":
         if object_ref is None:
             raise ValidationException("Object reference cannot be null")
 
@@ -476,7 +521,11 @@ class ParagraphBuilder:
 
         if object_ref.line_spacings:
             builder._paragraph.set_line_spacings(object_ref.line_spacings)
-            builder._paragraph.line_spacing = object_ref.line_spacings[0] if object_ref.line_spacings else builder._paragraph.line_spacing
+            builder._paragraph.line_spacing = (
+                object_ref.line_spacings[0]
+                if object_ref.line_spacings
+                else builder._paragraph.line_spacing
+            )
 
         if object_ref.font_name and object_ref.font_size:
             builder._original_font = Font(object_ref.font_name, object_ref.font_size)
@@ -488,7 +537,7 @@ class ParagraphBuilder:
             for child in object_ref.children:
                 builder.add_text_line(child)
         elif object_ref.text:
-            for segment in object_ref.text.split('\n'):
+            for segment in object_ref.text.split("\n"):
                 builder.add_text_line(segment)
 
         return builder
@@ -496,10 +545,10 @@ class ParagraphBuilder:
 
 class ParagraphPageBuilder(ParagraphBuilder):
 
-    def __init__(self, client: 'PDFDancer', page_index: int):
+    def __init__(self, client: "PDFDancer", page_index: int):
         super().__init__(client)
         self._page_index: Optional[int] = page_index
 
     # noinspection PyMethodOverriding
-    def at(self, x: float, y: float) -> 'ParagraphBuilder':
+    def at(self, x: float, y: float) -> "ParagraphBuilder":
         return super().at(self._page_index, x, y)

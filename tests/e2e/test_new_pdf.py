@@ -22,11 +22,9 @@ def test_create_blank_pdf_defaults():
 
         pdf_bytes = pdf.get_bytes()
         assert len(pdf_bytes) > 0, "PDF bytes should not be empty"
-        assert pdf_bytes[:4] == b'%PDF', "PDF should start with PDF signature"
+        assert pdf_bytes[:4] == b"%PDF", "PDF should start with PDF signature"
 
-        (
-            PDFAssertions(pdf).assert_total_number_of_elements(0)
-        )
+        (PDFAssertions(pdf).assert_total_number_of_elements(0))
 
 
 def test_create_blank_pdf_with_custom_params():
@@ -34,11 +32,11 @@ def test_create_blank_pdf_with_custom_params():
     base_url, token = _require_env()
 
     with PDFDancer.new(
-            token=token,
-            base_url=base_url,
-            page_size=PageSize.A4,
-            orientation=Orientation.LANDSCAPE,
-            initial_page_count=3
+        token=token,
+        base_url=base_url,
+        page_size=PageSize.A4,
+        orientation=Orientation.LANDSCAPE,
+        initial_page_count=3,
     ) as pdf:
         pages = pdf.pages()
         assert len(pages) == 3, "PDF should have 3 pages"
@@ -55,11 +53,11 @@ def test_create_blank_pdf_with_string_params():
     base_url, token = _require_env()
 
     with PDFDancer.new(
-            token=token,
-            base_url=base_url,
-            page_size="LETTER",
-            orientation="PORTRAIT",
-            initial_page_count=2
+        token=token,
+        base_url=base_url,
+        page_size="LETTER",
+        orientation="PORTRAIT",
+        initial_page_count=2,
     ) as pdf:
         pages = pdf.pages()
         assert len(pages) == 2, "PDF should have 2 pages"
@@ -68,7 +66,9 @@ def test_create_blank_pdf_with_string_params():
             PDFAssertions(pdf)
             .assert_total_number_of_elements(0)
             .assert_page_count(2)
-            .assert_page_dimension(PageSize.LETTER.width, PageSize.LETTER.height, Orientation.PORTRAIT)
+            .assert_page_dimension(
+                PageSize.LETTER.width, PageSize.LETTER.height, Orientation.PORTRAIT
+            )
         )
 
 
@@ -90,10 +90,7 @@ def test_create_blank_pdf_add_content():
         assert len(paragraphs) == 1, "Should have one paragraph"
         assert paragraphs[0].get_text() == "Hello from blank PDF"
 
-        (
-            PDFAssertions(pdf)
-            .assert_paragraph_is_at("Hello from blank PDF", 100, 201.5)
-        )
+        (PDFAssertions(pdf).assert_paragraph_is_at("Hello from blank PDF", 100, 201.5))
 
 
 def test_create_blank_pdf_add_and_modify_content():
@@ -112,8 +109,11 @@ def test_create_blank_pdf_add_and_modify_content():
         assert pdf.page(0).select_text_lines()[0].internal_id
         pdf.save("/tmp/test_create_blank_pdf_add_and_modify_content.pdf")
 
-        with PDFDancer.open("/tmp/test_create_blank_pdf_add_and_modify_content.pdf", token=token,
-                            base_url=base_url) as pdf2:
+        with PDFDancer.open(
+            "/tmp/test_create_blank_pdf_add_and_modify_content.pdf",
+            token=token,
+            base_url=base_url,
+        ) as pdf2:
             for i in range(0, 10):
                 line = pdf2.page(0).select_text_lines()[0]
                 assert line.edit().replace(f"hello {i}").apply()
@@ -130,10 +130,7 @@ def test_create_blank_pdf_add_page():
         assert Orientation.PORTRAIT == page_ref.orientation
         assert 2 == len(pdf.pages())
 
-        (
-            PDFAssertions(pdf)
-            .assert_page_count(2)
-        )
+        (PDFAssertions(pdf).assert_page_count(2))
 
 
 def test_create_blank_pdf_invalid_page_count():
@@ -141,10 +138,6 @@ def test_create_blank_pdf_invalid_page_count():
     base_url, token = _require_env()
 
     with pytest.raises(ValidationException) as exc_info:
-        PDFDancer.new(
-            token=token,
-            base_url=base_url,
-            initial_page_count=0
-        )
+        PDFDancer.new(token=token, base_url=base_url, initial_page_count=0)
 
     assert "Initial page count must be at least 1" in str(exc_info.value)

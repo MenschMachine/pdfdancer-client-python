@@ -8,8 +8,9 @@ def test_get_all_elements():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         expected_total = 99
-        assert len(
-            pdf.select_elements()) == expected_total, f"{len(pdf.select_elements())} elements found but {expected_total} elements expected"
+        assert (
+            len(pdf.select_elements()) == expected_total
+        ), f"{len(pdf.select_elements())} elements found but {expected_total} elements expected"
         actual_total = 0
         for page in pdf.pages():
             actual_total += len(page.select_elements())
@@ -46,10 +47,7 @@ def test_delete_page():
         pages_after = pdf.pages()
         assert len(pages_after) == 6
 
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_pages(6)
-        )
+        (PDFAssertions(pdf).assert_number_of_pages(6))
 
 
 def test_move_page():
@@ -61,8 +59,9 @@ def test_move_page():
         assert pdf.move_page(0, 6)
 
         (
-            PDFAssertions(pdf)
-            .assert_paragraph_exists("This is regular Sans text showing alignment and styles.", 6)
+            PDFAssertions(pdf).assert_paragraph_exists(
+                "This is regular Sans text showing alignment and styles.", 6
+            )
         )
 
 
@@ -99,12 +98,7 @@ def test_add_page_with_builder_a4_portrait():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert len(pdf.pages()) == 7
 
-        page_ref = (
-            pdf.new_page()
-            .a4()
-            .portrait()
-            .add()
-        )
+        page_ref = pdf.new_page().a4().portrait().add()
 
         assert page_ref.position.page_index == 7
         assert len(pdf.pages()) == 8
@@ -116,12 +110,7 @@ def test_add_page_with_builder_letter_landscape():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert len(pdf.pages()) == 7
 
-        page_ref = (
-            pdf.new_page()
-            .letter()
-            .landscape()
-            .add()
-        )
+        page_ref = pdf.new_page().letter().landscape().add()
 
         assert page_ref.position.page_index == 7
         assert len(pdf.pages()) == 8
@@ -133,20 +122,16 @@ def test_add_page_with_builder_at_index():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert len(pdf.pages()) == 7
 
-        page_ref = (
-            pdf.new_page()
-            .at_index(5)
-            .a5()
-            .landscape()
-            .add()
-        )
+        page_ref = pdf.new_page().at_index(5).a5().landscape().add()
 
         assert page_ref.position.page_index == 5
         assert len(pdf.pages()) == 8
 
         (
             PDFAssertions(pdf)
-            .assert_page_dimension(PageSize.A5.width, PageSize.A5.height, Orientation.PORTRAIT, 5)
+            .assert_page_dimension(
+                PageSize.A5.width, PageSize.A5.height, Orientation.PORTRAIT, 5
+            )
             .assert_total_number_of_elements(0, 5)
         )
 
@@ -157,12 +142,7 @@ def test_add_page_with_builder_custom_size():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert len(pdf.pages()) == 7
 
-        page_ref = (
-            pdf.new_page()
-            .custom_size(400, 600)
-            .landscape()
-            .add()
-        )
+        page_ref = pdf.new_page().custom_size(400, 600).landscape().add()
 
         assert page_ref.position.page_index == 7
         assert len(pdf.pages()) == 8

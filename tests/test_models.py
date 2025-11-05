@@ -142,13 +142,19 @@ class TestColor:
         Color(0, 128, 255)
 
         # Invalid values should raise ValueError
-        with pytest.raises(ValueError, match="Color component must be between 0 and 255"):
+        with pytest.raises(
+            ValueError, match="Color component must be between 0 and 255"
+        ):
             Color(-1, 0, 0)
 
-        with pytest.raises(ValueError, match="Color component must be between 0 and 255"):
+        with pytest.raises(
+            ValueError, match="Color component must be between 0 and 255"
+        ):
             Color(0, 256, 0)
 
-        with pytest.raises(ValueError, match="Color component must be between 0 and 255"):
+        with pytest.raises(
+            ValueError, match="Color component must be between 0 and 255"
+        ):
             Color(0, 0, 300)
 
 

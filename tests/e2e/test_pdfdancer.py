@@ -34,8 +34,10 @@ def test_env_vars():
         with pytest.raises(ValidationException) as exc_info:
             with PDFDancer.open(pdf_path) as pdf:
                 pass
-        assert "Authentication with the PDFDancer API failed. Confirm that your API token is valid, has not expired" in str(
-            exc_info.value)
+        assert (
+            "Authentication with the PDFDancer API failed. Confirm that your API token is valid, has not expired"
+            in str(exc_info.value)
+        )
     finally:
         if original_base_url_env is not None:
             os.environ["PDFDANCER_BASE_URL"] = original_base_url_env

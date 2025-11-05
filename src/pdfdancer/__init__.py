@@ -80,7 +80,7 @@ __all__ = [
     "ValidationException",
     "HttpClientException",
     "SessionException",
-    "set_ssl_verify"
+    "set_ssl_verify",
 ]
 
 from . import pdfdancer_v1

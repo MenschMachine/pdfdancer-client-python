@@ -38,7 +38,9 @@ def test_find_paragraphs_by_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paras = pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")
+        paras = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )
         assert len(paras) == 1
         p = paras[0]
         assert p.internal_id == "PARAGRAPH_000006"
@@ -71,61 +73,85 @@ def test_select_paragraphs_matching_with_special_characters():
     # Create a new PDF with test data
     with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
         # Add paragraphs with various patterns
-        pdf.new_paragraph().text('Invoice #12345').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
-        pdf.new_paragraph().text('Date: 2024-01-15').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
-        pdf.new_paragraph().text('Total: $99.99').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add()
-        pdf.new_paragraph().text('Email: test@example.com').font(StandardFonts.HELVETICA, 12).at(0, 100, 400).add()
+        pdf.new_paragraph().text("Invoice #12345").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 100
+        ).add()
+        pdf.new_paragraph().text("Date: 2024-01-15").font(
+            StandardFonts.HELVETICA, 12
+        ).at(0, 100, 200).add()
+        pdf.new_paragraph().text("Total: $99.99").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 300
+        ).add()
+        pdf.new_paragraph().text("Email: test@example.com").font(
+            StandardFonts.HELVETICA, 12
+        ).at(0, 100, 400).add()
 
         # Test matching invoice numbers
-        invoice_matches = pdf.select_paragraphs_matching(r'Invoice #[0-9]+')
+        invoice_matches = pdf.select_paragraphs_matching(r"Invoice #[0-9]+")
         assert len(invoice_matches) == 1
-        assert 'Invoice #12345' in invoice_matches[0].text
+        assert "Invoice #12345" in invoice_matches[0].text
 
         # Test matching dates in YYYY-MM-DD format
-        date_matches = pdf.select_paragraphs_matching(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        date_matches = pdf.select_paragraphs_matching(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
         assert len(date_matches) == 1
-        assert '2024-01-15' in date_matches[0].text
+        assert "2024-01-15" in date_matches[0].text
 
         # Test matching dollar amounts
-        dollar_matches = pdf.select_paragraphs_matching(r'\$[0-9]+\.[0-9]+')
+        dollar_matches = pdf.select_paragraphs_matching(r"\$[0-9]+\.[0-9]+")
         assert len(dollar_matches) == 1
-        assert '$99.99' in dollar_matches[0].text
+        assert "$99.99" in dollar_matches[0].text
 
         # Test matching email addresses
-        email_matches = pdf.select_paragraphs_matching(r'[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+')
+        email_matches = pdf.select_paragraphs_matching(
+            r"[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z]+"
+        )
         assert len(email_matches) == 1
-        assert 'test@example.com' in email_matches[0].text
+        assert "test@example.com" in email_matches[0].text
 
 
 def test_select_paragraphs_matching_multiple_pages():
     """Test regex pattern matching across multiple pages"""
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
-    with PDFDancer.new(token=token, base_url=base_url, timeout=30.0, initial_page_count=3) as pdf:
+    with PDFDancer.new(
+        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+    ) as pdf:
         # Add paragraphs to different pages
-        pdf.new_paragraph().text('Chapter 1: Introduction').font(StandardFonts.HELVETICA, 14).at(0, 100, 100).add()
-        pdf.new_paragraph().text('Section 1.1').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+        pdf.new_paragraph().text("Chapter 1: Introduction").font(
+            StandardFonts.HELVETICA, 14
+        ).at(0, 100, 100).add()
+        pdf.new_paragraph().text("Section 1.1").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 200
+        ).add()
 
-        pdf.new_paragraph().text('Chapter 2: Methods').font(StandardFonts.HELVETICA, 14).at(1, 100, 100).add()
-        pdf.new_paragraph().text('Section 2.1').font(StandardFonts.HELVETICA, 12).at(1, 100, 200).add()
+        pdf.new_paragraph().text("Chapter 2: Methods").font(
+            StandardFonts.HELVETICA, 14
+        ).at(1, 100, 100).add()
+        pdf.new_paragraph().text("Section 2.1").font(StandardFonts.HELVETICA, 12).at(
+            1, 100, 200
+        ).add()
 
-        pdf.new_paragraph().text('Chapter 3: Results').font(StandardFonts.HELVETICA, 14).at(2, 100, 100).add()
-        pdf.new_paragraph().text('Section 3.1').font(StandardFonts.HELVETICA, 12).at(2, 100, 200).add()
+        pdf.new_paragraph().text("Chapter 3: Results").font(
+            StandardFonts.HELVETICA, 14
+        ).at(2, 100, 100).add()
+        pdf.new_paragraph().text("Section 3.1").font(StandardFonts.HELVETICA, 12).at(
+            2, 100, 200
+        ).add()
 
         # Test matching all chapters (document-level)
-        chapter_matches = pdf.select_paragraphs_matching(r'^Chapter [0-9]+:')
+        chapter_matches = pdf.select_paragraphs_matching(r"^Chapter [0-9]+:")
         assert len(chapter_matches) == 3
-        assert all('Chapter' in p.text for p in chapter_matches)
+        assert all("Chapter" in p.text for p in chapter_matches)
 
         # Test matching all sections (document-level)
-        section_matches = pdf.select_paragraphs_matching(r'^Section [0-9]+\.[0-9]+')
+        section_matches = pdf.select_paragraphs_matching(r"^Section [0-9]+\.[0-9]+")
         assert len(section_matches) == 3
-        assert all('Section' in p.text for p in section_matches)
+        assert all("Section" in p.text for p in section_matches)
 
         # Compare with page-level matching
-        page1_chapters = pdf.page(1).select_paragraphs_matching(r'^Chapter [0-9]+:')
+        page1_chapters = pdf.page(1).select_paragraphs_matching(r"^Chapter [0-9]+:")
         assert len(page1_chapters) == 1
-        assert 'Chapter 2' in page1_chapters[0].text
+        assert "Chapter 2" in page1_chapters[0].text
 
 
 def test_select_paragraphs_matching_empty_results():
@@ -133,15 +159,19 @@ def test_select_paragraphs_matching_empty_results():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
-        pdf.new_paragraph().text('Hello World').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
-        pdf.new_paragraph().text('Goodbye Moon').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
+        pdf.new_paragraph().text("Hello World").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 100
+        ).add()
+        pdf.new_paragraph().text("Goodbye Moon").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 200
+        ).add()
 
         # Test pattern that doesn't match anything
-        no_matches = pdf.select_paragraphs_matching(r'[0-9]{5}')
+        no_matches = pdf.select_paragraphs_matching(r"[0-9]{5}")
         assert len(no_matches) == 0
 
         # Test pattern that doesn't match
-        no_matches = pdf.select_paragraphs_matching(r'^Nonexistent')
+        no_matches = pdf.select_paragraphs_matching(r"^Nonexistent")
         assert len(no_matches) == 0
 
 
@@ -150,21 +180,27 @@ def test_select_paragraphs_matching_case_sensitivity():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
-        pdf.new_paragraph().text('UPPERCASE TEXT').font(StandardFonts.HELVETICA, 12).at(0, 100, 100).add()
-        pdf.new_paragraph().text('lowercase text').font(StandardFonts.HELVETICA, 12).at(0, 100, 200).add()
-        pdf.new_paragraph().text('MixedCase Text').font(StandardFonts.HELVETICA, 12).at(0, 100, 300).add()
+        pdf.new_paragraph().text("UPPERCASE TEXT").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 100
+        ).add()
+        pdf.new_paragraph().text("lowercase text").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 200
+        ).add()
+        pdf.new_paragraph().text("MixedCase Text").font(StandardFonts.HELVETICA, 12).at(
+            0, 100, 300
+        ).add()
 
         # Test case-sensitive matching
-        uppercase_matches = pdf.select_paragraphs_matching(r'UPPERCASE')
+        uppercase_matches = pdf.select_paragraphs_matching(r"UPPERCASE")
         assert len(uppercase_matches) == 1
-        assert 'UPPERCASE' in uppercase_matches[0].text
+        assert "UPPERCASE" in uppercase_matches[0].text
 
-        lowercase_matches = pdf.select_paragraphs_matching(r'lowercase')
+        lowercase_matches = pdf.select_paragraphs_matching(r"lowercase")
         assert len(lowercase_matches) == 1
-        assert 'lowercase' in lowercase_matches[0].text
+        assert "lowercase" in lowercase_matches[0].text
 
         # Test case-insensitive pattern
-        case_insensitive_matches = pdf.select_paragraphs_matching(r'(?i)text')
+        case_insensitive_matches = pdf.select_paragraphs_matching(r"(?i)text")
         assert len(case_insensitive_matches) == 3
 
 
@@ -172,11 +208,13 @@ def test_delete_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         paragraph.delete()
         remaining = pdf.page(0).select_paragraphs_starting_with(
-            "This is regular Sans text showing alignment and styles.")
+            "This is regular Sans text showing alignment and styles."
+        )
         assert remaining == []
 
 
@@ -184,8 +222,9 @@ def test_move_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         paragraph.move_to(0.1, 300)
         moved = pdf.page(0).select_paragraphs_at(0.1, 300)[0]
         assert moved is not None
@@ -200,8 +239,9 @@ def test_modify_paragraph():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
         (
             paragraph.edit()
@@ -232,8 +272,9 @@ def test_modify_paragraph_without_position():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         original_x = paragraph.position.x()
         original_y = paragraph.position.y()
 
@@ -259,16 +300,12 @@ def test_modify_paragraph_without_position_and_spacing():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         original_x = paragraph.position.x()
         original_y = paragraph.position.y()
-        (
-            paragraph.edit()
-            .replace("Awesomely\nObvious!")
-            .font("Helvetica", 12)
-            .apply()
-        )
+        (paragraph.edit().replace("Awesomely\nObvious!").font("Helvetica", 12).apply())
 
         (
             PDFAssertions(pdf)
@@ -284,14 +321,13 @@ def test_modify_paragraph_noop():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
-        (
-            paragraph.edit()
-            .apply()
-        )
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
+        (paragraph.edit().apply())
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
@@ -299,10 +335,15 @@ def test_modify_paragraph_noop():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.",
-                                      "AAAZPH+Roboto-Regular",
-                                      12)
-            .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
+            .assert_textline_has_font(
+                "This is regular Sans text showing alignment and styles.",
+                "AAAZPH+Roboto-Regular",
+                12,
+            )
+            .assert_textline_has_color(
+                "This is regular Sans text showing alignment and styles.",
+                Color(0, 0, 0),
+            )
         )
 
 
@@ -310,13 +351,10 @@ def test_modify_paragraph_only_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
-        result = (
-            paragraph.edit()
-            .replace("lorem\nipsum\nCaesar")
-            .apply()
-        )
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
+        result = paragraph.edit().replace("lorem\nipsum\nCaesar").apply()
 
         paragraph = pdf.page(0).select_paragraphs_starting_with("lorem")[0]
         assert paragraph.object_ref().status is not None
@@ -326,7 +364,9 @@ def test_modify_paragraph_only_text():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
             .assert_textline_has_color("lorem", Color(0, 0, 0))
             .assert_textline_has_color("ipsum", Color(0, 0, 0))
             .assert_textline_has_color("Caesar", Color(0, 0, 0))
@@ -337,15 +377,13 @@ def test_modify_paragraph_only_font():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
-        (
-            paragraph.edit()
-            .font("Helvetica", 28)
-            .apply()
-        )
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
+        (paragraph.edit().font("Helvetica", 28).apply())
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()
         assert paragraph.object_ref().status.font_type == FontType.STANDARD
@@ -354,8 +392,15 @@ def test_modify_paragraph_only_font():
         # TODO does not preserve color and fucks up line spacings
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.", "Helvetica", 28)
-            .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
+            .assert_textline_has_font(
+                "This is regular Sans text showing alignment and styles.",
+                "Helvetica",
+                28,
+            )
+            .assert_textline_has_color(
+                "This is regular Sans text showing alignment and styles.",
+                Color(0, 0, 0),
+            )
         )
 
 
@@ -363,17 +408,15 @@ def test_modify_paragraph_only_move():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
 
-        (
-            paragraph.edit()
-            .move_to(40, 40)
-            .apply()
-        )
+        (paragraph.edit().move_to(40, 40).apply())
 
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         assert paragraph.object_ref().status is not None
         assert paragraph.object_ref().status.is_encodable()
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
@@ -381,11 +424,18 @@ def test_modify_paragraph_only_move():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("This is regular Sans text showing alignment and styles.",
-                                      "AAAZPH+Roboto-Regular",
-                                      12)
-            .assert_paragraph_is_at("This is regular Sans text showing alignment and styles.", 40, 40, 0)
-            .assert_textline_has_color("This is regular Sans text showing alignment and styles.", Color(0, 0, 0))
+            .assert_textline_has_font(
+                "This is regular Sans text showing alignment and styles.",
+                "AAAZPH+Roboto-Regular",
+                12,
+            )
+            .assert_paragraph_is_at(
+                "This is regular Sans text showing alignment and styles.", 40, 40, 0
+            )
+            .assert_textline_has_color(
+                "This is regular Sans text showing alignment and styles.",
+                Color(0, 0, 0),
+            )
         )
 
 
@@ -394,8 +444,9 @@ def test_modify_paragraph_simple():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paragraph = \
-            pdf.page(0).select_paragraphs_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        paragraph = pdf.page(0).select_paragraphs_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         paragraph.edit().replace("Awesomely\nObvious!").apply()
 
         paragraph = pdf.page(0).select_paragraphs_starting_with("Awesomely")[0]
@@ -457,7 +508,8 @@ def test_add_paragraph_on_page_with_custom_font1_1():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         (
-            pdf.page(0).new_paragraph()
+            pdf.page(0)
+            .new_paragraph()
             .text("Awesomely\nObvious!")
             .font("Roboto-Regular", 14)
             .line_spacing(0.7)
@@ -534,10 +586,11 @@ def test_add_paragraph_with_custom_font2():
 def test_add_paragraph_with_custom_font3():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
     from pathlib import Path
+
     repo_root = Path(__file__).resolve().parents[2]
     ttf_path = repo_root / "tests/fixtures" / "DancingScript-Regular.ttf"
 
-    with (PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf):
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         (
             pdf.new_paragraph()
             .text("Awesomely\nObvious!")
@@ -571,7 +624,9 @@ def test_add_paragraph_with_standard_font_times():
         )
         (
             PDFAssertions(pdf)
-            .assert_text_has_font("Times Roman Test", StandardFonts.TIMES_ROMAN.value, 14)
+            .assert_text_has_font(
+                "Times Roman Test", StandardFonts.TIMES_ROMAN.value, 14
+            )
             .assert_paragraph_is_at("Times Roman Test", 150, 150, 0)
         )
 
@@ -591,7 +646,9 @@ def test_add_paragraph_with_standard_font_courier():
 
         (
             PDFAssertions(pdf)
-            .assert_text_has_font("Courier Monospace", StandardFonts.COURIER_BOLD.value, 12, page=0)
+            .assert_text_has_font(
+                "Courier Monospace", StandardFonts.COURIER_BOLD.value, 12, page=0
+            )
             .assert_paragraph_is_at("Courier Monospace", 200, 200, page=0)
         )
 
@@ -630,7 +687,8 @@ def test_add_paragraph_to_new_page():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         (
-            pdf.page(0).new_paragraph()
+            pdf.page(0)
+            .new_paragraph()
             .text("Awesome")
             .font("Roboto-Regular", 14)
             .at(50, 100)

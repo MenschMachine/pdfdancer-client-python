@@ -7,6 +7,7 @@ These tests:
 3. Add them to the PDF
 4. Save and verify the PDF contains exactly what we built
 """
+
 import pytest
 
 from pdfdancer import Color, Orientation, PageSize, PDFDancer
@@ -26,15 +27,13 @@ class TestPathBuilderRectangleBasic:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Add a 100x80 rectangle at (50, 50)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(50, 50, 100, 80) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.0
+        ).add_rectangle(50, 50, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -48,15 +47,13 @@ class TestPathBuilderRectangleBasic:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Red rectangle with thick stroke
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(3.0) \
-            .add_rectangle(100, 100, 150, 100) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            3.0
+        ).add_rectangle(100, 100, 150, 100).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -70,16 +67,13 @@ class TestPathBuilderRectangleBasic:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Blue stroke, yellow fill
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .fill_color(Color(255, 255, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(200, 200, 120, 90) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).fill_color(
+            Color(255, 255, 0)
+        ).stroke_width(2.0).add_rectangle(200, 200, 120, 90).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -93,16 +87,13 @@ class TestPathBuilderRectangleBasic:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Dashed border rectangle
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.5) \
-            .dash_pattern([10.0, 5.0]) \
-            .add_rectangle(75, 75, 200, 150) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.5
+        ).dash_pattern([10.0, 5.0]).add_rectangle(75, 75, 200, 150).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -120,15 +111,13 @@ class TestPathBuilderRectangleSizes:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # 100x100 square
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(100, 100, 100, 100) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            2.0
+        ).add_rectangle(100, 100, 100, 100).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -142,15 +131,13 @@ class TestPathBuilderRectangleSizes:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Wide rectangle 300x50
-        pdf.page(0).new_path() \
-            .stroke_color(Color(128, 128, 128)) \
-            .stroke_width(1.0) \
-            .add_rectangle(50, 400, 300, 50) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
+            1.0
+        ).add_rectangle(50, 400, 300, 50).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -164,15 +151,13 @@ class TestPathBuilderRectangleSizes:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Tall rectangle 50x300
-        pdf.page(0).new_path() \
-            .stroke_color(Color(64, 64, 64)) \
-            .stroke_width(1.0) \
-            .add_rectangle(400, 50, 50, 300) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(64, 64, 64)).stroke_width(
+            1.0
+        ).add_rectangle(400, 50, 50, 300).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -186,15 +171,13 @@ class TestPathBuilderRectangleSizes:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Small 10x10 rectangle
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 255)) \
-            .stroke_width(0.5) \
-            .add_rectangle(300, 300, 10, 10) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
+            0.5
+        ).add_rectangle(300, 300, 10, 10).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -208,15 +191,13 @@ class TestPathBuilderRectangleSizes:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Large rectangle (almost full page A4 is ~595x842 pts)
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 128, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(20, 20, 550, 800) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 128, 0)).stroke_width(
+            2.0
+        ).add_rectangle(20, 20, 550, 800).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -234,29 +215,23 @@ class TestPathBuilderRectangleMultiple:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rectangle 1
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(50, 50, 100, 80) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            1.0
+        ).add_rectangle(50, 50, 100, 80).add()
 
         # Rectangle 2
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 255, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(200, 50, 100, 80) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+            1.0
+        ).add_rectangle(200, 50, 100, 80).add()
 
         # Rectangle 3
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(1.0) \
-            .add_rectangle(350, 50, 100, 80) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            1.0
+        ).add_rectangle(350, 50, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -270,29 +245,23 @@ class TestPathBuilderRectangleMultiple:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Outer rectangle
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(3.0) \
-            .add_rectangle(100, 100, 200, 150) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            3.0
+        ).add_rectangle(100, 100, 200, 150).add()
 
         # Middle rectangle
-        pdf.page(0).new_path() \
-            .stroke_color(Color(128, 128, 128)) \
-            .stroke_width(2.0) \
-            .add_rectangle(120, 120, 160, 110) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
+            2.0
+        ).add_rectangle(120, 120, 160, 110).add()
 
         # Inner rectangle
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(140, 140, 120, 70) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            1.0
+        ).add_rectangle(140, 140, 120, 70).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -307,29 +276,23 @@ class TestPathBuilderRectangleMultiple:
             orientation=Orientation.PORTRAIT,
             initial_page_count=3,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rectangle on page 0
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(100, 100, 150, 100) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            2.0
+        ).add_rectangle(100, 100, 150, 100).add()
 
         # Rectangle on page 1
-        pdf.page(1).new_path() \
-            .stroke_color(Color(0, 255, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(100, 100, 150, 100) \
-            .add()
+        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+            2.0
+        ).add_rectangle(100, 100, 150, 100).add()
 
         # Rectangle on page 2
-        pdf.page(2).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(2.0) \
-            .add_rectangle(100, 100, 150, 100) \
-            .add()
+        pdf.page(2).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            2.0
+        ).add_rectangle(100, 100, 150, 100).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -348,17 +311,17 @@ class TestPathBuilderRectangleAdvanced:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Complex path: rectangle + line
         from pdfdancer import Point
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(100, 100, 150, 100) \
-            .add_line(Point(250, 150), Point(350, 200)) \
-            .add()
+
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            2.0
+        ).add_rectangle(100, 100, 150, 100).add_line(
+            Point(250, 150), Point(350, 200)
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -372,27 +335,21 @@ class TestPathBuilderRectangleAdvanced:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Three separate paths, each with its own rectangle and properties
-        pdf.page(0).new_path() \
-            .stroke_color(Color(255, 0, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(50, 50, 80, 60) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+            1.0
+        ).add_rectangle(50, 50, 80, 60).add()
 
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 255, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(150, 50, 80, 60) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+            2.0
+        ).add_rectangle(150, 50, 80, 60).add()
 
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 255)) \
-            .stroke_width(3.0) \
-            .add_rectangle(250, 50, 80, 60) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+            3.0
+        ).add_rectangle(250, 50, 80, 60).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(3, page=0)
@@ -406,18 +363,17 @@ class TestPathBuilderRectangleAdvanced:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Overlapping rectangles with even-odd fill
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .fill_color(Color(255, 0, 0, 128)) \
-            .stroke_width(1.0) \
-            .even_odd_fill(True) \
-            .add_rectangle(100, 100, 200, 150) \
-            .add_rectangle(150, 125, 200, 150) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).fill_color(
+            Color(255, 0, 0, 128)
+        ).stroke_width(1.0).even_odd_fill(True).add_rectangle(
+            100, 100, 200, 150
+        ).add_rectangle(
+            150, 125, 200, 150
+        ).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -431,15 +387,13 @@ class TestPathBuilderRectangleAdvanced:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rectangle at origin
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(2.0) \
-            .add_rectangle(0, 0, 100, 80) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            2.0
+        ).add_rectangle(0, 0, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -453,15 +407,13 @@ class TestPathBuilderRectangleAdvanced:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         # Rectangle with decimal coordinates
-        pdf.page(0).new_path() \
-            .stroke_color(Color(0, 0, 0)) \
-            .stroke_width(1.0) \
-            .add_rectangle(123.456, 234.567, 111.222, 88.999) \
-            .add()
+        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+            1.0
+        ).add_rectangle(123.456, 234.567, 111.222, 88.999).add()
 
         assertions = PDFAssertions(pdf)
         assertions.assert_number_of_paths(1, page=0)
@@ -479,14 +431,13 @@ class TestPathBuilderRectangleValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_color(Color(0, 0, 0)) \
-                .add_rectangle(100, 100, 0, 100) \
-                .add()
+            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+                100, 100, 0, 100
+            ).add()
 
         assert "width must be positive" in str(exc_info.value).lower()
 
@@ -498,14 +449,13 @@ class TestPathBuilderRectangleValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_color(Color(0, 0, 0)) \
-                .add_rectangle(100, 100, -50, 100) \
-                .add()
+            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+                100, 100, -50, 100
+            ).add()
 
         assert "width must be positive" in str(exc_info.value).lower()
 
@@ -517,14 +467,13 @@ class TestPathBuilderRectangleValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_color(Color(0, 0, 0)) \
-                .add_rectangle(100, 100, 100, 0) \
-                .add()
+            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+                100, 100, 100, 0
+            ).add()
 
         assert "height must be positive" in str(exc_info.value).lower()
 
@@ -536,14 +485,13 @@ class TestPathBuilderRectangleValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_color(Color(0, 0, 0)) \
-                .add_rectangle(100, 100, 100, -80) \
-                .add()
+            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+                100, 100, 100, -80
+            ).add()
 
         assert "height must be positive" in str(exc_info.value).lower()
 
@@ -555,14 +503,13 @@ class TestPathBuilderRectangleValidation:
             page_size=PageSize.A4,
             orientation=Orientation.PORTRAIT,
             token=token,
-            base_url=base_url
+            base_url=base_url,
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path() \
-                .stroke_color(Color(0, 0, 0)) \
-                .add_rectangle(100, 100, -50, -80) \
-                .add()
+            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+                100, 100, -50, -80
+            ).add()
 
         # Should fail on width check first
         assert "width must be positive" in str(exc_info.value).lower()

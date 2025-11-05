@@ -35,7 +35,12 @@ class HttpClientException(PdfDancerException):
     Wraps httpx exceptions and HTTP errors from the API.
     """
 
-    def __init__(self, message: str, response: Optional[httpx.Response] = None, cause: Optional[Exception] = None):
+    def __init__(
+        self,
+        message: str,
+        response: Optional[httpx.Response] = None,
+        cause: Optional[Exception] = None,
+    ):
         super().__init__(message, cause)
         self.response = response
         self.status_code = response.status_code if response else None
@@ -46,6 +51,7 @@ class SessionException(PdfDancerException):
     Exception raised for session-related errors.
     Occurs when session creation fails or session is invalid.
     """
+
     pass
 
 
@@ -54,4 +60,5 @@ class ValidationException(PdfDancerException):
     Exception raised for input validation errors.
     Equivalent to IllegalArgumentException in the Java client.
     """
+
     pass

@@ -26,7 +26,9 @@ def test_find_request():
     result = find_req.to_dict()
 
     expected_keys = {"objectType", "position", "hint"}
-    assert set(result.keys()) == expected_keys, f"FindRequest keys mismatch: {result.keys()}"
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"FindRequest keys mismatch: {result.keys()}"
     assert result["objectType"] == "PARAGRAPH"
     assert result["hint"] == "test hint"
     print("✓ FindRequest serialization correct")
@@ -56,7 +58,9 @@ def test_move_request():
     result = move_req.to_dict()
 
     expected_keys = {"objectRef", "newPosition"}
-    assert set(result.keys()) == expected_keys, f"MoveRequest keys mismatch: {result.keys()}"
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"MoveRequest keys mismatch: {result.keys()}"
     assert "internalId" in result["objectRef"]
     print("✓ MoveRequest serialization correct")
 
@@ -65,7 +69,9 @@ def test_add_request():
     """Test AddRequest serialization."""
     print("Testing AddRequest...")
     position = Position.at_page_coordinates(1, 10.0, 20.0)
-    paragraph = Paragraph(position=position, text_lines=["test line"], font=Font("Arial", 12))
+    paragraph = Paragraph(
+        position=position, text_lines=["test line"], font=Font("Arial", 12)
+    )
     add_req = AddRequest(paragraph)
     result = add_req.to_dict()
 
@@ -84,7 +90,9 @@ def test_modify_request():
     result = modify_req.to_dict()
 
     expected_keys = {"ref", "newObject"}
-    assert set(result.keys()) == expected_keys, f"ModifyRequest keys mismatch: {result.keys()}"
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"ModifyRequest keys mismatch: {result.keys()}"
     assert "internalId" in result["ref"]
     print("✓ ModifyRequest serialization correct")
 
@@ -98,7 +106,9 @@ def test_modify_text_request():
     result = modify_text_req.to_dict()
 
     expected_keys = {"ref", "newTextLine"}
-    assert set(result.keys()) == expected_keys, f"ModifyTextRequest keys mismatch: {result.keys()}"
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"ModifyTextRequest keys mismatch: {result.keys()}"
     assert result["newTextLine"] == "new text content"
     print("✓ ModifyTextRequest serialization correct")
 
@@ -111,7 +121,9 @@ def test_object_ref():
     result = obj_ref.to_dict()
 
     expected_keys = {"internalId", "position", "type"}
-    assert set(result.keys()) == expected_keys, f"ObjectRef keys mismatch: {result.keys()}"
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"ObjectRef keys mismatch: {result.keys()}"
     assert result["internalId"] == "test-id"
     assert result["type"] == "PARAGRAPH"
     print("✓ ObjectRef serialization correct")

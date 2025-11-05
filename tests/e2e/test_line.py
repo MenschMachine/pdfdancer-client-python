@@ -47,7 +47,9 @@ def test_find_lines_by_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        lines = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")
+        lines = pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )
         assert len(lines) == 1
 
         line = lines[0]
@@ -60,14 +62,21 @@ def test_delete_line():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        line = pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         line.delete()
-        assert pdf.page(0).select_text_lines_starting_with(
-            "This is regular Sans text showing alignment and styles.") == []
+        assert (
+            pdf.page(0).select_text_lines_starting_with(
+                "This is regular Sans text showing alignment and styles."
+            )
+            == []
+        )
 
         (
-            PDFAssertions(pdf)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            PDFAssertions(pdf).assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
         )
 
 
@@ -77,7 +86,9 @@ def test_move_line():
     new_x = None
     new_y = None
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        line = pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         pos = line.position
         new_x = pos.x() + 100
         new_y = pos.y() + 18
@@ -91,8 +102,9 @@ def test_move_line():
         assert not moved_line.object_ref().status.is_modified()
 
         (
-            PDFAssertions(pdf)
-            .assert_textline_is_at("This is regular Sans text showing alignment and styles.", new_x, new_y)
+            PDFAssertions(pdf).assert_textline_is_at(
+                "This is regular Sans text showing alignment and styles.", new_x, new_y
+            )
         )
 
 
@@ -100,12 +112,18 @@ def test_modify_line():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with("This is regular Sans text showing alignment and styles.")[0]
+        line = pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )[0]
         result = line.edit().replace(" replaced ").apply()
 
         # Validate replacements
-        assert pdf.page(0).select_text_lines_starting_with(
-            "This is regular Sans text showing alignment and styles.") == []
+        assert (
+            pdf.page(0).select_text_lines_starting_with(
+                "This is regular Sans text showing alignment and styles."
+            )
+            == []
+        )
         assert pdf.page(0).select_paragraphs_starting_with(" replaced ") != []
         lines = pdf.page(0).select_text_lines_starting_with(" replaced ")
         assert lines != []
@@ -116,7 +134,9 @@ def test_modify_line():
         assert lines[0].object_ref().status.is_modified
         (
             PDFAssertions(pdf)
-            .assert_textline_does_not_exist("This is regular Sans text showing alignment and styles.")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
             .assert_textline_exists(" replaced ")
             .assert_paragraph_exists(" replaced ")
         )

@@ -1,4 +1,4 @@
-from pdfdancer import PDFDancer, ObjectType, Orientation, PageSize
+from pdfdancer import ObjectType, Orientation, PageSize, PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 

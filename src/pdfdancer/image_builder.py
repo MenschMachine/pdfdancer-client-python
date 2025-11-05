@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from pdfdancer import ValidationException, Image, Position
+from pdfdancer import Image, Position, ValidationException
 
 if TYPE_CHECKING:
     from .pdfdancer_v1 import PDFDancer

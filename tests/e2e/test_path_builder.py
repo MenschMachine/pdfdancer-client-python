@@ -10,7 +10,7 @@ These tests:
 """
 import pytest
 
-from pdfdancer import PDFDancer, Point, Color, PageSize, Orientation
+from pdfdancer import Color, Orientation, PageSize, PDFDancer, Point
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions
 

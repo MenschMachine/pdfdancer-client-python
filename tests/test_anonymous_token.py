@@ -6,8 +6,10 @@ anonymous tokens when no PDFDANCER_TOKEN is provided, matching the
 behavior of the Java client.
 """
 import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from pdfdancer import PDFDancer
 from pdfdancer.exceptions import HttpClientException
 

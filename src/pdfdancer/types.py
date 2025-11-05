@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from . import ObjectType, Position, ObjectRef, Point, FormFieldRef, TextObjectRef
+from . import FormFieldRef, ObjectRef, ObjectType, Point, Position, TextObjectRef
 from .exceptions import ValidationException
 
 if TYPE_CHECKING:

@@ -1,6 +1,13 @@
 import pytest
 
-from pdfdancer import PDFDancer, PageSize, Orientation, StandardFonts, Color, ValidationException
+from pdfdancer import (
+    Color,
+    Orientation,
+    PageSize,
+    PDFDancer,
+    StandardFonts,
+    ValidationException,
+)
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions
 

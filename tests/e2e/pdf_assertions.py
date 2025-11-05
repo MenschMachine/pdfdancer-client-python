@@ -1,9 +1,9 @@
 import tempfile
-from typing import Optional, List
+from typing import List, Optional
 
 import pytest
 
-from pdfdancer import PDFDancer, Color, Orientation, Line, Bezier, PathSegment, Point
+from pdfdancer import Bezier, Color, Line, Orientation, PathSegment, PDFDancer, Point
 
 
 class PDFAssertions(object):

@@ -4,7 +4,7 @@ Model classes for the PDFDancer Python client.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, List, Any, Dict, Mapping, Tuple, ClassVar, Union
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Tuple, Union
 
 
 @dataclass(frozen=True)
@@ -958,6 +958,7 @@ class AddRequest:
     def _object_to_dict(self, obj: Any) -> dict:
         """Convert PDF object to dictionary for JSON serialization."""
         import base64
+
         from .models import Path as PathModel
 
         if isinstance(obj, PathModel):
@@ -1048,7 +1049,7 @@ class AddRequest:
 
     def _segment_to_dict(self, segment: 'PathSegment') -> dict:
         """Convert a PathSegment (Line or Bezier) to dictionary for JSON serialization."""
-        from .models import Line, Bezier
+        from .models import Bezier, Line
 
         result = {}
 

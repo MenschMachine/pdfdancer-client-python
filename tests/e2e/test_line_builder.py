@@ -3,9 +3,9 @@ End-to-end tests for LineBuilder.
 Tests building lines from scratch and verifying the resulting PDF.
 """
 
-from pdfdancer import PDFDancer, Color, Point, PageSize, Orientation
-from tests.e2e.pdf_assertions import PDFAssertions
+from pdfdancer import Color, Orientation, PageSize, PDFDancer, Point
 from tests.e2e import _require_env
+from tests.e2e.pdf_assertions import PDFAssertions
 
 
 class TestLineBuilderSimpleLines:

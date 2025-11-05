@@ -5,10 +5,10 @@ Provides fluent interface for constructing vector paths with lines and curves.
 
 from __future__ import annotations
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 from .exceptions import ValidationException
-from .models import Path, Line, Bezier, PathSegment, Point, Color, Position
+from .models import Bezier, Color, Line, Path, PathSegment, Point, Position
 
 if TYPE_CHECKING:
     from .pdfdancer_v1 import PDFDancer

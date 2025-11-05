@@ -5,9 +5,18 @@ Tests for model classes - mirrors Java model test patterns.
 import pytest
 
 from pdfdancer import (
-    ObjectRef, Position, ObjectType, Font, Color, Image, Paragraph, BoundingRect,
-    PositionMode, ShapeType
+    BoundingRect,
+    Color,
+    Font,
+    Image,
+    ObjectRef,
+    ObjectType,
+    Paragraph,
+    Position,
+    PositionMode,
+    ShapeType,
 )
+
 # Import Point class for tests
 from pdfdancer.models import Point
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from .exceptions import ValidationException
-from .models import Orientation, PageRef, PageSize, AddPageRequest
+from .models import AddPageRequest, Orientation, PageRef, PageSize
 
 if TYPE_CHECKING:
     from .pdfdancer_v1 import PDFDancer

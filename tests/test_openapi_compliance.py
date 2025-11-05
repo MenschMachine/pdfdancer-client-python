@@ -4,8 +4,17 @@ Test script to verify OpenAPI compliance of request wrapper types.
 """
 
 from pdfdancer.models import (
-    ObjectRef, Position, ObjectType, Font, Paragraph,
-    FindRequest, DeleteRequest, MoveRequest, AddRequest, ModifyRequest, ModifyTextRequest
+    AddRequest,
+    DeleteRequest,
+    FindRequest,
+    Font,
+    ModifyRequest,
+    ModifyTextRequest,
+    MoveRequest,
+    ObjectRef,
+    ObjectType,
+    Paragraph,
+    Position,
 )
 
 

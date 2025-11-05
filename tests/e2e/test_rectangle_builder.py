@@ -9,7 +9,7 @@ These tests:
 """
 import pytest
 
-from pdfdancer import PDFDancer, Color, PageSize, Orientation
+from pdfdancer import Color, Orientation, PageSize, PDFDancer
 from pdfdancer.exceptions import ValidationException
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions

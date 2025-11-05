@@ -3,13 +3,18 @@ Tests for __eq__ implementations on PDFObjectBase subclasses.
 """
 
 from unittest.mock import Mock
+
 import pytest
 
+from pdfdancer import Color, ObjectType, Position, TextObjectRef
 from pdfdancer.types import (
-    PathObject, ImageObject, FormObject, ParagraphObject,
-    TextLineObject, FormFieldObject
+    FormFieldObject,
+    FormObject,
+    ImageObject,
+    ParagraphObject,
+    PathObject,
+    TextLineObject,
 )
-from pdfdancer import ObjectType, Position, TextObjectRef, Color
 
 
 class TestPDFObjectEquality:

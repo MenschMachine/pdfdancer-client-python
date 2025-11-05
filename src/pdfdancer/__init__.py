@@ -7,17 +7,41 @@ mirrors the Java client structure and functionality.
 """
 
 from .exceptions import (
-    PdfDancerException, FontNotFoundException, ValidationException,
-    HttpClientException, SessionException
+    FontNotFoundException,
+    HttpClientException,
+    PdfDancerException,
+    SessionException,
+    ValidationException,
 )
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Color, Image, BoundingRect, Paragraph, FormFieldRef, TextObjectRef,
-    PageRef, PositionMode, ShapeType, Point, StandardFonts, PageSize, Orientation, TextStatus, FontRecommendation,
-    FontType, PathSegment, Line, Bezier, Path
+    Bezier,
+    BoundingRect,
+    Color,
+    Font,
+    FontRecommendation,
+    FontType,
+    FormFieldRef,
+    Image,
+    Line,
+    ObjectRef,
+    ObjectType,
+    Orientation,
+    PageRef,
+    PageSize,
+    Paragraph,
+    Path,
+    PathSegment,
+    Point,
+    Position,
+    PositionMode,
+    ShapeType,
+    StandardFonts,
+    TextObjectRef,
+    TextStatus,
 )
-from .paragraph_builder import ParagraphBuilder
 from .page_builder import PageBuilder
-from .path_builder import PathBuilder, LineBuilder, BezierBuilder
+from .paragraph_builder import ParagraphBuilder
+from .path_builder import BezierBuilder, LineBuilder, PathBuilder
 
 __version__ = "1.0.0"
 __all__ = [
@@ -59,8 +83,9 @@ __all__ = [
     "set_ssl_verify"
 ]
 
-from .pdfdancer_v1 import PDFDancer
 from . import pdfdancer_v1
+from .pdfdancer_v1 import PDFDancer
+
 
 def set_ssl_verify(enabled: bool) -> None:
     """

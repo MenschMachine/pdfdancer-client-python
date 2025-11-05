@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from pdfdancer import PDFDancer, ValidationException, HttpClientException
+from pdfdancer import HttpClientException, PDFDancer, ValidationException
 from tests.e2e import _require_env_and_fixture
 
 

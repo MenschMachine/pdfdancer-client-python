@@ -14,7 +14,7 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Union, BinaryIO, Mapping, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, BinaryIO, List, Mapping, Optional, Union
 
 import httpx
 from dotenv import load_dotenv
@@ -22,8 +22,8 @@ from dotenv import load_dotenv
 from .fingerprint import Fingerprint
 
 if TYPE_CHECKING:
-    from .path_builder import RectangleBuilder
     from .models import PathSegment
+    from .path_builder import RectangleBuilder
 
 load_dotenv()
 
@@ -123,26 +123,54 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
             print(f"{time.time()}|{method} {path} - Header parse error: {e}")
 
 
-from . import ParagraphBuilder, BezierBuilder, PathBuilder, LineBuilder
+from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
 from .exceptions import (
-    PdfDancerException,
     FontNotFoundException,
     HttpClientException,
+    PdfDancerException,
     SessionException,
-    ValidationException
+    ValidationException,
 )
 from .image_builder import ImageBuilder, ImageOnPageBuilder
 from .models import (
-    ObjectRef, Position, ObjectType, Font, Image, Paragraph, FormFieldRef, TextObjectRef, PageRef,
-    FindRequest, DeleteRequest, MoveRequest, PageMoveRequest, AddPageRequest, AddRequest, ModifyRequest,
+    AddPageRequest,
+    AddRequest,
+    ChangeFormFieldRequest,
+    CommandResult,
+    DeleteRequest,
+    DocumentSnapshot,
+    FindRequest,
+    Font,
+    FontRecommendation,
+    FontType,
+    FormFieldRef,
+    Image,
+    ModifyRequest,
     ModifyTextRequest,
-    ChangeFormFieldRequest, CommandResult,
-    ShapeType, PositionMode, PageSize, Orientation,
-    PageSnapshot, DocumentSnapshot, FontRecommendation, FontType
+    MoveRequest,
+    ObjectRef,
+    ObjectType,
+    Orientation,
+    PageMoveRequest,
+    PageRef,
+    PageSize,
+    PageSnapshot,
+    Paragraph,
+    Position,
+    PositionMode,
+    ShapeType,
+    TextObjectRef,
 )
-from .paragraph_builder import ParagraphPageBuilder
 from .page_builder import PageBuilder
-from .types import PathObject, ParagraphObject, TextLineObject, ImageObject, FormObject, FormFieldObject
+from .paragraph_builder import ParagraphPageBuilder
+from .types import (
+    FormFieldObject,
+    FormObject,
+    ImageObject,
+    ParagraphObject,
+    PathObject,
+    TextLineObject,
+)
 
 
 class PageClient:
@@ -1827,7 +1855,7 @@ class PDFDancer:
         status = None
         status_data = obj_data.get('status')
         if isinstance(status_data, dict):
-            from .models import TextStatus, FontRecommendation, FontType
+            from .models import FontRecommendation, FontType, TextStatus
 
             # Parse font recommendation
             font_rec_data = status_data.get('fontRecommendation')
@@ -1907,7 +1935,7 @@ class PDFDancer:
 
     def _parse_path_segment(self, segment_data: dict) -> 'PathSegment':
         """Parse JSON data into PathSegment instance (Line or Bezier)."""
-        from .models import Line, Bezier, PathSegment, Point, Color
+        from .models import Bezier, Color, Line, PathSegment, Point
 
         segment_type = segment_data.get('segmentType', segment_data.get('type', '')).upper()
 

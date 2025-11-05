@@ -4,7 +4,7 @@ Validates that snapshot data matches select_* method results before, during, and
 """
 import pytest
 
-from pdfdancer import PDFDancer, ObjectType
+from pdfdancer import ObjectType, PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 

@@ -7,19 +7,19 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
-from typing import List, Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from . import StandardFonts
 from .exceptions import ValidationException
 from .models import (
-    Paragraph,
-    Font,
     Color,
+    Font,
+    ObjectRef,
+    Paragraph,
+    Point,
     Position,
     TextLine,
     TextObjectRef,
-    Point,
-    ObjectRef,
 )
 
 if TYPE_CHECKING:

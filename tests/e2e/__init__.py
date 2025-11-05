@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 from typing import Tuple
 
-import pytest
 import httpx
+import pytest
 
 
 def _get_base_url():

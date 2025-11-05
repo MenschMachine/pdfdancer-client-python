@@ -19,7 +19,55 @@ from typing import TYPE_CHECKING, Any, BinaryIO, List, Mapping, Optional, Union
 import httpx
 from dotenv import load_dotenv
 
+from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
+from .exceptions import (
+    FontNotFoundException,
+    HttpClientException,
+    PdfDancerException,
+    SessionException,
+    ValidationException,
+)
 from .fingerprint import Fingerprint
+from .image_builder import ImageBuilder, ImageOnPageBuilder
+from .models import (
+    AddPageRequest,
+    AddRequest,
+    ChangeFormFieldRequest,
+    CommandResult,
+    DeleteRequest,
+    DocumentSnapshot,
+    FindRequest,
+    Font,
+    FontRecommendation,
+    FontType,
+    FormFieldRef,
+    Image,
+    ModifyRequest,
+    ModifyTextRequest,
+    MoveRequest,
+    ObjectRef,
+    ObjectType,
+    Orientation,
+    PageMoveRequest,
+    PageRef,
+    PageSize,
+    PageSnapshot,
+    Paragraph,
+    Position,
+    PositionMode,
+    ShapeType,
+    TextObjectRef,
+)
+from .page_builder import PageBuilder
+from .paragraph_builder import ParagraphPageBuilder
+from .types import (
+    FormFieldObject,
+    FormObject,
+    ImageObject,
+    ParagraphObject,
+    PathObject,
+    TextLineObject,
+)
 
 if TYPE_CHECKING:
     from .models import PathSegment
@@ -125,56 +173,6 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
 
         except (ValueError, AttributeError) as e:
             print(f"{time.time()}|{method} {path} - Header parse error: {e}")
-
-
-from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
-from .exceptions import (
-    FontNotFoundException,
-    HttpClientException,
-    PdfDancerException,
-    SessionException,
-    ValidationException,
-)
-from .image_builder import ImageBuilder, ImageOnPageBuilder
-from .models import (
-    AddPageRequest,
-    AddRequest,
-    ChangeFormFieldRequest,
-    CommandResult,
-    DeleteRequest,
-    DocumentSnapshot,
-    FindRequest,
-    Font,
-    FontRecommendation,
-    FontType,
-    FormFieldRef,
-    Image,
-    ModifyRequest,
-    ModifyTextRequest,
-    MoveRequest,
-    ObjectRef,
-    ObjectType,
-    Orientation,
-    PageMoveRequest,
-    PageRef,
-    PageSize,
-    PageSnapshot,
-    Paragraph,
-    Position,
-    PositionMode,
-    ShapeType,
-    TextObjectRef,
-)
-from .page_builder import PageBuilder
-from .paragraph_builder import ParagraphPageBuilder
-from .types import (
-    FormFieldObject,
-    FormObject,
-    ImageObject,
-    ParagraphObject,
-    PathObject,
-    TextLineObject,
-)
 
 
 class PageClient:

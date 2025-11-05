@@ -9,3 +9,10 @@ src/pdfdancer_client_python.egg-info
 /logs/
 /venv
 /venv-*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python

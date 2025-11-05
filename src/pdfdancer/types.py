@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from . import ObjectType, Position, ObjectRef, Point, FormFieldRef, TextObjectRef
+from .exceptions import ValidationException
+
+if TYPE_CHECKING:
+    from .pdfdancer_v1 import PDFDancer
 
 
 @dataclass

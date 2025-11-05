@@ -5,6 +5,8 @@ A Python client that closely mirrors the Java Client class structure and functio
 Provides session-based PDF manipulation operations with strict validation.
 """
 
+from __future__ import annotations
+
 import gzip
 import json
 import logging
@@ -12,12 +14,16 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional, Union, BinaryIO, Mapping, Any
+from typing import List, Optional, Union, BinaryIO, Mapping, Any, TYPE_CHECKING
 
 import httpx
 from dotenv import load_dotenv
 
 from .fingerprint import Fingerprint
+
+if TYPE_CHECKING:
+    from .path_builder import RectangleBuilder
+    from .models import PathSegment
 
 load_dotenv()
 

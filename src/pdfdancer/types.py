@@ -226,6 +226,13 @@ class TextLineObject(PDFObjectBase):
         )
         self._object_ref = object_ref
 
+    def __getattr__(self, name):
+        """
+        Automatically delegate attribute/method lookup to _object_ref
+        if it's not found on this object.
+        """
+        return getattr(self._object_ref, name)
+
     def edit(self) -> TextLineEdit:
         return TextLineEdit(self, self.object_ref())
 

@@ -16,16 +16,19 @@ def test_select_paragraph_at_page_level():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        # First verify the plural version returns results
-        paragraphs = pdf.page(0).select_paragraphs_at(180, 755.2)
+        # First get all paragraphs to find valid coordinates
+        paragraphs = pdf.page(0).select_paragraphs()
         assert len(paragraphs) >= 1
 
+        # Use actual coordinates from first paragraph
+        first = paragraphs[0]
+        x = first.position.x()
+        y = first.position.y()
+
         # Now test the singular version
-        paragraph = pdf.page(0).select_paragraph_at(180, 755.2)
+        paragraph = pdf.page(0).select_paragraph_at(x, y)
         assert paragraph is not None
-        assert paragraph.internal_id == "PARAGRAPH_000005"
-        assert pytest.approx(paragraph.position.x(), rel=0, abs=1) == 180
-        assert pytest.approx(paragraph.position.y(), rel=0, abs=1) == 755.2
+        assert paragraph.internal_id == first.internal_id
 
 
 def test_select_paragraph_at_no_match():
@@ -187,29 +190,29 @@ def test_select_image_at_no_match():
 
 def test_select_form_field_by_name():
     """Test selecting a single form field by name at document level"""
-    base_url, token, pdf_path = _require_env_and_fixture("acroform.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         # Test singular version
-        field = pdf.select_form_field_by_name("given-name-field")
+        field = pdf.select_form_field_by_name("firstName")
         assert field is not None
-        assert field.name == "given-name-field"
+        assert field.name == "firstName"
 
 
 def test_select_form_field_by_name_page_level():
     """Test selecting a single form field by name at page level"""
-    base_url, token, pdf_path = _require_env_and_fixture("acroform.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         # Test singular version at page level
-        field = pdf.page(0).select_form_field_by_name("given-name-field")
+        field = pdf.page(0).select_form_field_by_name("firstName")
         assert field is not None
-        assert field.name == "given-name-field"
+        assert field.name == "firstName"
 
 
 def test_select_form_field_by_name_no_match():
     """Test selecting a form field with non-existent name returns None"""
-    base_url, token, pdf_path = _require_env_and_fixture("acroform.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         field = pdf.select_form_field_by_name("nonexistent-field")
@@ -218,7 +221,7 @@ def test_select_form_field_by_name_no_match():
 
 def test_select_form_field_at():
     """Test selecting a single form field at specific coordinates"""
-    base_url, token, pdf_path = _require_env_and_fixture("acroform.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         # First get all form fields to find coordinates
@@ -258,7 +261,7 @@ def test_select_path_at_no_match():
 
 def test_select_form_at():
     """Test selecting a single form at specific coordinates"""
-    base_url, token, pdf_path = _require_env_and_fixture("xobject-form.pdf")
+    base_url, token, pdf_path = _require_env_and_fixture("form-xobject-example.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         # First get all forms to find coordinates

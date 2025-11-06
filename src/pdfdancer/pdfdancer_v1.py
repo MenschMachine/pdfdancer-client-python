@@ -83,7 +83,20 @@ DISABLE_SSL_VERIFY = os.environ.get("PDFDANCER_CLIENT_DISABLE_SSL_VERIFY", False
 DEBUG = os.environ.get("PDFDANCER_CLIENT_DEBUG", False)
 DEFAULT_TOLERANCE = 0.01
 
-# Retry configuration
+# Retry configuration for transient network errors
+# These settings control automatic retry behavior when encountering transient network errors
+# like "Server disconnected without sending a response", connection timeouts, etc.
+# HTTP status errors (4xx, 5xx) are NOT retried as they are application-level errors.
+#
+# PDFDANCER_MAX_RETRIES: Maximum number of retry attempts (default: 3)
+#   Example: With max_retries=3, the client will make up to 4 total attempts (1 initial + 3 retries)
+#
+# PDFDANCER_RETRY_BACKOFF_FACTOR: Base multiplier for exponential backoff delays (default: 1.0)
+#   The actual delay for each retry is calculated as: backoff_factor * (2 ** attempt)
+#   Examples:
+#     - backoff_factor=1.0: delays are 1s, 2s, 4s, 8s, ...
+#     - backoff_factor=2.0: delays are 2s, 4s, 8s, 16s, ...
+#     - backoff_factor=0.5: delays are 0.5s, 1s, 2s, 4s, ...
 DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
     os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "1.0")
@@ -647,7 +660,10 @@ class PDFDancer:
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
+                Delay calculation: backoff_factor * (2 ** attempt_number).
+                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
 
         Returns:
             A ready-to-use `PDFDancer` client instance.
@@ -772,7 +788,10 @@ class PDFDancer:
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
+                Delay calculation: backoff_factor * (2 ** attempt_number).
+                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
 
         Returns:
             A ready-to-use `PDFDancer` client instance with a blank PDF.
@@ -839,8 +858,11 @@ class PDFDancer:
             pdf_data: PDF file data as bytes, Path, filename string, or file-like object
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3)
-            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0)
+            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
+                Delay calculation: backoff_factor * (2 ** attempt_number).
+                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
 
         Raises:
             ValidationException: If token is empty or PDF data is invalid

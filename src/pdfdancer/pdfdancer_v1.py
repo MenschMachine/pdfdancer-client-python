@@ -83,6 +83,12 @@ DISABLE_SSL_VERIFY = os.environ.get("PDFDANCER_CLIENT_DISABLE_SSL_VERIFY", False
 DEBUG = os.environ.get("PDFDANCER_CLIENT_DEBUG", False)
 DEFAULT_TOLERANCE = 0.01
 
+# Retry configuration
+DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
+DEFAULT_RETRY_BACKOFF_FACTOR = float(
+    os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "1.0")
+)
+
 
 def _generate_timestamp() -> str:
     """
@@ -173,6 +179,46 @@ def _log_generated_at_header(response: httpx.Response, method: str, path: str) -
 
         except (ValueError, AttributeError) as e:
             print(f"{time.time()}|{method} {path} - Header parse error: {e}")
+
+
+def _is_retryable_error(error: Exception) -> bool:
+    """
+    Determine if an error is retryable (transient network error).
+
+    Args:
+        error: The exception to check
+
+    Returns:
+        True if the error is retryable, False otherwise
+    """
+    # Retryable errors include:
+    # - RemoteProtocolError (server disconnected without response)
+    # - ConnectError/ConnectTimeout (connection issues)
+    # - ReadTimeout (server didn't respond in time)
+    # - PoolTimeout (connection pool exhausted)
+    error_msg = str(error).lower()
+
+    if isinstance(error, httpx.RemoteProtocolError):
+        return True
+    if isinstance(error, httpx.ConnectError):
+        return True
+    if isinstance(error, httpx.ReadTimeout):
+        return True
+    if isinstance(error, httpx.PoolTimeout):
+        return True
+    if isinstance(error, httpx.WriteTimeout):
+        return True
+
+    # Check for specific error messages that indicate transient issues
+    retryable_messages = [
+        "server disconnected",
+        "connection reset",
+        "broken pipe",
+        "connection refused",
+        "temporarily unavailable",
+    ]
+
+    return any(msg in error_msg for msg in retryable_messages)
 
 
 class PageClient:
@@ -582,6 +628,8 @@ class PDFDancer:
         token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 30.0,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
         Create a client session, falling back to environment variables when needed.
@@ -598,6 +646,8 @@ class PDFDancer:
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
+            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
+            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0).
 
         Returns:
             A ready-to-use `PDFDancer` client instance.
@@ -609,7 +659,14 @@ class PDFDancer:
         if resolved_token is None:
             resolved_token = cls._obtain_anonymous_token(resolved_base_url, timeout)
 
-        return PDFDancer(resolved_token, pdf_data, resolved_base_url, timeout)
+        return PDFDancer(
+            resolved_token,
+            pdf_data,
+            resolved_base_url,
+            timeout,
+            max_retries,
+            retry_backoff_factor,
+        )
 
     @classmethod
     def _resolve_base_url(cls, base_url: Optional[str]) -> Optional[str]:
@@ -693,6 +750,8 @@ class PDFDancer:
         page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
         orientation: Optional[Union[Orientation, str]] = None,
         initial_page_count: int = 1,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
         Create a new blank PDF document with optional configuration.
@@ -712,6 +771,8 @@ class PDFDancer:
                 mapping with `width`/`height` values.
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
+            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
+            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0).
 
         Returns:
             A ready-to-use `PDFDancer` client instance with a blank PDF.
@@ -733,6 +794,8 @@ class PDFDancer:
         instance._token = resolved_token.strip()
         instance._base_url = resolved_base_url.rstrip("/")
         instance._read_timeout = timeout
+        instance._max_retries = max_retries
+        instance._retry_backoff_factor = retry_backoff_factor
 
         # Create HTTP client for connection reuse with HTTP/2 support
         instance._client = httpx.Client(
@@ -763,6 +826,8 @@ class PDFDancer:
         pdf_data: Union[bytes, Path, str, BinaryIO],
         base_url: str,
         read_timeout: float = 0,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ):
         """
         Creates a new client with PDF data.
@@ -774,6 +839,8 @@ class PDFDancer:
             pdf_data: PDF file data as bytes, Path, filename string, or file-like object
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
+            max_retries: Maximum number of retry attempts for transient network errors (default: 3)
+            retry_backoff_factor: Backoff factor for exponential retry delays (default: 1.0)
 
         Raises:
             ValidationException: If token is empty or PDF data is invalid
@@ -787,6 +854,8 @@ class PDFDancer:
         self._token = token.strip()
         self._base_url = base_url.rstrip("/")
         self._read_timeout = read_timeout
+        self._max_retries = max_retries
+        self._retry_backoff_factor = retry_backoff_factor
 
         # Process PDF data with validation
         self._pdf_bytes = self._process_pdf_data(pdf_data)
@@ -920,84 +989,119 @@ class PDFDancer:
         """
         Creates a new PDF processing session by uploading the PDF data.
         """
-        try:
-            # Build multipart body manually to avoid base64 encoding and enable compression
-            # httpx by default may add Content-Transfer-Encoding: base64 which the server rejects
-            import uuid
+        import uuid
 
-            boundary = uuid.uuid4().hex
+        last_error: Optional[Exception] = None
+        attempt = 0
 
-            # Build multipart body with binary (not base64) encoding
-            body_parts = []
-            body_parts.append(f"--{boundary}\r\n".encode("utf-8"))
-            body_parts.append(
-                b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n'
-            )
-            body_parts.append(b"Content-Type: application/pdf\r\n")
-            body_parts.append(b"\r\n")  # End of headers, no Content-Transfer-Encoding
-            body_parts.append(self._pdf_bytes)
-            body_parts.append(b"\r\n")
-            body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
+        while attempt <= self._max_retries:
+            try:
+                # Build multipart body manually to avoid base64 encoding and enable compression
+                # httpx by default may add Content-Transfer-Encoding: base64 which the server rejects
+                boundary = uuid.uuid4().hex
 
-            uncompressed_body = b"".join(body_parts)
+                # Build multipart body with binary (not base64) encoding
+                body_parts = []
+                body_parts.append(f"--{boundary}\r\n".encode("utf-8"))
+                body_parts.append(
+                    b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n'
+                )
+                body_parts.append(b"Content-Type: application/pdf\r\n")
+                body_parts.append(b"\r\n")  # End of headers, no Content-Transfer-Encoding
+                body_parts.append(self._pdf_bytes)
+                body_parts.append(b"\r\n")
+                body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
 
-            # Compress entire request body using gzip
-            compressed_body = gzip.compress(uncompressed_body)
+                uncompressed_body = b"".join(body_parts)
 
-            original_size = len(uncompressed_body)
-            compressed_size = len(compressed_body)
-            compression_ratio = (
-                (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
-            )
+                # Compress entire request body using gzip
+                compressed_body = gzip.compress(uncompressed_body)
 
-            if DEBUG:
-                print(
-                    f"{time.time()}|POST /session/create - original size: {original_size} bytes, "
-                    f"compressed size: {compressed_size} bytes, "
-                    f"compression: {compression_ratio:.1f}%"
+                original_size = len(uncompressed_body)
+                compressed_size = len(compressed_body)
+                compression_ratio = (
+                    (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
                 )
 
-            headers = {
-                "X-Generated-At": _generate_timestamp(),
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "Content-Encoding": "gzip",
-            }
+                if DEBUG:
+                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    print(
+                        f"{time.time()}|POST /session/create{retry_info} - original size: {original_size} bytes, "
+                        f"compressed size: {compressed_size} bytes, "
+                        f"compression: {compression_ratio:.1f}%"
+                    )
 
-            response = self._client.post(
-                self._cleanup_url_path(self._base_url, "/session/create"),
-                content=compressed_body,
-                headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
-            )
+                headers = {
+                    "X-Generated-At": _generate_timestamp(),
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
+                    "Content-Encoding": "gzip",
+                }
 
-            response_size = len(response.content)
-            if DEBUG:
-                print(
-                    f"{time.time()}|POST /session/create - response size: {response_size} bytes"
+                response = self._client.post(
+                    self._cleanup_url_path(self._base_url, "/session/create"),
+                    content=compressed_body,
+                    headers=headers,
+                    timeout=self._read_timeout if self._read_timeout > 0 else None,
                 )
 
-            _log_generated_at_header(response, "POST", "/session/create")
-            self._handle_authentication_error(response)
-            response.raise_for_status()
-            session_id = response.text.strip()
+                response_size = len(response.content)
+                if DEBUG:
+                    print(
+                        f"{time.time()}|POST /session/create - response size: {response_size} bytes"
+                    )
 
-            if not session_id:
-                raise SessionException("Server returned empty session ID")
+                _log_generated_at_header(response, "POST", "/session/create")
+                self._handle_authentication_error(response)
+                response.raise_for_status()
+                session_id = response.text.strip()
 
-            return session_id
+                if not session_id:
+                    raise SessionException("Server returned empty session ID")
 
-        except httpx.HTTPStatusError as e:
-            self._handle_authentication_error(e.response)
-            error_message = self._extract_error_message(e.response)
+                return session_id
+
+            except httpx.HTTPStatusError as e:
+                # HTTP status errors are not retried (these are application-level errors)
+                self._handle_authentication_error(e.response)
+                error_message = self._extract_error_message(e.response)
+                raise HttpClientException(
+                    f"Failed to create session: {error_message}",
+                    response=e.response,
+                    cause=e,
+                ) from None
+            except httpx.RequestError as e:
+                last_error = e
+
+                # Check if this is a retryable error
+                if _is_retryable_error(e) and attempt < self._max_retries:
+                    # Calculate exponential backoff delay
+                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|POST /session/create - Retryable error: {str(e)}, "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+                else:
+                    # Non-retryable error or exhausted retries
+                    raise HttpClientException(
+                        f"Failed to create session: {str(e)}", response=None, cause=e
+                    ) from None
+
+        # Should not reach here, but handle just in case
+        if last_error:
             raise HttpClientException(
-                f"Failed to create session: {error_message}",
-                response=e.response,
-                cause=e,
+                f"Failed to create session after {self._max_retries + 1} attempts: {str(last_error)}",
+                response=None,
+                cause=last_error,
             ) from None
-        except httpx.RequestError as e:
+        else:
             raise HttpClientException(
-                f"Failed to create session: {str(e)}", response=None, cause=e
-            ) from None
+                f"Failed to create session after {self._max_retries + 1} attempts",
+                response=None,
+            )
 
     def _create_blank_pdf_session(
         self,
@@ -1021,85 +1125,120 @@ class PDFDancer:
             SessionException: If session creation fails
             HttpClientException: If HTTP communication fails
         """
-        try:
-            # Build request payload
-            request_data = {}
+        # Build request payload (outside retry loop since validation should only happen once)
+        request_data = {}
 
-            # Handle page_size - convert to type-safe object with dimensions
-            if page_size is not None:
-                try:
-                    request_data["pageSize"] = PageSize.coerce(page_size).to_dict()
-                except ValueError as exc:
-                    raise ValidationException(str(exc)) from exc
-                except TypeError:
-                    raise ValidationException(
-                        f"Invalid page_size type: {type(page_size)}"
-                    )
-
-            # Handle orientation
-            if orientation is not None:
-                if isinstance(orientation, Orientation):
-                    request_data["orientation"] = orientation.value
-                elif isinstance(orientation, str):
-                    request_data["orientation"] = orientation
-                else:
-                    raise ValidationException(
-                        f"Invalid orientation type: {type(orientation)}"
-                    )
-
-            # Handle initial_page_count with validation
-            if initial_page_count < 1:
+        # Handle page_size - convert to type-safe object with dimensions
+        if page_size is not None:
+            try:
+                request_data["pageSize"] = PageSize.coerce(page_size).to_dict()
+            except ValueError as exc:
+                raise ValidationException(str(exc)) from exc
+            except TypeError:
                 raise ValidationException(
-                    f"Initial page count must be at least 1, got {initial_page_count}"
-                )
-            request_data["initialPageCount"] = initial_page_count
-
-            request_body = json.dumps(request_data)
-            request_size = len(request_body.encode("utf-8"))
-            if DEBUG:
-                print(
-                    f"{time.time()}|POST /session/new - request size: {request_size} bytes"
+                    f"Invalid page_size type: {type(page_size)}"
                 )
 
-            headers = {
-                "Content-Type": "application/json",
-                "X-Generated-At": _generate_timestamp(),
-            }
-            response = self._client.post(
-                self._cleanup_url_path(self._base_url, "/session/new"),
-                json=request_data,
-                headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
+        # Handle orientation
+        if orientation is not None:
+            if isinstance(orientation, Orientation):
+                request_data["orientation"] = orientation.value
+            elif isinstance(orientation, str):
+                request_data["orientation"] = orientation
+            else:
+                raise ValidationException(
+                    f"Invalid orientation type: {type(orientation)}"
+                )
+
+        # Handle initial_page_count with validation
+        if initial_page_count < 1:
+            raise ValidationException(
+                f"Initial page count must be at least 1, got {initial_page_count}"
             )
+        request_data["initialPageCount"] = initial_page_count
 
-            response_size = len(response.content)
-            if DEBUG:
-                print(
-                    f"{time.time()}|POST /session/new - response size: {response_size} bytes"
+        last_error: Optional[Exception] = None
+        attempt = 0
+
+        while attempt <= self._max_retries:
+            try:
+                request_body = json.dumps(request_data)
+                request_size = len(request_body.encode("utf-8"))
+                if DEBUG:
+                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    print(
+                        f"{time.time()}|POST /session/new{retry_info} - request size: {request_size} bytes"
+                    )
+
+                headers = {
+                    "Content-Type": "application/json",
+                    "X-Generated-At": _generate_timestamp(),
+                }
+                response = self._client.post(
+                    self._cleanup_url_path(self._base_url, "/session/new"),
+                    json=request_data,
+                    headers=headers,
+                    timeout=self._read_timeout if self._read_timeout > 0 else None,
                 )
 
-            _log_generated_at_header(response, "POST", "/session/new")
-            self._handle_authentication_error(response)
-            response.raise_for_status()
-            session_id = response.text.strip()
+                response_size = len(response.content)
+                if DEBUG:
+                    print(
+                        f"{time.time()}|POST /session/new - response size: {response_size} bytes"
+                    )
 
-            if not session_id:
-                raise SessionException("Server returned empty session ID")
+                _log_generated_at_header(response, "POST", "/session/new")
+                self._handle_authentication_error(response)
+                response.raise_for_status()
+                session_id = response.text.strip()
 
-            return session_id
+                if not session_id:
+                    raise SessionException("Server returned empty session ID")
 
-        except httpx.HTTPStatusError as e:
-            self._handle_authentication_error(e.response)
-            error_message = self._extract_error_message(e.response)
+                return session_id
+
+            except httpx.HTTPStatusError as e:
+                # HTTP status errors are not retried (these are application-level errors)
+                self._handle_authentication_error(e.response)
+                error_message = self._extract_error_message(e.response)
+                raise HttpClientException(
+                    f"Failed to create blank PDF session: {error_message}",
+                    response=e.response,
+                    cause=e,
+                ) from None
+            except httpx.RequestError as e:
+                last_error = e
+
+                # Check if this is a retryable error
+                if _is_retryable_error(e) and attempt < self._max_retries:
+                    # Calculate exponential backoff delay
+                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|POST /session/new - Retryable error: {str(e)}, "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+                else:
+                    # Non-retryable error or exhausted retries
+                    raise HttpClientException(
+                        f"Failed to create blank PDF session: {str(e)}", response=None, cause=e
+                    ) from None
+
+        # Should not reach here, but handle just in case
+        if last_error:
             raise HttpClientException(
-                f"Failed to create blank PDF session: {error_message}",
-                response=e.response,
-                cause=e,
+                f"Failed to create blank PDF session after {self._max_retries + 1} attempts: {str(last_error)}",
+                response=None,
+                cause=last_error,
             ) from None
-        except httpx.RequestError as e:
+        else:
             raise HttpClientException(
-                f"Failed to create blank PDF session: {str(e)}", response=None, cause=e
-            ) from None
+                f"Failed to create blank PDF session after {self._max_retries + 1} attempts",
+                response=None,
+            )
 
     def _make_request(
         self,
@@ -1109,7 +1248,7 @@ class PDFDancer:
         params: Optional[dict] = None,
     ) -> httpx.Response:
         """
-        Make HTTP request with session headers and error handling.
+        Make HTTP request with session headers, error handling, and automatic retry for transient errors.
         """
         headers = {
             "X-Session-Id": self._session_id,
@@ -1118,58 +1257,93 @@ class PDFDancer:
             "X-Fingerprint": Fingerprint.generate(),
         }
 
-        try:
-            request_size = 0
-            if data is not None:
-                request_body = json.dumps(data)
-                request_size = len(request_body.encode("utf-8"))
-            if DEBUG:
-                print(
-                    f"{time.time()}|{method} {path} - request size: {request_size} bytes"
+        last_error: Optional[Exception] = None
+        attempt = 0
+
+        while attempt <= self._max_retries:
+            try:
+                request_size = 0
+                if data is not None:
+                    request_body = json.dumps(data)
+                    request_size = len(request_body.encode("utf-8"))
+                if DEBUG:
+                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    print(
+                        f"{time.time()}|{method} {path}{retry_info} - request size: {request_size} bytes"
+                    )
+
+                response = self._client.request(
+                    method=method,
+                    url=self._cleanup_url_path(self._base_url, path),
+                    json=data,
+                    params=params,
+                    headers=headers,
+                    timeout=self._read_timeout if self._read_timeout > 0 else None,
                 )
 
-            response = self._client.request(
-                method=method,
-                url=self._cleanup_url_path(self._base_url, path),
-                json=data,
-                params=params,
-                headers=headers,
-                timeout=self._read_timeout if self._read_timeout > 0 else None,
-            )
+                response_size = len(response.content)
+                if DEBUG:
+                    print(
+                        f"{time.time()}|{method} {path} - response size: {response_size} bytes"
+                    )
 
-            response_size = len(response.content)
-            if DEBUG:
-                print(
-                    f"{time.time()}|{method} {path} - response size: {response_size} bytes"
-                )
+                _log_generated_at_header(response, method, path)
 
-            _log_generated_at_header(response, method, path)
+                # Handle FontNotFoundException
+                if response.status_code == 404:
+                    try:
+                        error_data = response.json()
+                        if error_data.get("error") == "FontNotFoundException":
+                            raise FontNotFoundException(
+                                error_data.get("message", "Font not found")
+                            )
+                    except (json.JSONDecodeError, KeyError):
+                        pass
 
-            # Handle FontNotFoundException
-            if response.status_code == 404:
-                try:
-                    error_data = response.json()
-                    if error_data.get("error") == "FontNotFoundException":
-                        raise FontNotFoundException(
-                            error_data.get("message", "Font not found")
+                self._handle_authentication_error(response)
+                response.raise_for_status()
+                return response
+
+            except httpx.HTTPStatusError as e:
+                # HTTP status errors are not retried (these are application-level errors)
+                self._handle_authentication_error(e.response)
+                error_message = self._extract_error_message(e.response)
+                raise HttpClientException(
+                    f"API request failed: {error_message}", response=e.response, cause=e
+                ) from None
+            except httpx.RequestError as e:
+                last_error = e
+
+                # Check if this is a retryable error
+                if _is_retryable_error(e) and attempt < self._max_retries:
+                    # Calculate exponential backoff delay
+                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|{method} {path} - Retryable error: {str(e)}, "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
                         )
-                except (json.JSONDecodeError, KeyError):
-                    pass
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+                else:
+                    # Non-retryable error or exhausted retries
+                    raise HttpClientException(
+                        f"API request failed: {str(e)}", response=None, cause=e
+                    ) from None
 
-            self._handle_authentication_error(response)
-            response.raise_for_status()
-            return response
-
-        except httpx.HTTPStatusError as e:
-            self._handle_authentication_error(e.response)
-            error_message = self._extract_error_message(e.response)
+        # Should not reach here, but handle just in case
+        if last_error:
             raise HttpClientException(
-                f"API request failed: {error_message}", response=e.response, cause=e
+                f"API request failed after {self._max_retries + 1} attempts: {str(last_error)}",
+                response=None,
+                cause=last_error,
             ) from None
-        except httpx.RequestError as e:
+        else:
             raise HttpClientException(
-                f"API request failed: {str(e)}", response=None, cause=e
-            ) from None
+                f"API request failed after {self._max_retries + 1} attempts",
+                response=None,
+            )
 
     def _find(
         self,

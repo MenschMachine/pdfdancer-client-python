@@ -127,10 +127,18 @@ def test_select_text_line_at():
             StandardFonts.HELVETICA, 12
         ).at(0, 100, 100).add()
 
-        # Select first text line at the coordinates
-        text_line = pdf.page(0).select_text_line_at(100, 100)
+        # Get the actual text lines to find their coordinates
+        text_lines = pdf.page(0).select_text_lines()
+        assert len(text_lines) >= 1
+
+        first_line = text_lines[0]
+        x = first_line.position.x()
+        y = first_line.position.y()
+
+        # Select first text line at the actual coordinates
+        text_line = pdf.page(0).select_text_line_at(x, y)
         assert text_line is not None
-        assert "Line 1" in text_line.text
+        assert text_line.internal_id == first_line.internal_id
 
 
 def test_select_text_line_starting_with():

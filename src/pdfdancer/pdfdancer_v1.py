@@ -305,6 +305,175 @@ class PageClient:
             self.root._find_form_fields(position, tolerance)
         )
 
+    # Singular selection methods (convenience methods returning first match or None)
+
+    def select_paragraph_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[ParagraphObject]:
+        """
+        Select the first paragraph at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First ParagraphObject at the coordinates, or None if no match
+        """
+        results = self.select_paragraphs_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_paragraph_starting_with(self, text: str) -> Optional[ParagraphObject]:
+        """
+        Select the first paragraph starting with the specified text.
+
+        Args:
+            text: Text to search for at the start of paragraphs
+
+        Returns:
+            First ParagraphObject starting with the text, or None if no match
+        """
+        results = self.select_paragraphs_starting_with(text)
+        return results[0] if results else None
+
+    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
+        """
+        Select the first paragraph matching the specified regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against paragraph text
+
+        Returns:
+            First ParagraphObject matching the pattern, or None if no match
+        """
+        results = self.select_paragraphs_matching(pattern)
+        return results[0] if results else None
+
+    def select_text_line_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[TextLineObject]:
+        """
+        Select the first text line at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First TextLineObject at the coordinates, or None if no match
+        """
+        results = self.select_text_lines_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_text_line_starting_with(self, text: str) -> Optional[TextLineObject]:
+        """
+        Select the first text line starting with the specified text.
+
+        Args:
+            text: Text to search for at the start of text lines
+
+        Returns:
+            First TextLineObject starting with the text, or None if no match
+        """
+        results = self.select_text_lines_starting_with(text)
+        return results[0] if results else None
+
+    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
+        """
+        Select the first text line matching the specified regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against text line text
+
+        Returns:
+            First TextLineObject matching the pattern, or None if no match
+        """
+        results = self.select_text_lines_matching(pattern)
+        return results[0] if results else None
+
+    def select_image_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[ImageObject]:
+        """
+        Select the first image at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First ImageObject at the coordinates, or None if no match
+        """
+        results = self.select_images_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_form_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[FormObject]:
+        """
+        Select the first form at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First FormObject at the coordinates, or None if no match
+        """
+        results = self.select_forms_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_form_field_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[FormFieldObject]:
+        """
+        Select the first form field at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First FormFieldObject at the coordinates, or None if no match
+        """
+        results = self.select_form_fields_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_form_field_by_name(self, field_name: str) -> Optional[FormFieldObject]:
+        """
+        Select the first form field with the specified name.
+
+        Args:
+            field_name: Name of the form field to search for
+
+        Returns:
+            First FormFieldObject with the specified name, or None if no match
+        """
+        results = self.select_form_fields_by_name(field_name)
+        return results[0] if results else None
+
+    def select_path_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> Optional[PathObject]:
+        """
+        Select the first path at the specified coordinates.
+
+        Args:
+            x: X coordinate in points
+            y: Y coordinate in points
+            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
+
+        Returns:
+            First PathObject at the coordinates, or None if no match
+        """
+        results = self.select_paths_at(x, y, tolerance)
+        return results[0] if results else None
+
     @classmethod
     def from_ref(cls, root: "PDFDancer", page_ref: PageRef) -> "PageClient":
         page_client = PageClient(
@@ -1062,6 +1231,19 @@ class PDFDancer:
         position.text_pattern = pattern
         return self._to_paragraph_objects(self._find_paragraphs(position))
 
+    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
+        """
+        Select the first paragraph matching the specified regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against paragraph text
+
+        Returns:
+            First ParagraphObject matching the pattern, or None if no match
+        """
+        results = self.select_paragraphs_matching(pattern)
+        return results[0] if results else None
+
     def _find_paragraphs(
         self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[TextObjectRef]:
@@ -1153,6 +1335,19 @@ class PDFDancer:
         return self._to_form_field_objects(
             self._find_form_fields(Position.by_name(field_name))
         )
+
+    def select_form_field_by_name(self, field_name: str) -> Optional[FormFieldObject]:
+        """
+        Select the first form field with the specified name.
+
+        Args:
+            field_name: Name of the form field to search for
+
+        Returns:
+            First FormFieldObject with the specified name, or None if no match
+        """
+        results = self.select_form_fields_by_name(field_name)
+        return results[0] if results else None
 
     def _find_form_fields(
         self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE

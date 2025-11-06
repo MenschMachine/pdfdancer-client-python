@@ -99,7 +99,7 @@ DEFAULT_TOLERANCE = 0.01
 #     - backoff_factor=0.5: delays are 0.5s, 1s, 2s, 4s, ...
 DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
-    os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "1.0")
+    os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
 )
 
 

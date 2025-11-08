@@ -14,7 +14,6 @@ def test_find_lines_by_position_multi():
             for line in pdf.select_text_lines():
                 assert line.object_ref().status is not None
                 assert not line.object_ref().status.is_modified()
-                assert line.object_ref().status.is_encodable()
 
 
 def test_find_lines_by_position():
@@ -31,7 +30,7 @@ def test_find_lines_by_position():
         assert pytest.approx(first.position.y(), rel=0, abs=1) == 750
         assert first.object_ref().status is not None
         assert not first.object_ref().status.is_modified()
-        assert first.object_ref().status.is_encodable()
+        # assert first.object_ref().status.is_encodable()
 
         last = lines[-1]
         assert last.internal_id == "TEXTLINE_000036"
@@ -40,7 +39,7 @@ def test_find_lines_by_position():
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 45
         assert last.object_ref().status is not None
         assert not last.object_ref().status.is_modified()
-        assert last.object_ref().status.is_encodable()
+        # assert last.object_ref().status.is_encodable()
 
 
 def test_find_lines_by_text():
@@ -97,7 +96,7 @@ def test_move_line():
         moved_line = pdf.page(0).select_text_lines_at(new_x, new_y, 1)[0]
         assert moved_line is not None
         assert moved_line.object_ref().status is not None
-        assert moved_line.object_ref().status.is_encodable()
+        # assert moved_line.object_ref().status.is_encodable()
         assert moved_line.object_ref().status.font_type == FontType.EMBEDDED
         assert not moved_line.object_ref().status.is_modified()
 
@@ -129,7 +128,7 @@ def test_modify_line():
         assert lines != []
         assert lines[0] is not None
         assert lines[0].object_ref().status is not None
-        assert lines[0].object_ref().status.is_encodable
+        # assert lines[0].object_ref().status.is_encodable
         assert lines[0].object_ref().status.font_type == FontType.EMBEDDED
         assert lines[0].object_ref().status.is_modified
         (

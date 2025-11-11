@@ -24,6 +24,7 @@ from .exceptions import (
     FontNotFoundException,
     HttpClientException,
     PdfDancerException,
+    RateLimitException,
     SessionException,
     ValidationException,
 )
@@ -232,6 +233,30 @@ def _is_retryable_error(error: Exception) -> bool:
     ]
 
     return any(msg in error_msg for msg in retryable_messages)
+
+
+def _get_retry_after_delay(response: httpx.Response) -> Optional[int]:
+    """
+    Extract Retry-After delay from response headers.
+
+    Args:
+        response: HTTP response with potential Retry-After header
+
+    Returns:
+        Delay in seconds, or None if header not present or invalid
+    """
+    retry_after = response.headers.get("Retry-After")
+    if not retry_after:
+        return None
+
+    try:
+        # Retry-After can be either a number of seconds or an HTTP date
+        # Try parsing as integer first (seconds)
+        return int(retry_after)
+    except ValueError:
+        # If not a number, it might be an HTTP date - ignore for now
+        # Most rate limiting APIs use seconds
+        return None
 
 
 class PageClient:
@@ -708,38 +733,88 @@ class PDFDancer:
 
         Raises:
             HttpClientException: If token request fails
+            RateLimitException: If rate limit is exceeded
         """
+        # Create temporary client without authentication
+        temp_client = httpx.Client(http2=True, verify=not DISABLE_SSL_VERIFY)
+        max_retries = 3
+        retry_backoff_factor = 1.0
+
         try:
-            # Create temporary client without authentication
-            temp_client = httpx.Client(http2=True, verify=not DISABLE_SSL_VERIFY)
+            last_error: Optional[Exception] = None
+            attempt = 0
 
-            headers = {"X-Fingerprint": Fingerprint.generate()}
+            while attempt <= max_retries:
+                try:
+                    headers = {"X-Fingerprint": Fingerprint.generate()}
 
-            response = temp_client.post(
-                cls._cleanup_url_path(base_url, "/keys/anon"),
-                headers=headers,
-                timeout=timeout if timeout > 0 else None,
-            )
+                    response = temp_client.post(
+                        cls._cleanup_url_path(base_url, "/keys/anon"),
+                        headers=headers,
+                        timeout=timeout if timeout > 0 else None,
+                    )
 
-            response.raise_for_status()
-            token_data = response.json()
+                    response.raise_for_status()
+                    token_data = response.json()
 
-            # Extract token from response (matches Java AnonTokenResponse structure)
-            if isinstance(token_data, dict) and "token" in token_data:
-                return token_data["token"]
+                    # Extract token from response (matches Java AnonTokenResponse structure)
+                    if isinstance(token_data, dict) and "token" in token_data:
+                        return token_data["token"]
+                    else:
+                        raise HttpClientException("Invalid anonymous token response format")
+
+                except httpx.HTTPStatusError as e:
+                    # Handle 429 (rate limit) with retry
+                    if e.response.status_code == 429 and attempt < max_retries:
+                        retry_after = _get_retry_after_delay(e.response)
+                        if retry_after is not None:
+                            delay = retry_after
+                        else:
+                            # Use exponential backoff if no Retry-After header
+                            delay = retry_backoff_factor * (2 ** attempt)
+
+                        if DEBUG:
+                            print(
+                                f"{time.time()}|POST /keys/anon - Rate limit exceeded (429), "
+                                f"retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                            )
+                        time.sleep(delay)
+                        attempt += 1
+                        continue
+
+                    # Raise RateLimitException for 429 after exhausting retries
+                    if e.response.status_code == 429:
+                        retry_after = _get_retry_after_delay(e.response)
+                        raise RateLimitException(
+                            f"Rate limit exceeded when obtaining anonymous token",
+                            retry_after=retry_after,
+                            response=e.response,
+                        ) from None
+
+                    # Other HTTP status errors
+                    raise HttpClientException(
+                        f"Failed to obtain anonymous token: HTTP {e.response.status_code}",
+                        response=e.response,
+                        cause=e,
+                    ) from None
+                except httpx.RequestError as e:
+                    last_error = e
+                    raise HttpClientException(
+                        f"Failed to obtain anonymous token: {str(e)}", response=None, cause=e
+                    ) from None
+
+            # Should not reach here, but handle just in case
+            if last_error:
+                raise HttpClientException(
+                    f"Failed to obtain anonymous token after {max_retries + 1} attempts: {str(last_error)}",
+                    response=None,
+                    cause=last_error,
+                ) from None
             else:
-                raise HttpClientException("Invalid anonymous token response format")
-
-        except httpx.HTTPStatusError as e:
-            raise HttpClientException(
-                f"Failed to obtain anonymous token: HTTP {e.response.status_code}",
-                response=e.response,
-                cause=e,
-            ) from None
-        except httpx.RequestError as e:
-            raise HttpClientException(
-                f"Failed to obtain anonymous token: {str(e)}", response=None, cause=e
-            ) from None
+                raise HttpClientException(
+                    f"Failed to obtain anonymous token after {max_retries + 1} attempts",
+                    response=None,
+                )
         finally:
             temp_client.close()
 
@@ -1083,9 +1158,37 @@ class PDFDancer:
                 return session_id
 
             except httpx.HTTPStatusError as e:
-                # HTTP status errors are not retried (these are application-level errors)
+                # Handle 429 (rate limit) with retry
+                if e.response.status_code == 429 and attempt < self._max_retries:
+                    retry_after = _get_retry_after_delay(e.response)
+                    if retry_after is not None:
+                        delay = retry_after
+                    else:
+                        # Use exponential backoff if no Retry-After header
+                        delay = self._retry_backoff_factor * (2 ** attempt)
+
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|POST /session/create - Rate limit exceeded (429), "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+
+                # Other HTTP status errors are not retried (these are application-level errors)
                 self._handle_authentication_error(e.response)
                 error_message = self._extract_error_message(e.response)
+
+                # Raise RateLimitException for 429 after exhausting retries
+                if e.response.status_code == 429:
+                    retry_after = _get_retry_after_delay(e.response)
+                    raise RateLimitException(
+                        f"Rate limit exceeded: {error_message}",
+                        retry_after=retry_after,
+                        response=e.response,
+                    ) from None
+
                 raise HttpClientException(
                     f"Failed to create session: {error_message}",
                     response=e.response,
@@ -1220,9 +1323,37 @@ class PDFDancer:
                 return session_id
 
             except httpx.HTTPStatusError as e:
-                # HTTP status errors are not retried (these are application-level errors)
+                # Handle 429 (rate limit) with retry
+                if e.response.status_code == 429 and attempt < self._max_retries:
+                    retry_after = _get_retry_after_delay(e.response)
+                    if retry_after is not None:
+                        delay = retry_after
+                    else:
+                        # Use exponential backoff if no Retry-After header
+                        delay = self._retry_backoff_factor * (2 ** attempt)
+
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|POST /session/new - Rate limit exceeded (429), "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+
+                # Other HTTP status errors are not retried (these are application-level errors)
                 self._handle_authentication_error(e.response)
                 error_message = self._extract_error_message(e.response)
+
+                # Raise RateLimitException for 429 after exhausting retries
+                if e.response.status_code == 429:
+                    retry_after = _get_retry_after_delay(e.response)
+                    raise RateLimitException(
+                        f"Rate limit exceeded: {error_message}",
+                        retry_after=retry_after,
+                        response=e.response,
+                    ) from None
+
                 raise HttpClientException(
                     f"Failed to create blank PDF session: {error_message}",
                     response=e.response,
@@ -1327,9 +1458,37 @@ class PDFDancer:
                 return response
 
             except httpx.HTTPStatusError as e:
-                # HTTP status errors are not retried (these are application-level errors)
+                # Handle 429 (rate limit) with retry
+                if e.response.status_code == 429 and attempt < self._max_retries:
+                    retry_after = _get_retry_after_delay(e.response)
+                    if retry_after is not None:
+                        delay = retry_after
+                    else:
+                        # Use exponential backoff if no Retry-After header
+                        delay = self._retry_backoff_factor * (2 ** attempt)
+
+                    if DEBUG:
+                        print(
+                            f"{time.time()}|{method} {path} - Rate limit exceeded (429), "
+                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                    time.sleep(delay)
+                    attempt += 1
+                    continue
+
+                # Other HTTP status errors are not retried (these are application-level errors)
                 self._handle_authentication_error(e.response)
                 error_message = self._extract_error_message(e.response)
+
+                # Raise RateLimitException for 429 after exhausting retries
+                if e.response.status_code == 429:
+                    retry_after = _get_retry_after_delay(e.response)
+                    raise RateLimitException(
+                        f"Rate limit exceeded: {error_message}",
+                        retry_after=retry_after,
+                        response=e.response,
+                    ) from None
+
                 raise HttpClientException(
                     f"API request failed: {error_message}", response=e.response, cause=e
                 ) from None

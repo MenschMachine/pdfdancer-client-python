@@ -10,6 +10,7 @@ from .exceptions import (
     FontNotFoundException,
     HttpClientException,
     PdfDancerException,
+    RateLimitException,
     SessionException,
     ValidationException,
 )
@@ -80,6 +81,7 @@ __all__ = [
     "ValidationException",
     "HttpClientException",
     "SessionException",
+    "RateLimitException",
     "set_ssl_verify",
 ]
 

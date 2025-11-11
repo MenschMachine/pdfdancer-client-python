@@ -62,3 +62,20 @@ class ValidationException(PdfDancerException):
     """
 
     pass
+
+
+class RateLimitException(PdfDancerException):
+    """
+    Exception raised when the API rate limit is exceeded (HTTP 429).
+    Includes retry-after information if provided by the server.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        retry_after: Optional[int] = None,
+        response: Optional[httpx.Response] = None,
+    ):
+        super().__init__(message)
+        self.retry_after = retry_after
+        self.response = response

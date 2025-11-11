@@ -114,7 +114,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(

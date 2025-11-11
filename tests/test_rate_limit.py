@@ -1,6 +1,7 @@
 """
 Tests for 429 rate limit handling
 """
+
 import time
 from unittest.mock import Mock, patch
 
@@ -47,7 +48,9 @@ class TestRateLimitHandling:
         assert delay is None
 
     @patch("pdfdancer.pdfdancer_v1.httpx.Client")
-    def test_rate_limit_exception_raised_after_retries_exhausted(self, mock_client_class):
+    def test_rate_limit_exception_raised_after_retries_exhausted(
+        self, mock_client_class
+    ):
         """Test that RateLimitException is raised after max retries for 429"""
         from pdfdancer import PDFDancer
 
@@ -81,7 +84,9 @@ class TestRateLimitHandling:
 
     @patch("pdfdancer.pdfdancer_v1.httpx.Client")
     @patch("pdfdancer.pdfdancer_v1.time.sleep")
-    def test_rate_limit_retry_with_exponential_backoff(self, mock_sleep, mock_client_class):
+    def test_rate_limit_retry_with_exponential_backoff(
+        self, mock_sleep, mock_client_class
+    ):
         """Test that 429 responses retry with exponential backoff when no Retry-After"""
         from pdfdancer import PDFDancer
 
@@ -137,7 +142,9 @@ class TestRateLimitHandling:
 
     @patch("pdfdancer.pdfdancer_v1.httpx.Client")
     @patch("pdfdancer.pdfdancer_v1.time.sleep")
-    def test_rate_limit_retry_uses_retry_after_header(self, mock_sleep, mock_client_class):
+    def test_rate_limit_retry_uses_retry_after_header(
+        self, mock_sleep, mock_client_class
+    ):
         """Test that 429 responses use Retry-After header value for delay"""
         from pdfdancer import PDFDancer
 

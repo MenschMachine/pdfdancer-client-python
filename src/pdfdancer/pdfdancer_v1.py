@@ -762,7 +762,9 @@ class PDFDancer:
                     if isinstance(token_data, dict) and "token" in token_data:
                         return token_data["token"]
                     else:
-                        raise HttpClientException("Invalid anonymous token response format")
+                        raise HttpClientException(
+                            "Invalid anonymous token response format"
+                        )
 
                 except httpx.HTTPStatusError as e:
                     # Handle 429 (rate limit) with retry
@@ -772,13 +774,13 @@ class PDFDancer:
                             delay = retry_after
                         else:
                             # Use exponential backoff if no Retry-After header
-                            delay = retry_backoff_factor * (2 ** attempt)
+                            delay = retry_backoff_factor * (2**attempt)
 
                         # Always log 429 to stderr for visibility
                         print(
                             f"Rate limit (429) on POST /keys/anon - retrying in {delay}s "
                             f"(attempt {attempt + 1}/{max_retries})",
-                            file=sys.stderr
+                            file=sys.stderr,
                         )
                         if DEBUG:
                             print(
@@ -793,11 +795,11 @@ class PDFDancer:
                     if e.response.status_code == 429:
                         retry_after = _get_retry_after_delay(e.response)
                         print(
-                            f"Rate limit (429) on POST /keys/anon - max retries exhausted",
-                            file=sys.stderr
+                            "Rate limit (429) on POST /keys/anon - max retries exhausted",
+                            file=sys.stderr,
                         )
                         raise RateLimitException(
-                            f"Rate limit exceeded when obtaining anonymous token",
+                            "Rate limit exceeded when obtaining anonymous token",
                             retry_after=retry_after,
                             response=e.response,
                         ) from None
@@ -811,7 +813,9 @@ class PDFDancer:
                 except httpx.RequestError as e:
                     last_error = e
                     raise HttpClientException(
-                        f"Failed to obtain anonymous token: {str(e)}", response=None, cause=e
+                        f"Failed to obtain anonymous token: {str(e)}",
+                        response=None,
+                        cause=e,
                     ) from None
 
             # Should not reach here, but handle just in case
@@ -1115,7 +1119,9 @@ class PDFDancer:
                     b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n'
                 )
                 body_parts.append(b"Content-Type: application/pdf\r\n")
-                body_parts.append(b"\r\n")  # End of headers, no Content-Transfer-Encoding
+                body_parts.append(
+                    b"\r\n"
+                )  # End of headers, no Content-Transfer-Encoding
                 body_parts.append(self._pdf_bytes)
                 body_parts.append(b"\r\n")
                 body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
@@ -1128,11 +1134,17 @@ class PDFDancer:
                 original_size = len(uncompressed_body)
                 compressed_size = len(compressed_body)
                 compression_ratio = (
-                    (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
+                    (1 - compressed_size / original_size) * 100
+                    if original_size > 0
+                    else 0
                 )
 
                 if DEBUG:
-                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    retry_info = (
+                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                        if attempt > 0
+                        else ""
+                    )
                     print(
                         f"{time.time()}|POST /session/create{retry_info} - original size: {original_size} bytes, "
                         f"compressed size: {compressed_size} bytes, "
@@ -1176,13 +1188,13 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
                         f"Rate limit (429) on POST /session/create - retrying in {delay}s "
                         f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr
+                        file=sys.stderr,
                     )
                     if DEBUG:
                         print(
@@ -1201,8 +1213,8 @@ class PDFDancer:
                 if e.response.status_code == 429:
                     retry_after = _get_retry_after_delay(e.response)
                     print(
-                        f"Rate limit (429) on POST /session/create - max retries exhausted",
-                        file=sys.stderr
+                        "Rate limit (429) on POST /session/create - max retries exhausted",
+                        file=sys.stderr,
                     )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
@@ -1221,7 +1233,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/create - Retryable error: {str(e)}, "
@@ -1281,9 +1293,7 @@ class PDFDancer:
             except ValueError as exc:
                 raise ValidationException(str(exc)) from exc
             except TypeError:
-                raise ValidationException(
-                    f"Invalid page_size type: {type(page_size)}"
-                )
+                raise ValidationException(f"Invalid page_size type: {type(page_size)}")
 
         # Handle orientation
         if orientation is not None:
@@ -1311,7 +1321,11 @@ class PDFDancer:
                 request_body = json.dumps(request_data)
                 request_size = len(request_body.encode("utf-8"))
                 if DEBUG:
-                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    retry_info = (
+                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                        if attempt > 0
+                        else ""
+                    )
                     print(
                         f"{time.time()}|POST /session/new{retry_info} - request size: {request_size} bytes"
                     )
@@ -1351,13 +1365,13 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
                         f"Rate limit (429) on POST /session/new - retrying in {delay}s "
                         f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr
+                        file=sys.stderr,
                     )
                     if DEBUG:
                         print(
@@ -1376,8 +1390,8 @@ class PDFDancer:
                 if e.response.status_code == 429:
                     retry_after = _get_retry_after_delay(e.response)
                     print(
-                        f"Rate limit (429) on POST /session/new - max retries exhausted",
-                        file=sys.stderr
+                        "Rate limit (429) on POST /session/new - max retries exhausted",
+                        file=sys.stderr,
                     )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
@@ -1396,7 +1410,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/new - Retryable error: {str(e)}, "
@@ -1408,7 +1422,9 @@ class PDFDancer:
                 else:
                     # Non-retryable error or exhausted retries
                     raise HttpClientException(
-                        f"Failed to create blank PDF session: {str(e)}", response=None, cause=e
+                        f"Failed to create blank PDF session: {str(e)}",
+                        response=None,
+                        cause=e,
                     ) from None
 
         # Should not reach here, but handle just in case
@@ -1451,7 +1467,11 @@ class PDFDancer:
                     request_body = json.dumps(data)
                     request_size = len(request_body.encode("utf-8"))
                 if DEBUG:
-                    retry_info = f" (attempt {attempt + 1}/{self._max_retries + 1})" if attempt > 0 else ""
+                    retry_info = (
+                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                        if attempt > 0
+                        else ""
+                    )
                     print(
                         f"{time.time()}|{method} {path}{retry_info} - request size: {request_size} bytes"
                     )
@@ -1496,13 +1516,13 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
                         f"Rate limit (429) on {method} {path} - retrying in {delay}s "
                         f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr
+                        file=sys.stderr,
                     )
                     if DEBUG:
                         print(
@@ -1522,7 +1542,7 @@ class PDFDancer:
                     retry_after = _get_retry_after_delay(e.response)
                     print(
                         f"Rate limit (429) on {method} {path} - max retries exhausted",
-                        file=sys.stderr
+                        file=sys.stderr,
                     )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
@@ -1539,7 +1559,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|{method} {path} - Retryable error: {str(e)}, "

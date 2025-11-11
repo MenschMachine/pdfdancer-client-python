@@ -107,6 +107,7 @@ class TestRateLimitHandling:
         mock_token_response = Mock(spec=httpx.Response)
         mock_token_response.status_code = 200
         mock_token_response.headers = {}
+        mock_token_response.content = b'{"token": "test-token"}'
         mock_token_response.json.return_value = {"token": "test-token"}
 
         mock_error = httpx.HTTPStatusError(
@@ -165,6 +166,7 @@ class TestRateLimitHandling:
         mock_token_response = Mock(spec=httpx.Response)
         mock_token_response.status_code = 200
         mock_token_response.headers = {}
+        mock_token_response.content = b'{"token": "test-token"}'
         mock_token_response.json.return_value = {"token": "test-token"}
 
         mock_error = httpx.HTTPStatusError(

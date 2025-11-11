@@ -11,6 +11,7 @@ import gzip
 import json
 import logging
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -773,6 +774,12 @@ class PDFDancer:
                             # Use exponential backoff if no Retry-After header
                             delay = retry_backoff_factor * (2 ** attempt)
 
+                        # Always log 429 to stderr for visibility
+                        print(
+                            f"Rate limit (429) on POST /keys/anon - retrying in {delay}s "
+                            f"(attempt {attempt + 1}/{max_retries})",
+                            file=sys.stderr
+                        )
                         if DEBUG:
                             print(
                                 f"{time.time()}|POST /keys/anon - Rate limit exceeded (429), "
@@ -785,6 +792,10 @@ class PDFDancer:
                     # Raise RateLimitException for 429 after exhausting retries
                     if e.response.status_code == 429:
                         retry_after = _get_retry_after_delay(e.response)
+                        print(
+                            f"Rate limit (429) on POST /keys/anon - max retries exhausted",
+                            file=sys.stderr
+                        )
                         raise RateLimitException(
                             f"Rate limit exceeded when obtaining anonymous token",
                             retry_after=retry_after,
@@ -1167,6 +1178,12 @@ class PDFDancer:
                         # Use exponential backoff if no Retry-After header
                         delay = self._retry_backoff_factor * (2 ** attempt)
 
+                    # Always log 429 to stderr for visibility
+                    print(
+                        f"Rate limit (429) on POST /session/create - retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{self._max_retries})",
+                        file=sys.stderr
+                    )
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/create - Rate limit exceeded (429), "
@@ -1183,6 +1200,10 @@ class PDFDancer:
                 # Raise RateLimitException for 429 after exhausting retries
                 if e.response.status_code == 429:
                     retry_after = _get_retry_after_delay(e.response)
+                    print(
+                        f"Rate limit (429) on POST /session/create - max retries exhausted",
+                        file=sys.stderr
+                    )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
                         retry_after=retry_after,
@@ -1332,6 +1353,12 @@ class PDFDancer:
                         # Use exponential backoff if no Retry-After header
                         delay = self._retry_backoff_factor * (2 ** attempt)
 
+                    # Always log 429 to stderr for visibility
+                    print(
+                        f"Rate limit (429) on POST /session/new - retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{self._max_retries})",
+                        file=sys.stderr
+                    )
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/new - Rate limit exceeded (429), "
@@ -1348,6 +1375,10 @@ class PDFDancer:
                 # Raise RateLimitException for 429 after exhausting retries
                 if e.response.status_code == 429:
                     retry_after = _get_retry_after_delay(e.response)
+                    print(
+                        f"Rate limit (429) on POST /session/new - max retries exhausted",
+                        file=sys.stderr
+                    )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
                         retry_after=retry_after,
@@ -1467,6 +1498,12 @@ class PDFDancer:
                         # Use exponential backoff if no Retry-After header
                         delay = self._retry_backoff_factor * (2 ** attempt)
 
+                    # Always log 429 to stderr for visibility
+                    print(
+                        f"Rate limit (429) on {method} {path} - retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{self._max_retries})",
+                        file=sys.stderr
+                    )
                     if DEBUG:
                         print(
                             f"{time.time()}|{method} {path} - Rate limit exceeded (429), "
@@ -1483,6 +1520,10 @@ class PDFDancer:
                 # Raise RateLimitException for 429 after exhausting retries
                 if e.response.status_code == 429:
                     retry_after = _get_retry_after_delay(e.response)
+                    print(
+                        f"Rate limit (429) on {method} {path} - max retries exhausted",
+                        file=sys.stderr
+                    )
                     raise RateLimitException(
                         f"Rate limit exceeded: {error_message}",
                         retry_after=retry_after,

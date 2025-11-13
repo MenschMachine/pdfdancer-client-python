@@ -43,7 +43,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://www.pdfdancer.com/"
-Repository = "https://github.com/MenschMachine/pdfdancer-client-python"
+Documentation = "https://www.pdfdancer.com/"
+Source = "https://github.com/MenschMachine/pdfdancer-client-python"
+Issues = "https://github.com/MenschMachine/pdfdancer-client-python/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

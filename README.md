@@ -1,10 +1,11 @@
 # PDFDancer Python Client
 
-**Getting Started with PDFDancer**
+![PDFDancer logo](media/logo-orange-60h.webp)
 
-PDFDancer gives you pixel-perfect programmatic control over any PDF document from Python. Locate existing elements by
-coordinates or text, adjust them precisely, add brand-new content, and ship the modified PDF in memory or on disk. The
-same API is also available for TypeScript and Java, so teams can orchestrate identical PDF workflows across stacks.
+**Stop fighting PDFs. Start editing them.**
+
+Edit text in real-world PDFs—even ones you didn't create. Move images, reposition headers, and change fonts with
+pixel-perfect control from Python. The same API is also available for TypeScript and Java.
 
 > Need the raw API schema? The latest OpenAPI description lives in `docs/openapi.yml` and is published at
 > https://bucket.pdfdancer.com/api-doc/development-0.0.yml.
@@ -19,7 +20,7 @@ same API is also available for TypeScript and Java, so teams can orchestrate ide
 
 ## What Makes PDFDancer Different
 
-- **Edit any PDF**: Work with documents from customers, governments, or vendors—not just ones you generated.
+- **Edit text in real-world PDFs**: Work with documents from customers, governments, or vendors—even ones you didn't create.
 - **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
 - **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
 - **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.

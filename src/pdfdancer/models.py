@@ -1102,6 +1102,45 @@ class AddRequest:
                 "lineSpacings": line_spacings,
                 "font": _font_to_dict(obj.font),
             }
+        elif isinstance(obj, TextLine):
+
+            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
+                if font:
+                    return {"name": font.name, "size": font.size}
+                return None
+
+            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
+                if color:
+                    return {
+                        "red": color.r,
+                        "green": color.g,
+                        "blue": color.b,
+                        "alpha": color.a,
+                    }
+                return None
+
+            text_element = {
+                "text": obj.text,
+                "font": _font_to_dict(obj.font),
+                "color": _color_to_dict(obj.color),
+                "position": (
+                    FindRequest._position_to_dict(obj.position)
+                    if obj.position
+                    else None
+                ),
+            }
+
+            return {
+                "type": "TEXT_LINE",
+                "position": (
+                    FindRequest._position_to_dict(obj.position)
+                    if obj.position
+                    else None
+                ),
+                "textElements": [text_element],
+                "font": _font_to_dict(obj.font),
+                "color": _color_to_dict(obj.color),
+            }
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 

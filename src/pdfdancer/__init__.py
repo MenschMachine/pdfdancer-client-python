@@ -43,11 +43,13 @@ from .models import (
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphBuilder
 from .path_builder import BezierBuilder, LineBuilder, PathBuilder
+from .text_line_builder import TextLineBuilder
 
 __version__ = "1.0.0"
 __all__ = [
     "PDFDancer",
     "ParagraphBuilder",
+    "TextLineBuilder",
     "PageBuilder",
     "PathBuilder",
     "LineBuilder",

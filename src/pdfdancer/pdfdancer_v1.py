@@ -58,6 +58,7 @@ from .models import (
     Position,
     PositionMode,
     ShapeType,
+    TextLine,
     TextObjectRef,
 )
 from .page_builder import PageBuilder
@@ -2197,6 +2198,33 @@ class PDFDancer:
 
         request_data = ModifyTextRequest(object_ref, new_text).to_dict()
         response = self._make_request("PUT", "/pdf/text/line", data=request_data)
+        result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
+        self._invalidate_snapshots()
+        return result
+
+    def _modify_text_line_full(
+        self, object_ref: ObjectRef, new_text_line: TextLine
+    ) -> CommandResult:
+        """
+        Modifies a text line object with full styling (font, color, position).
+
+        Args:
+            object_ref: Reference to the text line to modify
+            new_text_line: New text line object with styling
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        if object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+        if new_text_line is None:
+            raise ValidationException("New text line cannot be null")
+
+        # Use /pdf/modify endpoint for full object modification
+        request_data = ModifyRequest(object_ref, new_text_line).to_dict()
+        response = self._make_request("PUT", "/pdf/modify", data=request_data)
         result = CommandResult.from_dict(response.json())
 
         # Invalidate snapshot caches after mutation

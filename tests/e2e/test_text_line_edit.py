@@ -1,7 +1,7 @@
 import pytest
-
 from pdfdancer import Color
 from pdfdancer.pdfdancer_v1 import PDFDancer
+
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -15,8 +15,8 @@ def test_text_line_edit_text_only():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -41,8 +41,7 @@ def test_text_line_edit_font_only():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
         original_text = text_line.text
@@ -63,8 +62,7 @@ def test_text_line_edit_color_only():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
         original_text = text_line.text
@@ -85,8 +83,7 @@ def test_text_line_edit_move_only():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -113,8 +110,7 @@ def test_text_line_edit_text_and_font():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -141,8 +137,7 @@ def test_text_line_edit_all_properties():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -165,8 +160,7 @@ def test_text_line_edit_line_spacing_fails():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -174,8 +168,8 @@ def test_text_line_edit_line_spacing_fails():
         from pdfdancer.types import UnsupportedOperation
 
         with pytest.raises(
-            UnsupportedOperation,
-            match="Line spacing changes are not supported for individual text lines",
+                UnsupportedOperation,
+                match="Line spacing changes are not supported for individual text lines",
         ):
             with text_line.edit() as editor:
                 editor.line_spacing(2.0)
@@ -190,8 +184,7 @@ def test_text_line_edit_chaining():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -219,8 +212,7 @@ def test_text_line_edit_with_exception_no_apply():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -245,8 +237,7 @@ def test_text_line_edit_multiple_sequential():
         text_lines = pdf.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
         with text_line.edit() as editor:
@@ -277,8 +268,7 @@ def test_text_line_edit_vs_manual_apply():
         text_lines = pdf1.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 
@@ -292,8 +282,7 @@ def test_text_line_edit_vs_manual_apply():
         text_lines = pdf2.page(0).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
+        assert len(text_lines) >= 1
 
         text_line = text_lines[0]
 

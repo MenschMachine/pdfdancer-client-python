@@ -1130,7 +1130,8 @@ class AddRequest:
                 ),
             }
 
-            return {
+            # TEXT_LINE structure matches paragraph line format (textElements only)
+            result = {
                 "type": "TEXT_LINE",
                 "position": (
                     FindRequest._position_to_dict(obj.position)
@@ -1138,9 +1139,15 @@ class AddRequest:
                     else None
                 ),
                 "textElements": [text_element],
-                "font": _font_to_dict(obj.font),
-                "color": _color_to_dict(obj.color),
             }
+
+            # Only include top-level font/color if they are not None
+            if obj.font:
+                result["font"] = _font_to_dict(obj.font)
+            if obj.color:
+                result["color"] = _color_to_dict(obj.color)
+
+            return result
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 

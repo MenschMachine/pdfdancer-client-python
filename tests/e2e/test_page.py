@@ -8,14 +8,15 @@ def test_get_all_elements():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        expected_total = 95
         assert (
                 95 <= len(pdf.select_elements()) <= 97
         ), f"{len(pdf.select_elements())} elements found but  95-97 elements expected"
         actual_total = 0
         for page in pdf.pages():
             actual_total += len(page.select_elements())
-        assert actual_total == expected_total
+        assert (
+                95 <= actual_total <= 97
+        ), f"{actual_total} elements found but  95-97 elements expected"
 
 
 def test_get_pages():

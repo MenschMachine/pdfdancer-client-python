@@ -225,10 +225,21 @@ class TextLineEdit(BaseTextEdit):
         )
 
         # Apply modifications to builder
+        # IMPORTANT: Always explicitly set text to ensure it's preserved
         if self._new_text is not None:
             builder.text(self._new_text)
+        elif hasattr(self._object_ref, "text") and self._object_ref.text:
+            # Preserve original text when only changing font/color/position
+            builder.text(self._object_ref.text)
+
+        # IMPORTANT: Always explicitly set font to ensure it's preserved
         if self._font_name is not None and self._font_size is not None:
             builder.font(self._font_name, self._font_size)
+        elif hasattr(self._object_ref, "font_name") and hasattr(self._object_ref, "font_size"):
+            if self._object_ref.font_name and self._object_ref.font_size:
+                # Preserve original font when only changing color/position
+                builder.font(self._object_ref.font_name, self._object_ref.font_size)
+
         if self._color is not None:
             builder.color(self._color)
         if self._position is not None:

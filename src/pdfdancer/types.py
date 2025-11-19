@@ -160,14 +160,14 @@ class BaseTextEdit:
 
 class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
-        # Text lines don't support line spacing - ignore if set
+        # Line spacing is NOT supported for text lines - fail hard
         if self._line_spacing is not None:
-            print(
-                "WARNING: Line spacing is not supported for text lines and will be ignored",
-                file=sys.stderr,
+            raise UnsupportedOperation(
+                "Line spacing changes are not supported for individual text lines. "
+                "Line spacing can only be modified on paragraphs, not individual text lines."
             )
 
-        # Simple text-only change
+        # If only text changed (no font, color, or position), use simple text modification
         only_text_changed = (
             self._new_text is not None
             and self._font_name is None
@@ -185,7 +185,7 @@ class TextLineEdit(BaseTextEdit):
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
 
-        # Position-only change (move operation)
+        # If only position changed (move operation)
         only_move = (
             self._position is not None
             and self._new_text is None
@@ -216,14 +216,53 @@ class TextLineEdit(BaseTextEdit):
             result = self._target_obj._client._move(self._object_ref, position)
             return result
 
-        # Text lines with font/color styling changes are not supported by the PDF API
-        # Text lines are components of paragraphs and can only have their text modified
-        # or be moved, but not have their styling changed independently
-        raise UnsupportedOperation(
-            "Text lines can only have their text content modified or be moved. "
-            "Font and color changes are not supported for individual text lines. "
-            "To modify text styling, please modify the parent paragraph instead."
+        # For font/color changes or combined operations, use TextLineBuilder
+        # This ensures proper handling of font/color fallbacks just like ParagraphEditSession
+        from .text_line_builder import TextLineBuilder
+
+        builder = TextLineBuilder.from_object_ref(
+            self._target_obj._client, self._object_ref
         )
+
+        # Apply modifications to builder
+        # IMPORTANT: Always explicitly set text to ensure it's preserved
+        if self._new_text is not None:
+            builder.text(self._new_text)
+        elif hasattr(self._object_ref, "text") and self._object_ref.text:
+            # Preserve original text when only changing font/color/position
+            builder.text(self._object_ref.text)
+
+        # IMPORTANT: Always explicitly set font to ensure it's preserved
+        if self._font_name is not None and self._font_size is not None:
+            builder.font(self._font_name, self._font_size)
+        elif hasattr(self._object_ref, "font_name") and hasattr(self._object_ref, "font_size"):
+            if self._object_ref.font_name and self._object_ref.font_size:
+                # Preserve original font when only changing color/position
+                builder.font(self._object_ref.font_name, self._object_ref.font_size)
+
+        if self._color is not None:
+            builder.color(self._color)
+        if self._position is not None:
+            x = self._position.x()
+            y = self._position.y()
+            if x is None or y is None:
+                raise ValidationException("Position must have x and y coordinates")
+            page_index = (
+                self._object_ref.position.page_index
+                if self._object_ref.position
+                else None
+            )
+            if page_index is None:
+                raise ValidationException(
+                    "Text line position must include a page index"
+                )
+            builder.at(page_index, x, y)
+
+        # Use builder's modify method which handles all the complexity
+        result = builder.modify(self._object_ref)
+        if result.warning:
+            print(f"WARNING: {result.warning}", file=sys.stderr)
+        return result
 
 
 class ParagraphObject(PDFObjectBase):

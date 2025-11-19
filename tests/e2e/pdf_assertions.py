@@ -43,7 +43,9 @@ class PDFAssertions(object):
 
         return self
 
-    def assert_paragraph_is_at(self, text, x, y, page=0, epsilon=2): # adjust for baseline vs bounding box differences
+    def assert_paragraph_is_at(
+        self, text, x, y, page=0, epsilon=2
+    ):  # adjust for baseline vs bounding box differences
         paragraphs = self.pdf.page(page).select_paragraphs_matching(f".*{text}.*")
         assert len(paragraphs) == 1, f"Expected 1 paragraph but got {len(paragraphs)}"
         reference = paragraphs[0].object_ref()

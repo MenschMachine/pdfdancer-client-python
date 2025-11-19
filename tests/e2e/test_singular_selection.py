@@ -53,7 +53,9 @@ def test_select_paragraph_starting_with():
         assert paragraph is not None
         assert paragraph.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(paragraph.position.x(), rel=0, abs=1) == 64.7
-        assert pytest.approx(paragraph.position.y(), rel=0, abs=2) == 642 # adjust for baseline/bounding box
+        assert (
+            pytest.approx(paragraph.position.y(), rel=0, abs=2) == 642
+        )  # adjust for baseline/bounding box
 
 
 def test_select_paragraph_starting_with_no_match():

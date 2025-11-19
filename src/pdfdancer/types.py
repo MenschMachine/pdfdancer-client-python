@@ -160,12 +160,23 @@ class BaseTextEdit:
 
 class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
-        if (
-            self._line_spacing is None
-            and self._font_size is None
+        # Text lines don't support line spacing - ignore if set
+        if self._line_spacing is not None:
+            print(
+                "WARNING: Line spacing is not supported for text lines and will be ignored",
+                file=sys.stderr,
+            )
+
+        # Simple text-only change
+        only_text_changed = (
+            self._new_text is not None
             and self._font_name is None
+            and self._font_size is None
             and self._color is None
-        ):
+            and self._position is None
+        )
+
+        if only_text_changed:
             # noinspection PyProtectedMember
             result = self._target_obj._client._modify_text_line(
                 self._object_ref, self._new_text
@@ -173,10 +184,46 @@ class TextLineEdit(BaseTextEdit):
             if result.warning:
                 print(f"WARNING: {result.warning}", file=sys.stderr)
             return result
-        else:
+
+        # Position-only change (move operation)
+        only_move = (
+            self._position is not None
+            and self._new_text is None
+            and self._font_name is None
+            and self._font_size is None
+            and self._color is None
+        )
+
+        if only_move:
+            page_index = (
+                self._object_ref.position.page_index
+                if self._object_ref.position
+                else None
+            )
+            if page_index is None:
+                raise ValidationException(
+                    "Text line position must include a page index to move"
+                )
+
+            # Extract x, y from self._position
+            x = self._position.x()
+            y = self._position.y()
+            if x is None or y is None:
+                raise ValidationException("Position must have x and y coordinates")
+
+            position = Position.at_page_coordinates(page_index, x, y)
             # noinspection PyProtectedMember
-            # return self._target_obj._client._modify_text_line(self._object_ref, new_textline)
-            raise UnsupportedOperation("Full TextLineEdit not implemented - TODO")
+            result = self._target_obj._client._move(self._object_ref, position)
+            return result
+
+        # Text lines with font/color styling changes are not supported by the PDF API
+        # Text lines are components of paragraphs and can only have their text modified
+        # or be moved, but not have their styling changed independently
+        raise UnsupportedOperation(
+            "Text lines can only have their text content modified or be moved. "
+            "Font and color changes are not supported for individual text lines. "
+            "To modify text styling, please modify the parent paragraph instead."
+        )
 
 
 class ParagraphObject(PDFObjectBase):

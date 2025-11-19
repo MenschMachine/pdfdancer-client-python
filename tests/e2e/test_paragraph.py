@@ -1,7 +1,7 @@
 import pytest
+
 from pdfdancer import Color, FontType, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
-
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -20,7 +20,9 @@ def test_find_paragraphs_by_position():
         assert first.internal_id == "PARAGRAPH_000004"
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
-        assert pytest.approx(first.position.y(), rel=0, abs=1) == 749  # adjusted for baseline/bounding box
+        assert (
+            pytest.approx(first.position.y(), rel=0, abs=1) == 749
+        )  # adjusted for baseline/bounding box
 
         last = paras_page0[-1]
         assert last.internal_id == "PARAGRAPH_000006"
@@ -45,7 +47,9 @@ def test_find_paragraphs_by_text():
         p = paras[0]
         assert p.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
-        assert pytest.approx(p.position.y(), rel=0, abs=2) == 642  # adjust for baseline/bounding box
+        assert (
+            pytest.approx(p.position.y(), rel=0, abs=2) == 642
+        )  # adjust for baseline/bounding box
 
 
 def test_select_paragraphs_matching_document_level():
@@ -114,7 +118,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(

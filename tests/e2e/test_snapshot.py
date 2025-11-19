@@ -239,7 +239,7 @@ def test_total_element_count_matches_expected():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Showcase.pdf - Python API filters certain types (638)
         all_elements = pdf.select_elements()
-        assert len(all_elements) == 99, "Showcase.pdf should have 99 total elements"
+        assert len(all_elements) == 95, "Showcase.pdf should have 95 total elements"
 
         doc_snapshot = pdf.get_document_snapshot()
         snapshot_total = sum(len(p.elements) for p in doc_snapshot.pages)

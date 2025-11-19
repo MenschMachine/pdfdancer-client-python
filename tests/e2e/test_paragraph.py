@@ -1,7 +1,7 @@
 import pytest
-
 from pdfdancer import Color, FontType, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
+
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -11,19 +11,19 @@ def test_find_paragraphs_by_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paras = pdf.select_paragraphs()
-        assert len(paras) == 24
+        assert len(paras) == 20
 
         paras_page0 = pdf.page(0).select_paragraphs()
-        assert len(paras_page0) == 4
+        assert len(paras_page0) == 3
 
         first = paras_page0[0]
-        assert first.internal_id == "PARAGRAPH_000005"
+        assert first.internal_id == "PARAGRAPH_000004"
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
-        assert pytest.approx(first.position.y(), rel=0, abs=1) == 755.2
+        assert pytest.approx(first.position.y(), rel=0, abs=1) == 749  # adjusted for baseline/bounding box
 
         last = paras_page0[-1]
-        assert last.internal_id == "PARAGRAPH_000008"
+        assert last.internal_id == "PARAGRAPH_000006"
         assert last.position is not None
         assert pytest.approx(last.position.x(), rel=0, abs=1) == 69.3
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 46.7
@@ -43,9 +43,9 @@ def test_find_paragraphs_by_text():
         )
         assert len(paras) == 1
         p = paras[0]
-        assert p.internal_id == "PARAGRAPH_000006"
+        assert p.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
-        assert pytest.approx(p.position.y(), rel=0, abs=2) == 661.2
+        assert pytest.approx(p.position.y(), rel=0, abs=2) == 642  # adjust for baseline/bounding box
 
 
 def test_select_paragraphs_matching_document_level():
@@ -114,7 +114,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(

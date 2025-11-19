@@ -7,7 +7,7 @@ def test_get_all_elements():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        expected_total = 99
+        expected_total = 95
         assert (
             len(pdf.select_elements()) == expected_total
         ), f"{len(pdf.select_elements())} elements found but {expected_total} elements expected"

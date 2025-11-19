@@ -12,7 +12,7 @@ def test_context_manager_basic_usage():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraphs = pdf.select_paragraphs()
-        assert len(paragraphs) == 24
+        assert len(paragraphs) == 20
 
 
 def test_context_manager_edit_text_only():

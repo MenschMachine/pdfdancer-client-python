@@ -238,6 +238,10 @@ class TextLineBuilder:
             final_color = self._original_color or DEFAULT_TEXT_COLOR
         else:
             final_color = self._original_color
+
+        # Ensure color is never None
+        if final_color is None:
+            final_color = DEFAULT_TEXT_COLOR
         self._text_line.color = final_color
 
         return self._text_line

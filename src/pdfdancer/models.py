@@ -1119,16 +1119,17 @@ class AddRequest:
                     }
                 return None
 
+            # Build textElement with only non-null fields
             text_element = {
                 "text": obj.text,
-                "font": _font_to_dict(obj.font),
-                "color": _color_to_dict(obj.color),
-                "position": (
-                    FindRequest._position_to_dict(obj.position)
-                    if obj.position
-                    else None
-                ),
             }
+
+            if obj.font:
+                text_element["font"] = _font_to_dict(obj.font)
+            if obj.color:
+                text_element["color"] = _color_to_dict(obj.color)
+            if obj.position:
+                text_element["position"] = FindRequest._position_to_dict(obj.position)
 
             # TEXT_LINE structure matches paragraph line format (textElements only)
             result = {

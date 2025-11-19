@@ -15,7 +15,6 @@ from .models import (
     Color,
     Font,
     ObjectRef,
-    Point,
     Position,
     TextLine,
     TextObjectRef,

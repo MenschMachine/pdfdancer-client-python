@@ -49,7 +49,9 @@ def test_text_line_edit_font_only():
         # Font changes on text lines should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
-        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+        with pytest.raises(
+            UnsupportedOperation, match="Font and color changes are not supported"
+        ):
             with text_line.edit() as editor:
                 editor.font("Helvetica", 28)
 
@@ -70,7 +72,9 @@ def test_text_line_edit_color_only():
         # Color changes on text lines should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
-        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+        with pytest.raises(
+            UnsupportedOperation, match="Font and color changes are not supported"
+        ):
             with text_line.edit() as editor:
                 editor.color(Color(0, 255, 0))
 
@@ -119,7 +123,9 @@ def test_text_line_edit_text_and_font():
         # Text + Font changes should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
-        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+        with pytest.raises(
+            UnsupportedOperation, match="Font and color changes are not supported"
+        ):
             with text_line.edit() as editor:
                 editor.replace("New Text Here")
                 editor.font("Helvetica", 16)
@@ -141,7 +147,9 @@ def test_text_line_edit_all_properties():
         # Combined changes including font/color should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
-        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+        with pytest.raises(
+            UnsupportedOperation, match="Font and color changes are not supported"
+        ):
             with text_line.edit() as editor:
                 editor.replace("Fully Modified")
                 editor.font("Helvetica", 18)
@@ -187,7 +195,9 @@ def test_text_line_edit_chaining():
         # Chained font/color changes should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
-        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+        with pytest.raises(
+            UnsupportedOperation, match="Font and color changes are not supported"
+        ):
             with text_line.edit() as editor:
                 editor.replace("Chained Edits").font("Helvetica", 15).color(
                     Color(128, 128, 128)

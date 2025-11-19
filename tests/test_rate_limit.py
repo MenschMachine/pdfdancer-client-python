@@ -48,7 +48,7 @@ class TestRateLimitHandling:
 
     @patch("pdfdancer.pdfdancer_v1.httpx.Client")
     def test_rate_limit_exception_raised_after_retries_exhausted(
-            self, mock_client_class
+        self, mock_client_class
     ):
         """Test that RateLimitException is raised after max retries for 429"""
         from pdfdancer import PDFDancer

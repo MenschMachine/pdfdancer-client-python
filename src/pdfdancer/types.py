@@ -162,7 +162,10 @@ class TextLineEdit(BaseTextEdit):
     def apply(self) -> bool:
         # Text lines don't support line spacing - ignore if set
         if self._line_spacing is not None:
-            print("WARNING: Line spacing is not supported for text lines and will be ignored", file=sys.stderr)
+            print(
+                "WARNING: Line spacing is not supported for text lines and will be ignored",
+                file=sys.stderr,
+            )
 
         # Simple text-only change
         only_text_changed = (

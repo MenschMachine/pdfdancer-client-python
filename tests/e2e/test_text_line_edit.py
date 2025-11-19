@@ -34,7 +34,7 @@ def test_text_line_edit_text_only():
 
 
 def test_text_line_edit_font_only():
-    """Test text line edit with font change only"""
+    """Test that text line font-only changes raise UnsupportedOperation"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -46,25 +46,16 @@ def test_text_line_edit_font_only():
 
         text_line = text_lines[0]
 
-        with text_line.edit() as editor:
-            editor.font("Helvetica", 28)
+        # Font changes on text lines should raise UnsupportedOperation
+        from pdfdancer.types import UnsupportedOperation
 
-        (
-            PDFAssertions(pdf)
-            .assert_textline_has_font(
-                "This is regular Sans text showing alignment and styles.",
-                "Helvetica",
-                28,
-            )
-            .assert_textline_has_color(
-                "This is regular Sans text showing alignment and styles.",
-                Color(0, 0, 0),
-            )
-        )
+        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+            with text_line.edit() as editor:
+                editor.font("Helvetica", 28)
 
 
 def test_text_line_edit_color_only():
-    """Test text line edit with color change only"""
+    """Test that text line color-only changes raise UnsupportedOperation"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -76,12 +67,12 @@ def test_text_line_edit_color_only():
 
         text_line = text_lines[0]
 
-        with text_line.edit() as editor:
-            editor.color(Color(0, 255, 0))
+        # Color changes on text lines should raise UnsupportedOperation
+        from pdfdancer.types import UnsupportedOperation
 
-        PDFAssertions(pdf).assert_textline_has_color(
-            "This is regular Sans text showing alignment and styles.", Color(0, 255, 0)
-        )
+        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+            with text_line.edit() as editor:
+                editor.color(Color(0, 255, 0))
 
 
 def test_text_line_edit_move_only():
@@ -113,7 +104,7 @@ def test_text_line_edit_move_only():
 
 
 def test_text_line_edit_text_and_font():
-    """Test text line edit with text replacement and font change"""
+    """Test that text+font changes raise UnsupportedOperation"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -125,21 +116,17 @@ def test_text_line_edit_text_and_font():
 
         text_line = text_lines[0]
 
-        with text_line.edit() as editor:
-            editor.replace("New Text Here")
-            editor.font("Helvetica", 16)
+        # Text + Font changes should raise UnsupportedOperation
+        from pdfdancer.types import UnsupportedOperation
 
-        (
-            PDFAssertions(pdf)
-            .assert_textline_has_font("New Text Here", "Helvetica", 16)
-            .assert_textline_does_not_exist(
-                "This is regular Sans text showing alignment and styles."
-            )
-        )
+        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+            with text_line.edit() as editor:
+                editor.replace("New Text Here")
+                editor.font("Helvetica", 16)
 
 
 def test_text_line_edit_all_properties():
-    """Test text line edit with all properties: text, font, color, position"""
+    """Test that combined property changes raise UnsupportedOperation"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -151,17 +138,15 @@ def test_text_line_edit_all_properties():
 
         text_line = text_lines[0]
 
-        with text_line.edit() as editor:
-            editor.replace("Fully Modified")
-            editor.font("Helvetica", 18)
-            editor.color(Color(255, 0, 0))
-            editor.move_to(100, 200)
+        # Combined changes including font/color should raise UnsupportedOperation
+        from pdfdancer.types import UnsupportedOperation
 
-        (
-            PDFAssertions(pdf)
-            .assert_textline_has_font("Fully Modified", "Helvetica", 18)
-            .assert_textline_has_color("Fully Modified", Color(255, 0, 0))
-        )
+        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+            with text_line.edit() as editor:
+                editor.replace("Fully Modified")
+                editor.font("Helvetica", 18)
+                editor.color(Color(255, 0, 0))
+                editor.move_to(100, 200)
 
 
 def test_text_line_edit_line_spacing_ignored():
@@ -187,7 +172,7 @@ def test_text_line_edit_line_spacing_ignored():
 
 
 def test_text_line_edit_chaining():
-    """Test fluent chaining within context manager"""
+    """Test that chained font/color changes raise UnsupportedOperation"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -199,16 +184,14 @@ def test_text_line_edit_chaining():
 
         text_line = text_lines[0]
 
-        with text_line.edit() as editor:
-            editor.replace("Chained Edits").font("Helvetica", 15).color(
-                Color(128, 128, 128)
-            )
+        # Chained font/color changes should raise UnsupportedOperation
+        from pdfdancer.types import UnsupportedOperation
 
-        (
-            PDFAssertions(pdf)
-            .assert_textline_has_font("Chained Edits", "Helvetica", 15)
-            .assert_textline_has_color("Chained Edits", Color(128, 128, 128))
-        )
+        with pytest.raises(UnsupportedOperation, match="Font and color changes are not supported"):
+            with text_line.edit() as editor:
+                editor.replace("Chained Edits").font("Helvetica", 15).color(
+                    Color(128, 128, 128)
+                )
 
 
 def test_text_line_edit_with_exception_no_apply():
@@ -237,7 +220,7 @@ def test_text_line_edit_with_exception_no_apply():
 
 
 def test_text_line_edit_multiple_sequential():
-    """Test multiple sequential edits using context manager"""
+    """Test multiple sequential text-only edits using context manager"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -252,16 +235,15 @@ def test_text_line_edit_multiple_sequential():
         with text_line.edit() as editor:
             editor.replace("First Edit")
 
-        # Second edit
+        # Second edit - text only (no font change since it's not supported)
         text_lines = pdf.page(0).select_text_lines_starting_with("First Edit")
         text_line = text_lines[0]
         with text_line.edit() as editor:
             editor.replace("Second Edit")
-            editor.font("Helvetica", 20)
 
         (
             PDFAssertions(pdf)
-            .assert_textline_has_font("Second Edit", "Helvetica", 20)
+            .assert_textline_exists("Second Edit")
             .assert_textline_does_not_exist("First Edit")
             .assert_textline_does_not_exist(
                 "This is regular Sans text showing alignment and styles."
@@ -270,7 +252,7 @@ def test_text_line_edit_multiple_sequential():
 
 
 def test_text_line_edit_vs_manual_apply():
-    """Test that context manager produces same result as manual apply()"""
+    """Test that context manager produces same result as manual apply() for text-only changes"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     # Test with context manager
@@ -285,8 +267,6 @@ def test_text_line_edit_vs_manual_apply():
 
         with text_line.edit() as editor:
             editor.replace("Test Text")
-            editor.font("Helvetica", 14)
-            editor.color(Color(255, 0, 0))
 
         result1 = pdf1.get_bytes()
 
@@ -300,9 +280,7 @@ def test_text_line_edit_vs_manual_apply():
 
         text_line = text_lines[0]
 
-        text_line.edit().replace("Test Text").font("Helvetica", 14).color(
-            Color(255, 0, 0)
-        ).apply()
+        text_line.edit().replace("Test Text").apply()
 
         result2 = pdf2.get_bytes()
 

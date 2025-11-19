@@ -213,27 +213,14 @@ class TextLineEdit(BaseTextEdit):
             result = self._target_obj._client._move(self._object_ref, position)
             return result
 
-        # Complex change - use TextLineBuilder
-        from .text_line_builder import TextLineBuilder
-
-        builder = TextLineBuilder.from_object_ref(
-            self._target_obj._client, self._object_ref
+        # Text lines with font/color styling changes are not supported by the PDF API
+        # Text lines are components of paragraphs and can only have their text modified
+        # or be moved, but not have their styling changed independently
+        raise UnsupportedOperation(
+            "Text lines can only have their text content modified or be moved. "
+            "Font and color changes are not supported for individual text lines. "
+            "To modify text styling, please modify the parent paragraph instead."
         )
-
-        if self._new_text is not None:
-            builder.text(self._new_text)
-        if self._font_name is not None and self._font_size is not None:
-            builder.font(self._font_name, self._font_size)
-        if self._color is not None:
-            builder.color(self._color)
-        if self._position is not None:
-            x = self._position.x()
-            y = self._position.y()
-            if x is not None and y is not None:
-                builder.move_to(x, y)
-
-        result = builder.modify(self._object_ref)
-        return result
 
 
 class ParagraphObject(PDFObjectBase):

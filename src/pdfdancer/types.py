@@ -216,13 +216,21 @@ class TextLineEdit(BaseTextEdit):
             result = self._target_obj._client._move(self._object_ref, position)
             return result
 
-        # For font/color changes or combined operations, use full text line modification
-        from .models import TextLine, Font
+        # For font/color changes or combined operations, use TextLineBuilder
+        # This ensures proper handling of font/color fallbacks just like ParagraphEditSession
+        from .text_line_builder import TextLineBuilder
 
-        # Build a TextLine object with the modifications
-        text_line = TextLine()
+        builder = TextLineBuilder.from_object_ref(
+            self._target_obj._client, self._object_ref
+        )
 
-        # Set position (either new or original)
+        # Apply modifications to builder
+        if self._new_text is not None:
+            builder.text(self._new_text)
+        if self._font_name is not None and self._font_size is not None:
+            builder.font(self._font_name, self._font_size)
+        if self._color is not None:
+            builder.color(self._color)
         if self._position is not None:
             x = self._position.x()
             y = self._position.y()
@@ -237,39 +245,10 @@ class TextLineEdit(BaseTextEdit):
                 raise ValidationException(
                     "Text line position must include a page index"
                 )
-            text_line.position = Position.at_page_coordinates(page_index, x, y)
-        else:
-            text_line.position = self._object_ref.position
+            builder.at(page_index, x, y)
 
-        # Set text (new or original)
-        if self._new_text is not None:
-            text_line.text = self._new_text
-        elif hasattr(self._object_ref, "text"):
-            text_line.text = self._object_ref.text
-        else:
-            text_line.text = ""
-
-        # Set font (new or original)
-        if self._font_name is not None and self._font_size is not None:
-            text_line.font = Font(self._font_name, self._font_size)
-        elif hasattr(self._object_ref, "font_name") and hasattr(
-            self._object_ref, "font_size"
-        ):
-            text_line.font = Font(
-                self._object_ref.font_name, self._object_ref.font_size
-            )
-
-        # Set color (new or original)
-        if self._color is not None:
-            text_line.color = self._color
-        elif hasattr(self._object_ref, "color"):
-            text_line.color = self._object_ref.color
-
-        # Use full modification endpoint
-        # noinspection PyProtectedMember
-        result = self._target_obj._client._modify_text_line_full(
-            self._object_ref, text_line
-        )
+        # Use builder's modify method which handles all the complexity
+        result = builder.modify(self._object_ref)
         if result.warning:
             print(f"WARNING: {result.warning}", file=sys.stderr)
         return result

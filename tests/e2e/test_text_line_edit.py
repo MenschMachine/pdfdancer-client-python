@@ -34,7 +34,7 @@ def test_text_line_edit_text_only():
 
 
 def test_text_line_edit_font_only():
-    """Test that text line font-only changes raise UnsupportedOperation"""
+    """Test text line font-only changes"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -45,19 +45,18 @@ def test_text_line_edit_font_only():
             pytest.skip("Required text line not found in test PDF")
 
         text_line = text_lines[0]
+        original_text = text_line.text
 
-        # Font changes on text lines should raise UnsupportedOperation
-        from pdfdancer.types import UnsupportedOperation
+        # Font changes on text lines should work
+        with text_line.edit() as editor:
+            editor.font("Helvetica", 28)
 
-        with pytest.raises(
-            UnsupportedOperation, match="Font and color changes are not supported"
-        ):
-            with text_line.edit() as editor:
-                editor.font("Helvetica", 28)
+        # Verify the text still exists (font changed but text preserved)
+        PDFAssertions(pdf).assert_textline_exists(original_text)
 
 
 def test_text_line_edit_color_only():
-    """Test that text line color-only changes raise UnsupportedOperation"""
+    """Test text line color-only changes"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -68,15 +67,14 @@ def test_text_line_edit_color_only():
             pytest.skip("Required text line not found in test PDF")
 
         text_line = text_lines[0]
+        original_text = text_line.text
 
-        # Color changes on text lines should raise UnsupportedOperation
-        from pdfdancer.types import UnsupportedOperation
+        # Color changes on text lines should work
+        with text_line.edit() as editor:
+            editor.color(Color(0, 255, 0))
 
-        with pytest.raises(
-            UnsupportedOperation, match="Font and color changes are not supported"
-        ):
-            with text_line.edit() as editor:
-                editor.color(Color(0, 255, 0))
+        # Verify the text still exists (color changed but text preserved)
+        PDFAssertions(pdf).assert_textline_exists(original_text)
 
 
 def test_text_line_edit_move_only():
@@ -108,7 +106,7 @@ def test_text_line_edit_move_only():
 
 
 def test_text_line_edit_text_and_font():
-    """Test that text+font changes raise UnsupportedOperation"""
+    """Test text+font changes work together"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -120,19 +118,23 @@ def test_text_line_edit_text_and_font():
 
         text_line = text_lines[0]
 
-        # Text + Font changes should raise UnsupportedOperation
-        from pdfdancer.types import UnsupportedOperation
+        # Text + Font changes should work
+        with text_line.edit() as editor:
+            editor.replace("New Text Here")
+            editor.font("Helvetica", 16)
 
-        with pytest.raises(
-            UnsupportedOperation, match="Font and color changes are not supported"
-        ):
-            with text_line.edit() as editor:
-                editor.replace("New Text Here")
-                editor.font("Helvetica", 16)
+        # Verify the new text exists
+        (
+            PDFAssertions(pdf)
+            .assert_textline_exists("New Text Here")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
+        )
 
 
 def test_text_line_edit_all_properties():
-    """Test that combined property changes raise UnsupportedOperation"""
+    """Test that combined property changes work (except line spacing)"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -144,43 +146,44 @@ def test_text_line_edit_all_properties():
 
         text_line = text_lines[0]
 
-        # Combined changes including font/color should raise UnsupportedOperation
+        # Combined changes including font/color/position should work
+        with text_line.edit() as editor:
+            editor.replace("Fully Modified")
+            editor.font("Helvetica", 18)
+            editor.color(Color(255, 0, 0))
+            editor.move_to(100, 200)
+
+        # Verify the modified text exists
+        PDFAssertions(pdf).assert_textline_exists("Fully Modified")
+
+
+def test_text_line_edit_line_spacing_fails():
+    """Test that line spacing changes fail hard for text lines"""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        text_lines = pdf.page(0).select_text_lines_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )
+        if not text_lines:
+            pytest.skip("Required text line not found in test PDF")
+
+        text_line = text_lines[0]
+
+        # Line spacing should raise UnsupportedOperation
         from pdfdancer.types import UnsupportedOperation
 
         with pytest.raises(
-            UnsupportedOperation, match="Font and color changes are not supported"
+            UnsupportedOperation,
+            match="Line spacing changes are not supported for individual text lines",
         ):
             with text_line.edit() as editor:
-                editor.replace("Fully Modified")
-                editor.font("Helvetica", 18)
-                editor.color(Color(255, 0, 0))
-                editor.move_to(100, 200)
-
-
-def test_text_line_edit_line_spacing_ignored():
-    """Test that line spacing is ignored for text lines with a warning"""
-    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
-            "This is regular Sans text showing alignment and styles."
-        )
-        if not text_lines:
-            pytest.skip("Required text line not found in test PDF")
-
-        text_line = text_lines[0]
-
-        # Line spacing should be ignored with a warning
-        with text_line.edit() as editor:
-            editor.line_spacing(2.0)  # This should be ignored
-            editor.replace("Text with ignored spacing")
-
-        # Verify the text was changed
-        PDFAssertions(pdf).assert_textline_exists("Text with ignored spacing")
+                editor.line_spacing(2.0)
+                editor.replace("Text with spacing")
 
 
 def test_text_line_edit_chaining():
-    """Test that chained font/color changes raise UnsupportedOperation"""
+    """Test that chained font/color changes work"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -192,16 +195,20 @@ def test_text_line_edit_chaining():
 
         text_line = text_lines[0]
 
-        # Chained font/color changes should raise UnsupportedOperation
-        from pdfdancer.types import UnsupportedOperation
+        # Chained font/color changes should work
+        with text_line.edit() as editor:
+            editor.replace("Chained Edits").font("Helvetica", 15).color(
+                Color(128, 128, 128)
+            )
 
-        with pytest.raises(
-            UnsupportedOperation, match="Font and color changes are not supported"
-        ):
-            with text_line.edit() as editor:
-                editor.replace("Chained Edits").font("Helvetica", 15).color(
-                    Color(128, 128, 128)
-                )
+        # Verify the new text exists
+        (
+            PDFAssertions(pdf)
+            .assert_textline_exists("Chained Edits")
+            .assert_textline_does_not_exist(
+                "This is regular Sans text showing alignment and styles."
+            )
+        )
 
 
 def test_text_line_edit_with_exception_no_apply():

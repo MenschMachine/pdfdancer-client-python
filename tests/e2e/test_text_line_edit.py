@@ -153,7 +153,7 @@ def test_text_line_edit_all_properties():
 
 
 def test_text_line_edit_line_spacing_fails():
-    """Test that line spacing changes fail hard for text lines"""
+    """Test that line spacing method does not exist on text line editor"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -164,15 +164,11 @@ def test_text_line_edit_line_spacing_fails():
 
         text_line = text_lines[0]
 
-        # Line spacing should raise UnsupportedOperation immediately when called
-        from pdfdancer.types import UnsupportedOperation
-
-        with pytest.raises(
-                UnsupportedOperation,
-                match="Line spacing changes are not supported for individual text lines",
-        ):
-            editor = text_line.edit()
-            editor.line_spacing(2.0)
+        # Line spacing method should not exist on TextLineEdit
+        editor = text_line.edit()
+        assert not hasattr(editor, "line_spacing"), (
+            "line_spacing() method should not exist on TextLineEdit"
+        )
 
 
 def test_text_line_edit_chaining():

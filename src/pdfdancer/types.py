@@ -116,7 +116,6 @@ class BaseTextEdit:
     def __init__(self, target_obj, object_ref):
         self._color = None
         self._position = None
-        self._line_spacing = None
         self._font_size = None
         self._font_name = None
         self._new_text = None
@@ -145,10 +144,6 @@ class BaseTextEdit:
         self._color = color
         return self
 
-    def line_spacing(self, line_spacing: float):
-        self._line_spacing = line_spacing
-        return self
-
     def move_to(self, x: float, y: float):
         self._position = Position().at_coordinates(Point(x, y))
         return self
@@ -159,16 +154,6 @@ class BaseTextEdit:
 
 
 class TextLineEdit(BaseTextEdit):
-    def line_spacing(self, line_spacing: float):
-        """
-        Line spacing is not supported for text lines.
-        Raises UnsupportedOperation immediately.
-        """
-        raise UnsupportedOperation(
-            "Line spacing changes are not supported for individual text lines. "
-            "Line spacing can only be modified on paragraphs, not individual text lines."
-        )
-
     def apply(self) -> bool:
         # If only text changed (no font, color, or position), use simple text modification
         only_text_changed = (

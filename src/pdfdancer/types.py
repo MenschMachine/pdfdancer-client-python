@@ -159,14 +159,17 @@ class BaseTextEdit:
 
 
 class TextLineEdit(BaseTextEdit):
-    def apply(self) -> bool:
-        # Line spacing is NOT supported for text lines - fail hard
-        if self._line_spacing is not None:
-            raise UnsupportedOperation(
-                "Line spacing changes are not supported for individual text lines. "
-                "Line spacing can only be modified on paragraphs, not individual text lines."
-            )
+    def line_spacing(self, line_spacing: float):
+        """
+        Line spacing is not supported for text lines.
+        Raises UnsupportedOperation immediately.
+        """
+        raise UnsupportedOperation(
+            "Line spacing changes are not supported for individual text lines. "
+            "Line spacing can only be modified on paragraphs, not individual text lines."
+        )
 
+    def apply(self) -> bool:
         # If only text changed (no font, color, or position), use simple text modification
         only_text_changed = (
             self._new_text is not None

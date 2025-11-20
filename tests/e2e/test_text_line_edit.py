@@ -164,16 +164,15 @@ def test_text_line_edit_line_spacing_fails():
 
         text_line = text_lines[0]
 
-        # Line spacing should raise UnsupportedOperation
+        # Line spacing should raise UnsupportedOperation immediately when called
         from pdfdancer.types import UnsupportedOperation
 
         with pytest.raises(
                 UnsupportedOperation,
                 match="Line spacing changes are not supported for individual text lines",
         ):
-            with text_line.edit() as editor:
-                editor.line_spacing(2.0)
-                editor.replace("Text with spacing")
+            editor = text_line.edit()
+            editor.line_spacing(2.0)
 
 
 def test_text_line_edit_chaining():

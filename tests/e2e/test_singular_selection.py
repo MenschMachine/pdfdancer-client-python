@@ -54,7 +54,7 @@ def test_select_paragraph_starting_with():
         assert paragraph.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(paragraph.position.x(), rel=0, abs=1) == 64.7
         assert (
-                pytest.approx(paragraph.position.y(), rel=0, abs=2) == 642
+            pytest.approx(paragraph.position.y(), rel=0, abs=2) == 642
         )  # adjust for baseline/bounding box
 
 

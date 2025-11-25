@@ -263,11 +263,11 @@ def _get_retry_after_delay(response: httpx.Response) -> Optional[int]:
 
 class PageClient:
     def __init__(
-            self,
-            page_number: int,
-            root: "PDFDancer",
-            page_size: Optional[PageSize] = None,
-            orientation: Optional[Union[Orientation, str]] = Orientation.PORTRAIT,
+        self,
+        page_number: int,
+        root: "PDFDancer",
+        page_size: Optional[PageSize] = None,
+        orientation: Optional[Union[Orientation, str]] = Orientation.PORTRAIT,
     ):
         self.page_number = page_number
         self.root = root
@@ -285,7 +285,7 @@ class PageClient:
             self.orientation = orientation
 
     def select_paths_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[PathObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -316,7 +316,7 @@ class PageClient:
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
     def select_paragraphs_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ParagraphObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -336,7 +336,7 @@ class PageClient:
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
     def select_text_lines_at(
-            self, x, y, tolerance: float = DEFAULT_TOLERANCE
+        self, x, y, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[TextLineObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -351,7 +351,7 @@ class PageClient:
         )
 
     def select_images_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ImageObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -363,7 +363,7 @@ class PageClient:
         return self.root._to_form_objects(self.root._find_form_x_objects(position))
 
     def select_forms_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[FormObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -383,7 +383,7 @@ class PageClient:
         return self.root._to_form_field_objects(self.root._find_form_fields(pos))
 
     def select_form_fields_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[FormFieldObject]:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
@@ -394,7 +394,7 @@ class PageClient:
     # Singular selection methods (convenience methods returning first match or None)
 
     def select_paragraph_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[ParagraphObject]:
         """
         Select the first paragraph at the specified coordinates.
@@ -437,7 +437,7 @@ class PageClient:
         return results[0] if results else None
 
     def select_text_line_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[TextLineObject]:
         """
         Select the first text line at the specified coordinates.
@@ -480,7 +480,7 @@ class PageClient:
         return results[0] if results else None
 
     def select_image_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[ImageObject]:
         """
         Select the first image at the specified coordinates.
@@ -497,7 +497,7 @@ class PageClient:
         return results[0] if results else None
 
     def select_form_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[FormObject]:
         """
         Select the first form at the specified coordinates.
@@ -514,7 +514,7 @@ class PageClient:
         return results[0] if results else None
 
     def select_form_field_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[FormFieldObject]:
         """
         Select the first form field at the specified coordinates.
@@ -544,7 +544,7 @@ class PageClient:
         return results[0] if results else None
 
     def select_path_at(
-            self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[PathObject]:
         """
         Select the first path at the specified coordinates.
@@ -663,13 +663,13 @@ class PDFDancer:
     # --------------------------------------------------------------
     @classmethod
     def open(
-            cls,
-            pdf_data: Union[bytes, Path, str, BinaryIO],
-            token: Optional[str] = None,
-            base_url: Optional[str] = None,
-            timeout: float = 30.0,
-            max_retries: int = DEFAULT_MAX_RETRIES,
-            retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
+        cls,
+        pdf_data: Union[bytes, Path, str, BinaryIO],
+        token: Optional[str] = None,
+        base_url: Optional[str] = None,
+        timeout: float = 30.0,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
         Create a client session, falling back to environment variables when needed.
@@ -775,7 +775,7 @@ class PDFDancer:
                             delay = retry_after
                         else:
                             # Use exponential backoff if no Retry-After header
-                            delay = retry_backoff_factor * (2 ** attempt)
+                            delay = retry_backoff_factor * (2**attempt)
 
                         # Always log 429 to stderr for visibility
                         print(
@@ -850,15 +850,15 @@ class PDFDancer:
 
     @classmethod
     def new(
-            cls,
-            token: Optional[str] = None,
-            base_url: Optional[str] = None,
-            timeout: float = 30.0,
-            page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
-            orientation: Optional[Union[Orientation, str]] = None,
-            initial_page_count: int = 1,
-            max_retries: int = DEFAULT_MAX_RETRIES,
-            retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
+        cls,
+        token: Optional[str] = None,
+        base_url: Optional[str] = None,
+        timeout: float = 30.0,
+        page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
+        orientation: Optional[Union[Orientation, str]] = None,
+        initial_page_count: int = 1,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
         Create a new blank PDF document with optional configuration.
@@ -931,13 +931,13 @@ class PDFDancer:
         return instance
 
     def __init__(
-            self,
-            token: str,
-            pdf_data: Union[bytes, Path, str, BinaryIO],
-            base_url: str,
-            read_timeout: float = 0,
-            max_retries: int = DEFAULT_MAX_RETRIES,
-            retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
+        self,
+        token: str,
+        pdf_data: Union[bytes, Path, str, BinaryIO],
+        base_url: str,
+        read_timeout: float = 0,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ):
         """
         Creates a new client with PDF data.
@@ -1189,7 +1189,7 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
@@ -1234,7 +1234,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/create - Retryable error: {str(e)}, "
@@ -1263,10 +1263,10 @@ class PDFDancer:
             )
 
     def _create_blank_pdf_session(
-            self,
-            page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
-            orientation: Optional[Union[Orientation, str]] = None,
-            initial_page_count: int = 1,
+        self,
+        page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
+        orientation: Optional[Union[Orientation, str]] = None,
+        initial_page_count: int = 1,
     ) -> str:
         """
         Creates a new PDF processing session with a blank PDF document.
@@ -1366,7 +1366,7 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
@@ -1411,7 +1411,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|POST /session/new - Retryable error: {str(e)}, "
@@ -1442,11 +1442,11 @@ class PDFDancer:
             )
 
     def _make_request(
-            self,
-            method: str,
-            path: str,
-            data: Optional[dict] = None,
-            params: Optional[dict] = None,
+        self,
+        method: str,
+        path: str,
+        data: Optional[dict] = None,
+        params: Optional[dict] = None,
     ) -> httpx.Response:
         """
         Make HTTP request with session headers, error handling, and automatic retry for transient errors.
@@ -1518,7 +1518,7 @@ class PDFDancer:
                         delay = retry_after
                     else:
                         # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2 ** attempt)
+                        delay = self._retry_backoff_factor * (2**attempt)
 
                     # Always log 429 to stderr for visibility
                     print(
@@ -1561,7 +1561,7 @@ class PDFDancer:
                 # Check if this is a retryable error
                 if _is_retryable_error(e) and attempt < self._max_retries:
                     # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2 ** attempt)
+                    delay = self._retry_backoff_factor * (2**attempt)
                     if DEBUG:
                         print(
                             f"{time.time()}|{method} {path} - Retryable error: {str(e)}, "
@@ -1590,10 +1590,10 @@ class PDFDancer:
             )
 
     def _find(
-            self,
-            object_type: Optional[ObjectType] = None,
-            position: Optional[Position] = None,
-            tolerance: float = DEFAULT_TOLERANCE,
+        self,
+        object_type: Optional[ObjectType] = None,
+        position: Optional[Position] = None,
+        tolerance: float = DEFAULT_TOLERANCE,
     ) -> List[ObjectRef]:
         """
         Searches for PDF objects matching the specified criteria.
@@ -1663,7 +1663,7 @@ class PDFDancer:
         return results[0] if results else None
 
     def _find_paragraphs(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[TextObjectRef]:
         """
         Searches for paragraph objects returning TextObjectRef with hierarchical structure.
@@ -1685,7 +1685,7 @@ class PDFDancer:
             )
 
     def _find_images(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ObjectRef]:
         """
         Searches for image objects at the specified position.
@@ -1719,7 +1719,7 @@ class PDFDancer:
         return self._to_form_objects(self._find(ObjectType.FORM_X_OBJECT, None))
 
     def _find_form_x_objects(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ObjectRef]:
         """
         Searches for form X objects at the specified position.
@@ -1768,7 +1768,7 @@ class PDFDancer:
         return results[0] if results else None
 
     def _find_form_fields(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[FormFieldRef]:
         """
         Searches for form fields at the specified position.
@@ -1813,7 +1813,7 @@ class PDFDancer:
         return self._find(ObjectType.PATH, None)
 
     def _find_paths(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ObjectRef]:
         """
         Searches for vector path objects at the specified position.
@@ -1842,7 +1842,7 @@ class PDFDancer:
             )
 
     def _find_text_lines(
-            self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
+        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[TextObjectRef]:
         """
         Searches for text line objects returning TextObjectRef with hierarchical structure.
@@ -1883,7 +1883,9 @@ class PDFDancer:
             ValidationException: If page_number is less than 1
         """
         if page_number < 1:
-            raise ValidationException(f"Page number must be >= 1 (1-based indexing), got {page_number}")
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
 
         # Try to get page ref from snapshot first (avoids API call)
         page_snapshot = self._get_or_fetch_page_snapshot(page_number)
@@ -1921,7 +1923,9 @@ class PDFDancer:
             Page reference for the specified page, or None if not found
         """
         if page_number < 1:
-            raise ValidationException(f"Page number must be >= 1 (1-based indexing), got {page_number}")
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
 
         params = {"pageNumber": page_number}
         response = self._make_request("POST", "/pdf/page/find", params=params)
@@ -1975,8 +1979,8 @@ class PDFDancer:
     def _move_page(self, from_page: int, to_page: int) -> bool:
         """Internal helper to perform the page move operation."""
         for value, label in (
-                (from_page, "from_page"),
-                (to_page, "to_page"),
+            (from_page, "from_page"),
+            (to_page, "to_page"),
         ):
             if value is None:
                 raise ValidationException(f"{label} cannot be null")
@@ -1985,7 +1989,9 @@ class PDFDancer:
                     f"{label} must be an integer, got {type(value)}"
                 )
             if value < 1:
-                raise ValidationException(f"{label} must be >= 1 (1-based indexing), got {value}")
+                raise ValidationException(
+                    f"{label} must be >= 1 (1-based indexing), got {value}"
+                )
 
         request_data = PageMoveRequest(from_page, to_page).to_dict()
         response = self._make_request("PUT", "/pdf/page/move", data=request_data)
@@ -2146,7 +2152,7 @@ class PDFDancer:
         return ParagraphBuilder(self)
 
     def new_page(
-            self, orientation=Orientation.PORTRAIT, size=PageSize.A4
+        self, orientation=Orientation.PORTRAIT, size=PageSize.A4
     ) -> PageBuilder:
         builder = PageBuilder(self)
         if orientation is not None:
@@ -2165,7 +2171,7 @@ class PDFDancer:
 
     # Modify Operations
     def _modify_paragraph(
-            self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]
+        self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]
     ) -> CommandResult:
         """
         Modifies a paragraph object or its text content.
@@ -2224,7 +2230,7 @@ class PDFDancer:
         return result
 
     def _modify_text_line_full(
-            self, object_ref: ObjectRef, new_text_line: TextLine
+        self, object_ref: ObjectRef, new_text_line: TextLine
     ) -> CommandResult:
         """
         Modifies a text line object with full styling (font, color, position).
@@ -2395,7 +2401,7 @@ class PDFDancer:
         return self._parse_document_snapshot(data)
 
     def get_page_snapshot(
-            self, page_number: int, types: Optional[str] = None
+        self, page_number: int, types: Optional[str] = None
     ) -> PageSnapshot:
         """
         Retrieve a snapshot of a specific page with all its elements.
@@ -2411,7 +2417,9 @@ class PDFDancer:
             ValidationException: If page_number is less than 1
         """
         if page_number < 1:
-            raise ValidationException(f"Page number must be >= 1 (1-based indexing), got {page_number}")
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
 
         params = {}
         if types:
@@ -2472,11 +2480,11 @@ class PDFDancer:
         self._page_snapshots.clear()
 
     def _filter_snapshot_elements(
-            self,
-            elements: List,
-            object_type: ObjectType,
-            position: Optional[Position] = None,
-            tolerance: float = DEFAULT_TOLERANCE,
+        self,
+        elements: List,
+        object_type: ObjectType,
+        position: Optional[Position] = None,
+        tolerance: float = DEFAULT_TOLERANCE,
     ) -> List:
         """
         Filter snapshot elements client-side based on object type and position criteria.
@@ -2520,8 +2528,8 @@ class PDFDancer:
                 e
                 for e in result
                 if isinstance(e, TextObjectRef)
-                   and e.text
-                   and e.text.lower().startswith(search_text)
+                and e.text
+                and e.text.lower().startswith(search_text)
             ]
 
         # Regex pattern filter
@@ -2540,8 +2548,8 @@ class PDFDancer:
                 e
                 for e in result
                 if e.position
-                   and e.position.bounding_rect
-                   and self._rects_intersect(e.position.bounding_rect, rect, tolerance)
+                and e.position.bounding_rect
+                and self._rects_intersect(e.position.bounding_rect, rect, tolerance)
             ]
 
         # Name filter (for form fields)
@@ -2678,7 +2686,7 @@ class PDFDancer:
         return position
 
     def _parse_text_object_ref(
-            self, obj_data: dict, fallback_id: Optional[str] = None
+        self, obj_data: dict, fallback_id: Optional[str] = None
     ) -> TextObjectRef:
         """Parse JSON object data into TextObjectRef instance with hierarchical structure."""
         position_data = obj_data.get("position", {})
@@ -2751,8 +2759,8 @@ class PDFDancer:
 
         try:
             if (
-                    isinstance(obj_data.get("children"), list)
-                    and len(obj_data["children"]) > 0
+                isinstance(obj_data.get("children"), list)
+                and len(obj_data["children"]) > 0
             ):
                 text_object.children = [
                     self._parse_text_object_ref(
@@ -2957,12 +2965,12 @@ class PDFDancer:
                     # Parse as TextObjectRef to capture text, font, color, children
                     elements.append(self._parse_text_object_ref(elem_data))
                 elif elem_type in (
-                        ObjectType.FORM_FIELD,
-                        ObjectType.TEXT_FIELD,
-                        ObjectType.CHECK_BOX,
-                        ObjectType.RADIO_BUTTON,
-                        ObjectType.BUTTON,
-                        ObjectType.DROPDOWN,
+                    ObjectType.FORM_FIELD,
+                    ObjectType.TEXT_FIELD,
+                    ObjectType.CHECK_BOX,
+                    ObjectType.RADIO_BUTTON,
+                    ObjectType.BUTTON,
+                    ObjectType.DROPDOWN,
                 ):
                     # Parse as FormFieldRef to capture name and value
                     elements.append(self._parse_form_field_ref(elem_data))

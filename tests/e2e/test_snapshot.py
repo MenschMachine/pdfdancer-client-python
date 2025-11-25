@@ -4,8 +4,8 @@ Validates that snapshot data matches select_* method results before, during, and
 """
 
 import pytest
-from pdfdancer import ObjectType, PDFDancer
 
+from pdfdancer import ObjectType, PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 
@@ -34,7 +34,7 @@ def test_page_snapshot_matches_select_paragraphs():
         selected_ids = {p.internal_id for p in selected_paragraphs}
 
         assert (
-                selected_ids == snapshot_ids
+            selected_ids == snapshot_ids
         ), "Snapshot and select_paragraphs() should return identical paragraph IDs"
 
 
@@ -59,7 +59,7 @@ def test_page_snapshot_matches_select_images():
             selected_ids = {img.internal_id for img in selected_images}
 
             assert (
-                    selected_ids == snapshot_ids
+                selected_ids == snapshot_ids
             ), "Snapshot and select_images() should return identical image IDs"
 
 
@@ -86,7 +86,7 @@ def test_page_snapshot_matches_select_forms():
             selected_ids = {form.internal_id for form in selected_forms}
 
             assert (
-                    selected_ids == snapshot_ids
+                selected_ids == snapshot_ids
             ), "Snapshot and select_forms() should return identical form IDs"
 
 
@@ -102,12 +102,12 @@ def test_page_snapshot_matches_select_form_fields():
             e
             for e in snapshot.elements
             if e.type
-               in (
-                   ObjectType.FORM_FIELD,
-                   ObjectType.TEXT_FIELD,
-                   ObjectType.CHECK_BOX,
-                   ObjectType.RADIO_BUTTON,
-               )
+            in (
+                ObjectType.FORM_FIELD,
+                ObjectType.TEXT_FIELD,
+                ObjectType.CHECK_BOX,
+                ObjectType.RADIO_BUTTON,
+            )
         ]
 
         selected_form_fields = page.select_form_fields()
@@ -121,7 +121,7 @@ def test_page_snapshot_matches_select_form_fields():
             selected_ids = {field.internal_id for field in selected_form_fields}
 
             assert (
-                    selected_ids == snapshot_ids
+                selected_ids == snapshot_ids
             ), "Snapshot and select_form_fields() should return identical form field IDs"
 
 
@@ -143,7 +143,7 @@ def test_page_snapshot_contains_all_element_types():
 
         # Verify we have at least some text elements
         assert (
-                paragraph_count > 0 or text_line_count > 0
+            paragraph_count > 0 or text_line_count > 0
         ), "Page should have at least some text elements"
 
         # Verify all elements have required fields
@@ -173,7 +173,7 @@ def test_document_snapshot_matches_all_pages():
             individual_page_ids = {e.internal_id for e in individual_page_snap.elements}
 
             assert (
-                    individual_page_ids == doc_page_ids
+                individual_page_ids == doc_page_ids
             ), f"Page {i} should have identical elements in document and individual snapshots"
 
 
@@ -201,7 +201,7 @@ def test_type_filter_matches_select_method():
         selected_ids = {p.internal_id for p in selected_paragraphs}
 
         assert (
-                selected_ids == snapshot_ids
+            selected_ids == snapshot_ids
         ), "Filtered snapshot and select_paragraphs() should return identical IDs"
 
 
@@ -239,7 +239,9 @@ def test_total_element_count_matches_expected():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Showcase.pdf - Python API filters certain types (638)
         all_elements = pdf.select_elements()
-        assert 95 <= len(all_elements) <= 97, "Showcase.pdf should have 95 total elements"
+        assert (
+            95 <= len(all_elements) <= 97
+        ), "Showcase.pdf should have 95 total elements"
 
         doc_snapshot = pdf.get_document_snapshot()
         snapshot_total = sum(len(p.elements) for p in doc_snapshot.pages)
@@ -266,7 +268,7 @@ def test_snapshot_consistency_across_multiple_pages():
             page_snap = pdf.get_page_snapshot(i)
             assert page_snap is not None, f"Page {i} snapshot should not be None"
             assert (
-                    page_snap.page_ref.position.page_number == i
+                page_snap.page_ref.position.page_number == i
             ), "Page snapshot should have correct page number"
 
 
@@ -280,7 +282,7 @@ def test_document_snapshot_contains_fonts():
 
         # Should have fonts
         assert (
-                doc_snapshot.fonts is not None
+            doc_snapshot.fonts is not None
         ), "Document snapshot should have fonts list"
         assert len(doc_snapshot.fonts) > 0, "Document should have at least one font"
 
@@ -289,5 +291,5 @@ def test_document_snapshot_contains_fonts():
             assert font.font_name is not None, "Font should have a name"
             assert font.font_type is not None, "Font should have a type"
             assert (
-                    font.similarity_score is not None
+                font.similarity_score is not None
             ), "Font should have similarity score"

@@ -21,7 +21,7 @@ def test_find_paragraphs_by_position():
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
         assert (
-                pytest.approx(first.position.y(), rel=0, abs=1) == 749
+            pytest.approx(first.position.y(), rel=0, abs=1) == 749
         )  # adjusted for baseline/bounding box
 
         last = paras_page0[-1]
@@ -48,7 +48,7 @@ def test_find_paragraphs_by_text():
         assert p.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
         assert (
-                pytest.approx(p.position.y(), rel=0, abs=2) == 642
+            pytest.approx(p.position.y(), rel=0, abs=2) == 642
         )  # adjust for baseline/bounding box
 
 
@@ -118,7 +118,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(

@@ -1,5 +1,4 @@
 from pdfdancer import ObjectType, Orientation, PageSize, PDFDancer
-
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -9,13 +8,13 @@ def test_get_all_elements():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         assert (
-                95 <= len(pdf.select_elements()) <= 97
+            95 <= len(pdf.select_elements()) <= 97
         ), f"{len(pdf.select_elements())} elements found but  95-97 elements expected"
         actual_total = 0
         for page in pdf.pages():
             actual_total += len(page.select_elements())
         assert (
-                95 <= actual_total <= 97
+            95 <= actual_total <= 97
         ), f"{actual_total} elements found but  95-97 elements expected"
 
 

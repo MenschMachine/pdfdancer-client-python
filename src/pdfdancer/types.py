@@ -235,7 +235,9 @@ class TextLineEdit(BaseTextEdit):
         # IMPORTANT: Always explicitly set font to ensure it's preserved
         if self._font_name is not None and self._font_size is not None:
             builder.font(self._font_name, self._font_size)
-        elif hasattr(self._object_ref, "font_name") and hasattr(self._object_ref, "font_size"):
+        elif hasattr(self._object_ref, "font_name") and hasattr(
+            self._object_ref, "font_size"
+        ):
             if self._object_ref.font_name and self._object_ref.font_size:
                 # Preserve original font when only changing color/position
                 builder.font(self._object_ref.font_name, self._object_ref.font_size)

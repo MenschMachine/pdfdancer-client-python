@@ -52,7 +52,12 @@ class PageBuilder:
         Deprecated: Use at_page() instead. This method will be removed in a future release.
         """
         import warnings
-        warnings.warn("at_index() is deprecated, use at_page() instead", DeprecationWarning, stacklevel=2)
+
+        warnings.warn(
+            "at_index() is deprecated, use at_page() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.at_page(page_number + 1)
 
     def orientation(self, orientation: Orientation) -> "PageBuilder":

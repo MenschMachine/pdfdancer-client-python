@@ -53,7 +53,7 @@ class TestPathBasicOperations:
 
             # Use PDFAssertions to verify path count
             assertions = PDFAssertions(pdf)
-            assertions.assert_number_of_paths(9, page=0)
+            assertions.assert_number_of_paths(9, page=1)
 
     def test_path_exists_at_coordinates(self):
         """Test verifying path existence at specific coordinates."""
@@ -65,13 +65,13 @@ class TestPathBasicOperations:
             assertions = PDFAssertions(pdf)
 
             # Assert path exists at known coordinates
-            assertions.assert_path_exists_at(80, 720, page=0, tolerance=5.0)
+            assertions.assert_path_exists_at(80, 720, page=1, tolerance=5.0)
 
             # Assert specific path ID at coordinates
-            assertions.assert_path_has_id("PATH_000001", 80, 720, page=0)
+            assertions.assert_path_has_id("PATH_000001", 80, 720, page=1)
 
             # Assert exact count at coordinates
-            assertions.assert_path_count_at(1, 80, 720, page=0, tolerance=5.0)
+            assertions.assert_path_count_at(1, 80, 720, page=1, tolerance=5.0)
 
     def test_path_bounding_box_verification(self):
         """Test verifying path bounding box dimensions."""
@@ -81,7 +81,7 @@ class TestPathBasicOperations:
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
             # Get first path
-            paths = pdf.page(0).select_paths_at(80, 720)
+            paths = pdf.page(1).select_paths_at(80, 720)
             assert len(paths) == 1
 
             path = paths[0]
@@ -101,7 +101,7 @@ class TestPathBasicOperations:
                 if bbox.width > 0 and bbox.height > 0:
                     assertions = PDFAssertions(pdf)
                     assertions.assert_path_bounding_box(
-                        bbox.x, bbox.y, bbox.width, bbox.height, page=0, epsilon=1.0
+                        bbox.x, bbox.y, bbox.width, bbox.height, page=1, epsilon=1.0
                     )
                 else:
                     # For degenerate bounding boxes, just verify coordinates
@@ -119,18 +119,18 @@ class TestPathBasicOperations:
 
             # Verify initial state
             initial_count = len(pdf.select_paths())
-            assertions.assert_number_of_paths(9, page=0)
-            assertions.assert_path_exists_at(80, 720, page=0)
+            assertions.assert_number_of_paths(9, page=1)
+            assertions.assert_path_exists_at(80, 720, page=1)
 
             # Delete the path
-            path = pdf.page(0).select_paths_at(80, 720)[0]
+            path = pdf.page(1).select_paths_at(80, 720)[0]
             path_id = path.internal_id
             path.delete()
 
             # Verify path is gone
             assertions = PDFAssertions(pdf)
-            assertions.assert_no_path_at(80, 720, page=0)
-            assertions.assert_number_of_paths(initial_count - 1, page=0)
+            assertions.assert_no_path_at(80, 720, page=1)
+            assertions.assert_number_of_paths(initial_count - 1, page=1)
 
             # Verify the specific path ID no longer exists
             remaining_paths = pdf.select_paths()
@@ -147,7 +147,7 @@ class TestPathBasicOperations:
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
             # Get original path
-            original_path = pdf.page(0).select_paths_at(80, 720)[0]
+            original_path = pdf.page(1).select_paths_at(80, 720)[0]
             original_id = original_path.internal_id
             original_x = original_path.position.x()
             original_y = original_path.position.y()
@@ -162,14 +162,14 @@ class TestPathBasicOperations:
             assertions = PDFAssertions(pdf)
 
             # Should be gone from original location
-            assertions.assert_no_path_at(original_x, original_y, page=0)
+            assertions.assert_no_path_at(original_x, original_y, page=1)
 
             # Should exist at new location with same ID
-            assertions.assert_path_is_at(original_id, new_x, new_y, page=0, epsilon=1.0)
-            assertions.assert_path_exists_at(new_x, new_y, page=0)
+            assertions.assert_path_is_at(original_id, new_x, new_y, page=1, epsilon=1.0)
+            assertions.assert_path_exists_at(new_x, new_y, page=1)
 
             # Total path count should remain the same
-            assertions.assert_number_of_paths(9, page=0)
+            assertions.assert_number_of_paths(9, page=1)
 
 
 class TestPathSegmentInspection:
@@ -498,7 +498,7 @@ class TestComplexPathScenarios:
         # Simulate API response for a path with mixed segments
         path_json = {
             "position": {
-                "pageIndex": 0,
+                "pageNumber": 1,
                 "boundingRect": {"x": 50.0, "y": 50.0, "width": 200.0, "height": 150.0},
             },
             "pathSegments": [
@@ -527,7 +527,7 @@ class TestComplexPathScenarios:
 
         # Verify parsed path structure
         assert path.get_position() is not None
-        assert path.get_position().page_index == 0
+        assert path.get_position().page_number == 1
         assert path.get_even_odd_fill() is False
 
         # Verify segments

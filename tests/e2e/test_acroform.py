@@ -21,10 +21,10 @@ def test_find_form_fields():
         )
         assert not all_at_origin, "All forms should not be at coordinates (0,0)"
 
-        first_page_fields = pdf.page(0).select_form_fields()
+        first_page_fields = pdf.page(1).select_form_fields()
         assert len(first_page_fields) == 10
 
-        first_form = pdf.page(0).select_form_fields_at(280, 455, 1)
+        first_form = pdf.page(1).select_form_fields_at(280, 455, 1)
         assert len(first_form) == 1
         f = first_form[0]
         assert f.object_type == ObjectType.RADIO_BUTTON
@@ -52,8 +52,8 @@ def test_move_form_field():
     base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        assert 10 == len(pdf.page(0).select_form_fields())
-        form_fields = pdf.page(0).select_form_fields_at(280, 455, 1)
+        assert 10 == len(pdf.page(1).select_form_fields())
+        form_fields = pdf.page(1).select_form_fields_at(280, 455, 1)
         assert len(form_fields) == 1
         f = form_fields[0]
         assert abs(f.position.x() - 280) < 0.1
@@ -61,9 +61,9 @@ def test_move_form_field():
 
         f.move_to(30, 40)
 
-        assert pdf.page(0).select_form_fields_at(280, 455, 1) == []
+        assert pdf.page(1).select_form_fields_at(280, 455, 1) == []
 
-        moved = pdf.page(0).select_form_fields_at(30, 40, 1)
+        moved = pdf.page(1).select_form_fields_at(30, 40, 1)
         assert len(moved) == 1
         assert moved[0].internal_id == f.internal_id
 

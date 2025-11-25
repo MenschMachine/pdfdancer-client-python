@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 
 class PageBuilder:
     """
-    Fluent builder for adding pages with optional orientation, size, and index.
+    Fluent builder for adding pages with optional orientation, size, and page number.
 
     Usage:
-        pdf.new_page().at_index(1).landscape().a4().add()
+        pdf.new_page().at_page(1).landscape().a4().add()
     """
 
     def __init__(self, client: "PDFDancer") -> None:
@@ -22,17 +22,43 @@ class PageBuilder:
             raise ValidationException("Client cannot be null")
 
         self._client = client
-        self._page_index: Optional[int] = None
+        self._page_number: Optional[int] = None
         self._orientation: Optional[Orientation] = None
         self._page_size: Optional[PageSize] = None
 
-    def at_index(self, page_index: int) -> "PageBuilder":
-        if page_index is None:
-            raise ValidationException("Page index cannot be null")
-        if page_index < 0:
-            raise ValidationException("Page index must be greater than or equal to 0")
-        self._page_index = int(page_index)
+    def at_page(self, page_number: int) -> "PageBuilder":
+        """
+        Sets the page number where the new page should be inserted (1-based).
+        Page 1 is the first page.
+
+        Args:
+            page_number: The 1-based page number (must be >= 1)
+
+        Returns:
+            This builder
+
+        Raises:
+            ValidationException: If page_number is None or less than 1
+        """
+        if page_number is None:
+            raise ValidationException("Page number cannot be null")
+        if page_number < 1:
+            raise ValidationException("Page number must be >= 1 (1-based indexing)")
+        self._page_number = int(page_number)
         return self
+
+    def at_index(self, page_number: int) -> "PageBuilder":
+        """
+        Deprecated: Use at_page() instead. This method will be removed in a future release.
+        """
+        import warnings
+
+        warnings.warn(
+            "at_index() is deprecated, use at_page() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.at_page(page_number + 1)
 
     def orientation(self, orientation: Orientation) -> "PageBuilder":
         if orientation is None:
@@ -87,13 +113,13 @@ class PageBuilder:
 
     def _build_request(self) -> Optional[AddPageRequest]:
         if (
-            self._page_index is None
+            self._page_number is None
             and self._orientation is None
             and self._page_size is None
         ):
             return None
         return AddPageRequest(
-            page_index=self._page_index,
+            page_number=self._page_number,
             orientation=self._orientation,
             page_size=self._page_size,
         )

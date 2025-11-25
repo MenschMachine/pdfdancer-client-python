@@ -264,16 +264,16 @@ def _get_retry_after_delay(response: httpx.Response) -> Optional[int]:
 class PageClient:
     def __init__(
         self,
-        page_index: int,
+        page_number: int,
         root: "PDFDancer",
         page_size: Optional[PageSize] = None,
         orientation: Optional[Union[Orientation, str]] = Orientation.PORTRAIT,
     ):
-        self.page_index = page_index
+        self.page_number = page_number
         self.root = root
         self.object_type = ObjectType.PAGE
-        self.position = Position.at_page(page_index)
-        self.internal_id = f"PAGE-{page_index}"
+        self.position = Position.at_page(page_number)
+        self.internal_id = f"PAGE-{page_number}"
         self.page_size = page_size
         if isinstance(orientation, str):
             normalized = orientation.strip().upper()
@@ -287,30 +287,30 @@ class PageClient:
     def select_paths_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[PathObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(position, tolerance))
 
     def select_paragraphs(self) -> List[ParagraphObject]:
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(
-            self.root._find_paragraphs(Position.at_page(self.page_index))
+            self.root._find_paragraphs(Position.at_page(self.page_number))
         )
 
     def select_paragraphs_starting_with(self, text: str) -> List[ParagraphObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         position.with_text_starts(text)
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
     def select_paragraphs_matching(self, pattern):
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         position.text_pattern = pattern
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
 
     def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         position.text_pattern = pattern
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
@@ -318,19 +318,19 @@ class PageClient:
     def select_paragraphs_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ParagraphObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_paragraph_objects(
             self.root._find_paragraphs(position, tolerance)
         )
 
     def select_text_lines(self) -> List[TextLineObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
 
     def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         position.with_text_starts(text)
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
@@ -338,7 +338,7 @@ class PageClient:
     def select_text_lines_at(
         self, x, y, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[TextLineObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(
             self.root._find_text_lines(position, tolerance)
@@ -347,45 +347,45 @@ class PageClient:
     def select_images(self) -> List[ImageObject]:
         # noinspection PyProtectedMember
         return self.root._to_image_objects(
-            self.root._find_images(Position.at_page(self.page_index))
+            self.root._find_images(Position.at_page(self.page_number))
         )
 
     def select_images_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[ImageObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_image_objects(self.root._find_images(position, tolerance))
 
     def select_forms(self) -> List[FormObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         # noinspection PyProtectedMember
         return self.root._to_form_objects(self.root._find_form_x_objects(position))
 
     def select_forms_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[FormObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_form_objects(
             self.root._find_form_x_objects(position, tolerance)
         )
 
     def select_form_fields(self) -> List[FormFieldObject]:
-        position = Position.at_page(self.page_index)
+        position = Position.at_page(self.page_number)
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(self.root._find_form_fields(position))
 
     def select_form_fields_by_name(self, field_name: str) -> List[FormFieldObject]:
         pos = Position.by_name(field_name)
-        pos.page_index = self.page_index
+        pos.page_number = self.page_number
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(self.root._find_form_fields(pos))
 
     def select_form_fields_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> List[FormFieldObject]:
-        position = Position.at_page_coordinates(self.page_index, x, y)
+        position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_form_field_objects(
             self.root._find_form_fields(position, tolerance)
@@ -563,7 +563,7 @@ class PageClient:
     @classmethod
     def from_ref(cls, root: "PDFDancer", page_ref: PageRef) -> "PageClient":
         page_client = PageClient(
-            page_index=page_ref.position.page_index,
+            page_number=page_ref.position.page_number,
             root=root,
             page_size=page_ref.page_size,
             orientation=page_ref.orientation,
@@ -571,25 +571,25 @@ class PageClient:
         page_client.internal_id = page_ref.internal_id
         if page_ref.position is not None:
             page_client.position = page_ref.position
-            page_client.page_index = page_ref.position.page_index
+            page_client.page_number = page_ref.position.page_number
         return page_client
 
     def delete(self) -> bool:
         # noinspection PyProtectedMember
         return self.root._delete_page(self._ref())
 
-    def move_to(self, target_page_index: int) -> bool:
+    def move_to(self, target_page_number: int) -> bool:
         """Move this page to a different index within the document."""
-        if target_page_index is None or target_page_index < 0:
+        if target_page_number is None or target_page_number < 0:
             raise ValidationException(
-                f"Target page index must be >= 0, got {target_page_index}"
+                f"Target page index must be >= 0, got {target_page_number}"
             )
 
         # noinspection PyProtectedMember
-        moved = self.root._move_page(self.page_index, target_page_index)
+        moved = self.root._move_page(self.page_number, target_page_number)
         if moved:
-            self.page_index = target_page_index
-            self.position = Position.at_page(target_page_index)
+            self.page_number = target_page_number
+            self.position = Position.at_page(target_page_number)
         return moved
 
     def _ref(self):
@@ -598,29 +598,29 @@ class PageClient:
         )
 
     def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphPageBuilder(self.root, self.page_index)
+        return ParagraphPageBuilder(self.root, self.page_number)
 
     def new_path(self) -> PathBuilder:
-        return PathBuilder(self.root, self.page_index)
+        return PathBuilder(self.root, self.page_number)
 
     def new_image(self) -> ImageOnPageBuilder:
-        return ImageOnPageBuilder(self.root, self.page_index)
+        return ImageOnPageBuilder(self.root, self.page_number)
 
     def new_line(self) -> LineBuilder:
-        return LineBuilder(self.root, self.page_index)
+        return LineBuilder(self.root, self.page_number)
 
     def new_bezier(self) -> BezierBuilder:
-        return BezierBuilder(self.root, self.page_index)
+        return BezierBuilder(self.root, self.page_number)
 
     def new_rectangle(self) -> "RectangleBuilder":
         from .path_builder import RectangleBuilder
 
-        return RectangleBuilder(self.root, self.page_index)
+        return RectangleBuilder(self.root, self.page_number)
 
     def select_paths(self):
         # noinspection PyProtectedMember
         return self.root._to_path_objects(
-            self.root._find_paths(Position.at_page(self.page_index))
+            self.root._find_paths(Position.at_page(self.page_number))
         )
 
     def select_elements(self):
@@ -1456,6 +1456,7 @@ class PDFDancer:
             "Content-Type": "application/json",
             "X-Generated-At": _generate_timestamp(),
             "X-Fingerprint": Fingerprint.generate(),
+            "X-API-VERSION": "1",
         }
 
         last_error: Optional[Exception] = None
@@ -1614,8 +1615,8 @@ class PDFDancer:
             return [self._parse_object_ref(obj_data) for obj_data in objects_data]
 
         # Use snapshot for all other queries
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, object_type, position, tolerance
             )
@@ -1669,8 +1670,8 @@ class PDFDancer:
         Uses snapshot cache for all queries.
         """
         # Use snapshot for all queries (including spatial)
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.PARAGRAPH, position, tolerance
             )
@@ -1691,8 +1692,8 @@ class PDFDancer:
         Uses snapshot cache for all queries.
         """
         # Use snapshot for all queries (including spatial)
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.IMAGE, position, tolerance
             )
@@ -1725,8 +1726,8 @@ class PDFDancer:
         Uses snapshot cache for all queries.
         """
         # Use snapshot for all queries (including spatial)
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.FORM_X_OBJECT, position, tolerance
             )
@@ -1775,8 +1776,8 @@ class PDFDancer:
         Uses snapshot cache for all queries (including name and spatial filtering).
         """
         # Use snapshot for all queries (including name and spatial)
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.FORM_FIELD, position, tolerance
             )
@@ -1825,8 +1826,8 @@ class PDFDancer:
             return self._find(ObjectType.PATH, position, tolerance)
 
         # For simple page-level "all paths" queries, use snapshot
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.PATH, position, tolerance
             )
@@ -1848,8 +1849,8 @@ class PDFDancer:
         Uses snapshot cache for all queries.
         """
         # Use snapshot for all queries (including spatial)
-        if position and position.page_index is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_index)
+        if position and position.page_number is not None:
+            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
                 snapshot.elements, ObjectType.TEXT_LINE, position, tolerance
             )
@@ -1868,27 +1869,35 @@ class PDFDancer:
         """
         return self._to_textline_objects(self._find_text_lines(None))
 
-    def page(self, page_index: int) -> PageClient:
+    def page(self, page_number: int) -> PageClient:
         """
-        Get a specific page by index, using snapshot cache when available.
+        Get a specific page by page number, using snapshot cache when available.
 
         Args:
-            page_index: The 0-based page index
+            page_number: The 1-based page number (page 1 is the first page)
 
         Returns:
             PageClient with page properties populated
+
+        Raises:
+            ValidationException: If page_number is less than 1
         """
+        if page_number < 1:
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
+
         # Try to get page ref from snapshot first (avoids API call)
-        page_snapshot = self._get_or_fetch_page_snapshot(page_index)
+        page_snapshot = self._get_or_fetch_page_snapshot(page_number)
         if page_snapshot and page_snapshot.page_ref:
             return PageClient.from_ref(self, page_snapshot.page_ref)
 
         # Fallback to API if snapshot doesn't have page ref
-        page_ref = self._get_page(page_index)
+        page_ref = self._get_page(page_number)
         if page_ref:
             return PageClient.from_ref(self, page_ref)
         else:
-            return PageClient(page_index, self)
+            return PageClient(page_number, self)
 
     # Page Operations
 
@@ -1903,20 +1912,22 @@ class PDFDancer:
         doc_snapshot = self._get_or_fetch_document_snapshot()
         return [page_snap.page_ref for page_snap in doc_snapshot.pages]
 
-    def _get_page(self, page_index: int) -> Optional[PageRef]:
+    def _get_page(self, page_number: int) -> Optional[PageRef]:
         """
-        Retrieves a reference to a specific page by its page index.
+        Retrieves a reference to a specific page by its page number.
 
         Args:
-            page_index: The page index to retrieve (1-based indexing)
+            page_number: The page number to retrieve (1-based indexing)
 
         Returns:
             Page reference for the specified page, or None if not found
         """
-        if page_index < 0:
-            raise ValidationException(f"Page index must be >= 0, got {page_index}")
+        if page_number < 1:
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
 
-        params = {"pageIndex": page_index}
+        params = {"pageNumber": page_number}
         response = self._make_request("POST", "/pdf/page/find", params=params)
 
         pages_data = response.json()
@@ -1949,15 +1960,27 @@ class PDFDancer:
 
         return result
 
-    def move_page(self, from_page_index: int, to_page_index: int) -> bool:
-        """Move a page to a different index within the document."""
-        return self._move_page(from_page_index, to_page_index)
+    def move_page(self, from_page: int, to_page: int) -> bool:
+        """
+        Move a page to a different position within the document.
 
-    def _move_page(self, from_page_index: int, to_page_index: int) -> bool:
+        Args:
+            from_page: The source page number (1-based, page 1 is first page)
+            to_page: The target page number (1-based)
+
+        Returns:
+            True if the page was successfully moved
+
+        Raises:
+            ValidationException: If from_page or to_page is less than 1
+        """
+        return self._move_page(from_page, to_page)
+
+    def _move_page(self, from_page: int, to_page: int) -> bool:
         """Internal helper to perform the page move operation."""
         for value, label in (
-            (from_page_index, "from_page_index"),
-            (to_page_index, "to_page_index"),
+            (from_page, "from_page"),
+            (to_page, "to_page"),
         ):
             if value is None:
                 raise ValidationException(f"{label} cannot be null")
@@ -1965,10 +1988,12 @@ class PDFDancer:
                 raise ValidationException(
                     f"{label} must be an integer, got {type(value)}"
                 )
-            if value < 0:
-                raise ValidationException(f"{label} must be >= 0, got {value}")
+            if value < 1:
+                raise ValidationException(
+                    f"{label} must be >= 1 (1-based indexing), got {value}"
+                )
 
-        request_data = PageMoveRequest(from_page_index, to_page_index).to_dict()
+        request_data = PageMoveRequest(from_page, to_page).to_dict()
         response = self._make_request("PUT", "/pdf/page/move", data=request_data)
         result = response.json()
 
@@ -2067,10 +2092,10 @@ class PDFDancer:
             raise ValidationException("Paragraph cannot be null")
         if paragraph.get_position() is None:
             raise ValidationException("Paragraph position is null")
-        if paragraph.get_position().page_index is None:
-            raise ValidationException("Paragraph position page index is null")
-        if paragraph.get_position().page_index < 0:
-            raise ValidationException("Paragraph position page index is less than 0")
+        if paragraph.get_position().page_number is None:
+            raise ValidationException("Paragraph position page number is null")
+        if paragraph.get_position().page_number < 1:
+            raise ValidationException("Paragraph position page number is less than 1")
 
         return self._add_object(paragraph)
 
@@ -2083,10 +2108,10 @@ class PDFDancer:
             raise ValidationException("Path cannot be null")
         if path.get_position() is None:
             raise ValidationException("Path position is null")
-        if path.get_position().page_index is None:
-            raise ValidationException("Path position page index is null")
-        if path.get_position().page_index < 0:
-            raise ValidationException("Path position page index is less than 0")
+        if path.get_position().page_number is None:
+            raise ValidationException("Path position page number is null")
+        if path.get_position().page_number < 1:
+            raise ValidationException("Path position page number is less than 1")
         if not path.get_path_segments() or len(path.get_path_segments()) == 0:
             raise ValidationException("Path must have at least one segment")
 
@@ -2376,27 +2401,32 @@ class PDFDancer:
         return self._parse_document_snapshot(data)
 
     def get_page_snapshot(
-        self, page_index: int, types: Optional[str] = None
+        self, page_number: int, types: Optional[str] = None
     ) -> PageSnapshot:
         """
         Retrieve a snapshot of a specific page with all its elements.
 
         Args:
-            page_index: The index of the page to snapshot (0-based)
+            page_number: The page number to snapshot (1-based, page 1 is first page)
             types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
 
         Returns:
             PageSnapshot containing page reference and all elements on that page
+
+        Raises:
+            ValidationException: If page_number is less than 1
         """
-        if page_index < 0:
-            raise ValidationException(f"Page index must be >= 0, got {page_index}")
+        if page_number < 1:
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
 
         params = {}
         if types:
             params["types"] = types
 
         response = self._make_request(
-            "GET", f"/pdf/page/{page_index}/snapshot", params=params
+            "GET", f"/pdf/page/{page_number}/snapshot", params=params
         )
         data = response.json()
 
@@ -2413,29 +2443,33 @@ class PDFDancer:
             # Cache individual page snapshots from document snapshot
             for i, page_snapshot in enumerate(self._document_snapshot.pages):
                 if i not in self._page_snapshots:
-                    self._page_snapshots[i] = page_snapshot
+                    self._page_snapshots[i + 1] = page_snapshot
         return self._document_snapshot
 
-    def _get_or_fetch_page_snapshot(self, page_index: int) -> PageSnapshot:
+    def _get_or_fetch_page_snapshot(self, page_number: int) -> PageSnapshot:
         """
         Get page snapshot from cache or fetch if not cached.
         This is used internally by select_* methods for optimization.
         If document snapshot exists, uses page from it instead of making separate API call.
+
+        Args:
+            page_number: 1-based page number
         """
         # Check if already cached
-        if page_index in self._page_snapshots:
-            return self._page_snapshots[page_index]
+        if page_number in self._page_snapshots:
+            return self._page_snapshots[page_number]
 
         # If document snapshot exists, get page from it (no API call needed)
+        # Convert 1-based page number to 0-based index for array access
         if self._document_snapshot is not None:
-            if 0 <= page_index < len(self._document_snapshot.pages):
-                page_snapshot = self._document_snapshot.pages[page_index]
-                self._page_snapshots[page_index] = page_snapshot
+            if 0 < page_number <= len(self._document_snapshot.pages):
+                page_snapshot = self._document_snapshot.pages[page_number - 1]
+                self._page_snapshots[page_number] = page_snapshot
                 return page_snapshot
 
         # Otherwise fetch page snapshot individually
-        self._page_snapshots[page_index] = self.get_page_snapshot(page_index)
-        return self._page_snapshots[page_index]
+        self._page_snapshots[page_number] = self.get_page_snapshot(page_number)
+        return self._page_snapshots[page_number]
 
     def _invalidate_snapshots(self) -> None:
         """
@@ -2630,7 +2664,7 @@ class PDFDancer:
     def _parse_position(pos_data: dict) -> Position:
         """Parse JSON position data into Position instance."""
         position = Position()
-        position.page_index = pos_data.get("pageIndex")
+        position.page_number = pos_data.get("pageNumber")
         position.text_starts_with = pos_data.get("textStartsWith")
 
         if "shape" in pos_data:

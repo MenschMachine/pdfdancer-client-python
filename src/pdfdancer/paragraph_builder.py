@@ -169,14 +169,14 @@ class ParagraphBuilder:
                 "Cannot move paragraph without an existing position"
             )
 
-        page_index = position.page_index
-        if page_index is None:
+        page_number = position.page_number
+        if page_number is None:
             raise ValidationException(
-                "Paragraph position must include a page index to move"
+                "Paragraph position must include a page number to move"
             )
 
         self._position_changed = True
-        return self.at(page_index, x, y)
+        return self.at(page_number, x, y)
 
     def at_position(self, position: Position) -> "ParagraphBuilder":
         if position is None:
@@ -186,8 +186,8 @@ class ParagraphBuilder:
         self._position_changed = True
         return self
 
-    def at(self, page_index: int, x: float, y: float) -> "ParagraphBuilder":
-        return self.at_position(Position.at_page_coordinates(page_index, x, y))
+    def at(self, page_number: int, x: float, y: float) -> "ParagraphBuilder":
+        return self.at_position(Position.at_page_coordinates(page_number, x, y))
 
     def add_text_line(
         self, text_line: Union[TextLine, TextObjectRef, str]
@@ -470,14 +470,14 @@ class ParagraphBuilder:
         if paragraph_position is None:
             return None
 
-        page_index = paragraph_position.page_index
+        page_number = paragraph_position.page_number
         base_x = paragraph_position.x()
         base_y = paragraph_position.y()
-        if page_index is None or base_x is None or base_y is None:
+        if page_number is None or base_x is None or base_y is None:
             return None
 
         offset = line_index * self._calculate_baseline_distance(spacing_factor)
-        return Position.at_page_coordinates(page_index, base_x, base_y + offset)
+        return Position.at_page_coordinates(page_number, base_x, base_y + offset)
 
     def _calculate_baseline_distance(self, spacing_factor: float) -> float:
         factor = spacing_factor if spacing_factor > 0 else DEFAULT_LINE_SPACING_FACTOR
@@ -545,10 +545,10 @@ class ParagraphBuilder:
 
 class ParagraphPageBuilder(ParagraphBuilder):
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         super().__init__(client)
-        self._page_index: Optional[int] = page_index
+        self._page_number: Optional[int] = page_number
 
     # noinspection PyMethodOverriding
     def at(self, x: float, y: float) -> "ParagraphBuilder":
-        return super().at(self._page_index, x, y)
+        return super().at(self._page_number, x, y)

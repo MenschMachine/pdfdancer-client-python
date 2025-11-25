@@ -43,9 +43,9 @@ class PDFObjectBase:
         self.object_type = object_type
 
     @property
-    def page_index(self) -> int:
+    def page_number(self) -> int:
         """Page index where this object resides."""
-        return self.position.page_index
+        return self.position.page_number
 
     def object_ref(self) -> ObjectRef:
         return ObjectRef(self.internal_id, self.position, self.object_type)
@@ -61,7 +61,7 @@ class PDFObjectBase:
         """Move this object to a new position."""
         return self._client._move(
             self.object_ref(),
-            Position.at_page_coordinates(self.position.page_index, x, y),
+            Position.at_page_coordinates(self.position.page_number, x, y),
         )
 
 
@@ -183,14 +183,14 @@ class TextLineEdit(BaseTextEdit):
         )
 
         if only_move:
-            page_index = (
-                self._object_ref.position.page_index
+            page_number = (
+                self._object_ref.position.page_number
                 if self._object_ref.position
                 else None
             )
-            if page_index is None:
+            if page_number is None:
                 raise ValidationException(
-                    "Text line position must include a page index to move"
+                    "Text line position must include a page number to move"
                 )
 
             # Extract x, y from self._position
@@ -199,7 +199,7 @@ class TextLineEdit(BaseTextEdit):
             if x is None or y is None:
                 raise ValidationException("Position must have x and y coordinates")
 
-            position = Position.at_page_coordinates(page_index, x, y)
+            position = Position.at_page_coordinates(page_number, x, y)
             # noinspection PyProtectedMember
             result = self._target_obj._client._move(self._object_ref, position)
             return result
@@ -223,7 +223,9 @@ class TextLineEdit(BaseTextEdit):
         # IMPORTANT: Always explicitly set font to ensure it's preserved
         if self._font_name is not None and self._font_size is not None:
             builder.font(self._font_name, self._font_size)
-        elif hasattr(self._object_ref, "font_name") and hasattr(self._object_ref, "font_size"):
+        elif hasattr(self._object_ref, "font_name") and hasattr(
+            self._object_ref, "font_size"
+        ):
             if self._object_ref.font_name and self._object_ref.font_size:
                 # Preserve original font when only changing color/position
                 builder.font(self._object_ref.font_name, self._object_ref.font_size)
@@ -235,16 +237,16 @@ class TextLineEdit(BaseTextEdit):
             y = self._position.y()
             if x is None or y is None:
                 raise ValidationException("Position must have x and y coordinates")
-            page_index = (
-                self._object_ref.position.page_index
+            page_number = (
+                self._object_ref.position.page_number
                 if self._object_ref.position
                 else None
             )
-            if page_index is None:
+            if page_number is None:
                 raise ValidationException(
-                    "Text line position must include a page index"
+                    "Text line position must include a page number"
                 )
-            builder.at(page_index, x, y)
+            builder.at(page_number, x, y)
 
         # Use builder's modify method which handles all the complexity
         result = builder.modify(self._object_ref)
@@ -409,16 +411,16 @@ class ParagraphEditSession:
         )
 
         if only_move:
-            page_index = (
-                self._object_ref.position.page_index
+            page_number = (
+                self._object_ref.position.page_number
                 if self._object_ref.position
                 else None
             )
-            if page_index is None:
+            if page_number is None:
                 raise ValidationException(
-                    "Paragraph position must include a page index to move"
+                    "Paragraph position must include a page number to move"
                 )
-            position = Position.at_page_coordinates(page_index, *self._new_position)
+            position = Position.at_page_coordinates(page_number, *self._new_position)
             result = self._client._move(self._object_ref, position)
             self._has_changes = False
             return result

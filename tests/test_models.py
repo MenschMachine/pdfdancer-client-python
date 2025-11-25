@@ -24,11 +24,11 @@ from pdfdancer.models import Point
 class TestPosition:
     """Test Position class functionality."""
 
-    def test_from_page_index_creates_position(self):
-        """Test Position.from_page_index() factory method."""
+    def test_from_page_number_creates_position(self):
+        """Test Position.from_page_number() factory method."""
         position = Position.at_page(2)
 
-        assert position.page_index == 2
+        assert position.page_number == 2
         assert position.mode == PositionMode.CONTAINS
         assert position.shape is None
         assert position.bounding_rect is None
@@ -37,7 +37,7 @@ class TestPosition:
         """Test Position.on_page_coordinates() factory method."""
         position = Position.at_page_coordinates(1, 100.5, 200.7)
 
-        assert position.page_index == 1
+        assert position.page_number == 1
         assert position.mode == PositionMode.CONTAINS
         assert position.shape == ShapeType.POINT
         assert position.bounding_rect.x == 100.5
@@ -61,7 +61,7 @@ class TestPosition:
 
     def test_get_x_y_coordinates(self):
         """Test get_x() and get_y() methods."""
-        position = Position.at_page_coordinates(0, 123.45, 678.90)
+        position = Position.at_page_coordinates(1, 123.45, 678.90)
 
         assert position.x() == 123.45
         assert position.y() == 678.90
@@ -75,7 +75,7 @@ class TestPosition:
 
     def test_move_x_updates_position(self):
         """Test move_x() updates x coordinate."""
-        position = Position.at_page_coordinates(0, 100.0, 200.0)
+        position = Position.at_page_coordinates(1, 100.0, 200.0)
 
         position.move_x(50.0)
 
@@ -84,7 +84,7 @@ class TestPosition:
 
     def test_move_y_updates_position(self):
         """Test move_y() updates y coordinate."""
-        position = Position.at_page_coordinates(0, 100.0, 200.0)
+        position = Position.at_page_coordinates(1, 100.0, 200.0)
 
         position.move_y(-25.0)
 
@@ -97,7 +97,7 @@ class TestObjectRef:
 
     def test_constructor_sets_properties(self):
         """Test ObjectRef constructor sets all properties."""
-        position = Position.at_page(0)
+        position = Position.at_page(1)
         obj_ref = ObjectRef("obj-123", position, ObjectType.PARAGRAPH)
 
         assert obj_ref.internal_id == "obj-123"
@@ -115,7 +115,7 @@ class TestObjectRef:
 
     def test_set_position_updates_position(self):
         """Test set_position() updates position reference."""
-        original_position = Position.at_page(0)
+        original_position = Position.at_page(1)
         new_position = Position.at_page(1)
         obj_ref = ObjectRef("test", original_position, ObjectType.FORM_X_OBJECT)
 
@@ -193,7 +193,7 @@ class TestImage:
     def test_get_set_position(self):
         """Test Image position getter and setter."""
         image = Image()
-        position = Position.at_page_coordinates(0, 100.0, 150.0)
+        position = Position.at_page_coordinates(1, 100.0, 150.0)
 
         assert image.get_position() is None
 

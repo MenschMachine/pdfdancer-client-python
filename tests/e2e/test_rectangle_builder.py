@@ -31,13 +31,13 @@ class TestRectangleBuilderBasic:
         )
 
         # Use fluent builder to create rectangle
-        pdf.page(0).new_rectangle().at_coordinates(50, 50).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(50, 50).with_size(
             100, 80
         ).stroke_color(Color(0, 0, 0)).stroke_width(1.0).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
     def test_build_rectangle_with_custom_colors(self):
         """Build a rectangle with custom stroke and fill colors."""
@@ -51,15 +51,15 @@ class TestRectangleBuilderBasic:
         )
 
         # Red stroke with yellow fill
-        pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
             150, 100
         ).stroke_color(Color(255, 0, 0)).fill_color(Color(255, 255, 0)).stroke_width(
             2.0
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_build_rectangle_with_dash_pattern(self):
         """Build a dashed rectangle."""
@@ -73,13 +73,13 @@ class TestRectangleBuilderBasic:
         )
 
         # Dashed border
-        pdf.page(0).new_rectangle().at_coordinates(75, 75).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(75, 75).with_size(
             200, 150
         ).stroke_color(Color(0, 0, 0)).stroke_width(1.5).dash_pattern([10.0, 5.0]).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(75, 75, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(75, 75, page=1, tolerance=5.0)
 
     def test_build_rectangle_with_solid(self):
         """Build a solid rectangle after setting dash pattern."""
@@ -93,13 +93,13 @@ class TestRectangleBuilderBasic:
         )
 
         # Set dash then override with solid
-        pdf.page(0).new_rectangle().at_coordinates(50, 50).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(50, 50).with_size(
             100, 80
         ).stroke_color(Color(0, 0, 255)).dash_pattern([5.0, 5.0]).solid().add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
 
 class TestRectangleBuilderSizes:
@@ -117,13 +117,13 @@ class TestRectangleBuilderSizes:
         )
 
         # 100x100 square
-        pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
             100, 100
         ).stroke_color(Color(0, 0, 0)).stroke_width(2.0).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_build_wide_rectangle(self):
         """Build a wide horizontal rectangle."""
@@ -137,13 +137,13 @@ class TestRectangleBuilderSizes:
         )
 
         # Wide 300x50
-        pdf.page(0).new_rectangle().at_coordinates(50, 400).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(50, 400).with_size(
             300, 50
         ).stroke_color(Color(128, 128, 128)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 400, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 400, page=1, tolerance=5.0)
 
     def test_build_small_rectangle(self):
         """Build a very small rectangle."""
@@ -157,13 +157,13 @@ class TestRectangleBuilderSizes:
         )
 
         # Small 10x10
-        pdf.page(0).new_rectangle().at_coordinates(300, 300).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(300, 300).with_size(
             10, 10
         ).stroke_color(Color(255, 0, 255)).stroke_width(0.5).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(300, 300, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(300, 300, page=1, tolerance=5.0)
 
 
 class TestRectangleBuilderMultiple:
@@ -181,20 +181,20 @@ class TestRectangleBuilderMultiple:
         )
 
         # Three rectangles
-        pdf.page(0).new_rectangle().at_coordinates(50, 50).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(50, 50).with_size(
             100, 80
         ).stroke_color(Color(255, 0, 0)).add()
 
-        pdf.page(0).new_rectangle().at_coordinates(200, 50).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(200, 50).with_size(
             100, 80
         ).stroke_color(Color(0, 255, 0)).add()
 
-        pdf.page(0).new_rectangle().at_coordinates(350, 50).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(350, 50).with_size(
             100, 80
         ).stroke_color(Color(0, 0, 255)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
+        assertions.assert_number_of_paths(3, page=1)
 
     def test_build_nested_rectangles(self):
         """Build nested rectangles."""
@@ -208,22 +208,22 @@ class TestRectangleBuilderMultiple:
         )
 
         # Outer
-        pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
             200, 150
         ).stroke_color(Color(0, 0, 0)).stroke_width(3.0).add()
 
         # Middle
-        pdf.page(0).new_rectangle().at_coordinates(120, 120).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(120, 120).with_size(
             160, 110
         ).stroke_color(Color(128, 128, 128)).stroke_width(2.0).add()
 
         # Inner
-        pdf.page(0).new_rectangle().at_coordinates(140, 140).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(140, 140).with_size(
             120, 70
         ).stroke_color(Color(255, 0, 0)).stroke_width(1.0).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
+        assertions.assert_number_of_paths(3, page=1)
 
     def test_build_rectangles_different_pages(self):
         """Build rectangles on different pages."""
@@ -238,22 +238,22 @@ class TestRectangleBuilderMultiple:
         )
 
         # Page 0
-        pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
             150, 100
         ).stroke_color(Color(255, 0, 0)).add()
 
         # Page 1
-        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(2).new_rectangle().at_coordinates(100, 100).with_size(
             150, 100
         ).stroke_color(Color(0, 255, 0)).add()
 
         # Page 2
-        pdf.page(2).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(3).new_rectangle().at_coordinates(100, 100).with_size(
             150, 100
         ).stroke_color(Color(0, 0, 255)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=2)
 
@@ -272,15 +272,15 @@ class TestRectangleBuilderAdvanced:
             base_url=base_url,
         )
 
-        pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
             200, 150
         ).stroke_color(Color(0, 0, 0)).fill_color(Color(255, 0, 0, 128)).even_odd_fill(
             True
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_build_rectangle_at_origin(self):
         """Build a rectangle at origin (0,0)."""
@@ -293,13 +293,13 @@ class TestRectangleBuilderAdvanced:
             base_url=base_url,
         )
 
-        pdf.page(0).new_rectangle().at_coordinates(0, 0).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(0, 0).with_size(
             100, 80
         ).stroke_color(Color(0, 0, 0)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_build_rectangle_with_decimal_coordinates(self):
         """Build a rectangle with precise decimal coordinates."""
@@ -312,13 +312,13 @@ class TestRectangleBuilderAdvanced:
             base_url=base_url,
         )
 
-        pdf.page(0).new_rectangle().at_coordinates(123.456, 234.567).with_size(
+        pdf.page(1).new_rectangle().at_coordinates(123.456, 234.567).with_size(
             111.222, 88.999
         ).stroke_color(Color(0, 0, 0)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(123.456, 234.567, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(123.456, 234.567, page=1, tolerance=5.0)
 
 
 class TestRectangleBuilderValidation:
@@ -336,7 +336,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().with_size(100, 80).add()
+            pdf.page(1).new_rectangle().with_size(100, 80).add()
 
         assert (
             "position" in str(exc_info.value).lower()
@@ -355,7 +355,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).add()
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).add()
 
         assert (
             "dimensions" in str(exc_info.value).lower()
@@ -374,7 +374,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(0, 100).add()
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(0, 100).add()
 
         assert "width must be positive" in str(exc_info.value).lower()
 
@@ -390,7 +390,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
                 -50, 100
             ).add()
 
@@ -408,7 +408,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(100, 0).add()
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(100, 0).add()
 
         assert "height must be positive" in str(exc_info.value).lower()
 
@@ -424,7 +424,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
                 100, -80
             ).add()
 
@@ -442,7 +442,7 @@ class TestRectangleBuilderValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_rectangle().at_coordinates(100, 100).with_size(
+            pdf.page(1).new_rectangle().at_coordinates(100, 100).with_size(
                 100, 80
             ).stroke_width(-1.0).add()
 

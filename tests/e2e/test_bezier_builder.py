@@ -20,7 +20,7 @@ class TestBezierBuilderSimpleCurves:
             orientation=Orientation.PORTRAIT,
         )
 
-        pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+        pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
             150, 100
         ).control_point_2(250, 100).to_point(300, 200).stroke_color(
             Color(255, 0, 0)
@@ -29,7 +29,7 @@ class TestBezierBuilderSimpleCurves:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
 
     def test_s_curve(self):
         """Test an S-shaped bezier curve."""
@@ -41,7 +41,7 @@ class TestBezierBuilderSimpleCurves:
             orientation=Orientation.PORTRAIT,
         )
 
-        pdf.page(0).new_bezier().from_point(100, 300).control_point_1(
+        pdf.page(1).new_bezier().from_point(100, 300).control_point_1(
             200, 100
         ).control_point_2(300, 500).to_point(400, 300).stroke_color(
             Color(0, 0, 255)
@@ -50,7 +50,7 @@ class TestBezierBuilderSimpleCurves:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
 
 
 class TestBezierBuilderFillColors:
@@ -65,7 +65,7 @@ class TestBezierBuilderFillColors:
             orientation=Orientation.PORTRAIT,
         )
 
-        pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+        pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
             150, 100
         ).control_point_2(250, 100).to_point(300, 200).stroke_color(
             Color(0, 0, 0)
@@ -76,7 +76,7 @@ class TestBezierBuilderFillColors:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
 
 
 class TestBezierBuilderDashedCurves:
@@ -91,7 +91,7 @@ class TestBezierBuilderDashedCurves:
             orientation=Orientation.PORTRAIT,
         )
 
-        pdf.page(0).new_bezier().from_point(100, 300).control_point_1(
+        pdf.page(1).new_bezier().from_point(100, 300).control_point_1(
             200, 200
         ).control_point_2(300, 400).to_point(400, 300).stroke_color(
             Color(128, 128, 128)
@@ -102,7 +102,7 @@ class TestBezierBuilderDashedCurves:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
 
 
 class TestBezierBuilderMultipleCurves:
@@ -118,7 +118,7 @@ class TestBezierBuilderMultipleCurves:
         )
 
         # First curve - red
-        pdf.page(0).new_bezier().from_point(50, 200).control_point_1(
+        pdf.page(1).new_bezier().from_point(50, 200).control_point_1(
             100, 100
         ).control_point_2(200, 100).to_point(250, 200).stroke_color(
             Color(255, 0, 0)
@@ -127,7 +127,7 @@ class TestBezierBuilderMultipleCurves:
         ).add()
 
         # Second curve - green
-        pdf.page(0).new_bezier().from_point(50, 300).control_point_1(
+        pdf.page(1).new_bezier().from_point(50, 300).control_point_1(
             100, 400
         ).control_point_2(200, 400).to_point(250, 300).stroke_color(
             Color(0, 255, 0)
@@ -136,7 +136,7 @@ class TestBezierBuilderMultipleCurves:
         ).add()
 
         # Third curve - blue
-        pdf.page(0).new_bezier().from_point(50, 400).control_point_1(
+        pdf.page(1).new_bezier().from_point(50, 400).control_point_1(
             100, 500
         ).control_point_2(200, 300).to_point(250, 400).stroke_color(
             Color(0, 0, 255)
@@ -145,7 +145,7 @@ class TestBezierBuilderMultipleCurves:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
+        assertions.assert_number_of_paths(3, page=1)
 
 
 class TestBezierBuilderMultiplePages:
@@ -162,7 +162,7 @@ class TestBezierBuilderMultiplePages:
         )
 
         # Curve on page 0
-        pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+        pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
             150, 100
         ).control_point_2(250, 100).to_point(300, 200).stroke_color(
             Color(255, 0, 0)
@@ -171,7 +171,7 @@ class TestBezierBuilderMultiplePages:
         ).add()
 
         # Curve on page 1
-        pdf.page(1).new_bezier().from_point(100, 300).control_point_1(
+        pdf.page(2).new_bezier().from_point(100, 300).control_point_1(
             150, 200
         ).control_point_2(250, 200).to_point(300, 300).stroke_color(
             Color(0, 255, 0)
@@ -180,7 +180,7 @@ class TestBezierBuilderMultiplePages:
         ).add()
 
         # Curve on page 2
-        pdf.page(2).new_bezier().from_point(100, 400).control_point_1(
+        pdf.page(3).new_bezier().from_point(100, 400).control_point_1(
             150, 300
         ).control_point_2(250, 300).to_point(300, 400).stroke_color(
             Color(0, 0, 255)
@@ -189,7 +189,7 @@ class TestBezierBuilderMultiplePages:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=2)
 
@@ -207,7 +207,7 @@ class TestBezierBuilderValidation:
         )
 
         try:
-            pdf.page(0).new_bezier().control_point_1(150, 100).control_point_2(
+            pdf.page(1).new_bezier().control_point_1(150, 100).control_point_2(
                 250, 100
             ).to_point(300, 200).add()
             assert False, "Should have raised ValidationException"
@@ -224,7 +224,7 @@ class TestBezierBuilderValidation:
         )
 
         try:
-            pdf.page(0).new_bezier().from_point(100, 200).control_point_2(
+            pdf.page(1).new_bezier().from_point(100, 200).control_point_2(
                 250, 100
             ).to_point(300, 200).add()
             assert False, "Should have raised ValidationException"
@@ -241,7 +241,7 @@ class TestBezierBuilderValidation:
         )
 
         try:
-            pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+            pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
                 150, 100
             ).to_point(300, 200).add()
             assert False, "Should have raised ValidationException"
@@ -258,7 +258,7 @@ class TestBezierBuilderValidation:
         )
 
         try:
-            pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+            pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
                 150, 100
             ).control_point_2(250, 100).add()
             assert False, "Should have raised ValidationException"
@@ -275,7 +275,7 @@ class TestBezierBuilderValidation:
         )
 
         try:
-            pdf.page(0).new_bezier().from_point(100, 200).control_point_1(
+            pdf.page(1).new_bezier().from_point(100, 200).control_point_1(
                 150, 100
             ).control_point_2(250, 100).to_point(300, 200).stroke_width(-1).add()
             assert False, "Should have raised ValidationException"

@@ -39,7 +39,7 @@ class ImageBuilder:
 
 class ImageOnPageBuilder:
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         """
         Initialize the image builder with a client reference.
 
@@ -51,14 +51,14 @@ class ImageOnPageBuilder:
 
         self._client = client
         self._image = Image()
-        self._page_index = page_index
+        self._page_number = page_number
 
     def from_file(self, img_path: Path) -> "ImageOnPageBuilder":
         self._image.data = img_path.read_bytes()
         return self
 
     def at(self, x, y) -> "ImageOnPageBuilder":
-        self._image.position = Position.at_page_coordinates(self._page_index, x, y)
+        self._image.position = Position.at_page_coordinates(self._page_number, x, y)
         return self
 
     def add(self) -> bool:

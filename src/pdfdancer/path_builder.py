@@ -21,19 +21,19 @@ class PathBuilder:
     All coordinates are absolute page coordinates.
     """
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         """
-        Initialize the path builder with a client reference and page index.
+        Initialize the path builder with a client reference and page number.
 
         Args:
             client: The PDFDancer instance for adding the path
-            page_index: The page number (0-indexed)
+            page_number: The page number (1-indexed)
         """
         if client is None:
             raise ValidationException("Client cannot be null")
 
         self._client = client
-        self._page_index = page_index
+        self._page_number = page_number
         self._segments: List[PathSegment] = []
         self._even_odd_fill: bool = False
         self._current_stroke_color: Optional[Color] = Color(0, 0, 0)  # Black default
@@ -222,7 +222,7 @@ class PathBuilder:
             raise ValidationException("Path must have at least one segment")
 
         # Create position with only page index set
-        position = Position.at_page_coordinates(self._page_index, 0, 0)
+        position = Position.at_page_coordinates(self._page_number, 0, 0)
 
         # Build the Path object
         path = Path(
@@ -242,19 +242,19 @@ class LineBuilder:
     Mirrors the Java client LineBuilder API.
     """
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         """
         Initialize the line builder.
 
         Args:
             client: The PDFDancer instance for adding the line
-            page_index: The page number (0-indexed)
+            page_number: The page number (1-indexed)
         """
         if client is None:
             raise ValidationException("Client cannot be null")
 
         self._client = client
-        self._page_index = page_index
+        self._page_number = page_number
         self._p0: Optional[Point] = None
         self._p1: Optional[Point] = None
         self._stroke_color: Optional[Color] = Color(0, 0, 0)  # Black default
@@ -387,7 +387,7 @@ class LineBuilder:
         )
 
         # Create position with only page index set
-        position = Position.at_page_coordinates(self._page_index, 0, 0)
+        position = Position.at_page_coordinates(self._page_number, 0, 0)
 
         # Wrap in Path with single segment
         path = Path(position=position, path_segments=[line], even_odd_fill=False)
@@ -403,19 +403,19 @@ class BezierBuilder:
     Mirrors the Java client BezierBuilder API.
     """
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         """
         Initialize the bezier builder.
 
         Args:
             client: The PDFDancer instance for adding the bezier
-            page_index: The page number (0-indexed)
+            page_number: The page number (1-indexed)
         """
         if client is None:
             raise ValidationException("Client cannot be null")
 
         self._client = client
-        self._page_index = page_index
+        self._page_number = page_number
         self._p0: Optional[Point] = None
         self._p1: Optional[Point] = None
         self._p2: Optional[Point] = None
@@ -590,7 +590,7 @@ class BezierBuilder:
         )
 
         # Create position with only page index set
-        position = Position.at_page_coordinates(self._page_index, 0, 0)
+        position = Position.at_page_coordinates(self._page_number, 0, 0)
 
         # Wrap in Path with single segment
         path = Path(position=position, path_segments=[bezier], even_odd_fill=False)
@@ -606,19 +606,19 @@ class RectangleBuilder:
     Provides a convenient way to create a rectangle path with a single builder.
     """
 
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         """
         Initialize the rectangle builder.
 
         Args:
             client: The PDFDancer instance for adding the rectangle
-            page_index: The page number (0-indexed)
+            page_number: The page number (1-indexed)
         """
         if client is None:
             raise ValidationException("Client cannot be null")
 
         self._client = client
-        self._page_index = page_index
+        self._page_number = page_number
         self._x: Optional[float] = None
         self._y: Optional[float] = None
         self._width: Optional[float] = None
@@ -812,7 +812,7 @@ class RectangleBuilder:
         ]
 
         # Create position with only page index set
-        position = Position.at_page_coordinates(self._page_index, 0, 0)
+        position = Position.at_page_coordinates(self._page_number, 0, 0)
 
         # Wrap in Path with four line segments
         path = Path(

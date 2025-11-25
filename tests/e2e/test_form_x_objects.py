@@ -30,9 +30,9 @@ def test_find_form_by_position():
     base_url, token, pdf_path = _require_env_and_fixture("form-xobject-example.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        none_found = pdf.page(0).select_forms_at(0, 0)
+        none_found = pdf.page(1).select_forms_at(0, 0)
         assert len(none_found) == 0
 
-        found = pdf.page(0).select_forms_at(320, 600)
+        found = pdf.page(1).select_forms_at(320, 600)
         assert len(found) == 1
         assert found[0].internal_id == "FORM_000005"

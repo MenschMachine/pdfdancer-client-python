@@ -37,7 +37,7 @@ def test_find_request():
 def test_delete_request():
     """Test DeleteRequest serialization."""
     print("Testing DeleteRequest...")
-    position = Position(page_index=1)
+    position = Position(page_number=1)
     obj_ref = ObjectRef("test-id", position, ObjectType.PARAGRAPH)
     delete_req = DeleteRequest(obj_ref)
     result = delete_req.to_dict()
@@ -51,7 +51,7 @@ def test_delete_request():
 def test_move_request():
     """Test MoveRequest serialization."""
     print("Testing MoveRequest...")
-    position = Position(page_index=1)
+    position = Position(page_number=1)
     obj_ref = ObjectRef("test-id", position, ObjectType.PARAGRAPH)
     new_position = Position.at_page_coordinates(2, 50.0, 60.0)
     move_req = MoveRequest(obj_ref, new_position)
@@ -83,7 +83,7 @@ def test_add_request():
 def test_modify_request():
     """Test ModifyRequest serialization."""
     print("Testing ModifyRequest...")
-    position = Position(page_index=1)
+    position = Position(page_number=1)
     obj_ref = ObjectRef("test-id", position, ObjectType.PARAGRAPH)
     new_paragraph = Paragraph(position=position, text_lines=["new text"])
     modify_req = ModifyRequest(obj_ref, new_paragraph)
@@ -100,7 +100,7 @@ def test_modify_request():
 def test_modify_text_request():
     """Test ModifyTextRequest serialization."""
     print("Testing ModifyTextRequest...")
-    position = Position(page_index=1)
+    position = Position(page_number=1)
     obj_ref = ObjectRef("test-id", position, ObjectType.TEXT_LINE)
     modify_text_req = ModifyTextRequest(obj_ref, "new text content")
     result = modify_text_req.to_dict()

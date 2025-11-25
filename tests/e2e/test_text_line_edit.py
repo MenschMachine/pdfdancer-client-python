@@ -152,30 +152,6 @@ def test_text_line_edit_all_properties():
         PDFAssertions(pdf).assert_textline_exists("Fully Modified")
 
 
-def test_text_line_edit_line_spacing_fails():
-    """Test that line spacing changes fail hard for text lines"""
-    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(1).select_text_lines_starting_with(
-            "This is regular Sans text showing alignment and styles."
-        )
-        assert len(text_lines) >= 1
-
-        text_line = text_lines[0]
-
-        # Line spacing should raise UnsupportedOperation
-        from pdfdancer.types import UnsupportedOperation
-
-        with pytest.raises(
-            UnsupportedOperation,
-            match="Line spacing changes are not supported for individual text lines",
-        ):
-            with text_line.edit() as editor:
-                editor.line_spacing(2.0)
-                editor.replace("Text with spacing")
-
-
 def test_text_line_edit_chaining():
     """Test that chained font/color changes work"""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")

@@ -46,7 +46,7 @@ def test_find_lines_by_text():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        lines = pdf.page(0).select_text_lines_starting_with(
+        lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(lines) == 1
@@ -61,12 +61,12 @@ def test_delete_line():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with(
+        line = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )[0]
         line.delete()
         assert (
-            pdf.page(0).select_text_lines_starting_with(
+            pdf.page(1).select_text_lines_starting_with(
                 "This is regular Sans text showing alignment and styles."
             )
             == []
@@ -85,7 +85,7 @@ def test_move_line():
     new_x = None
     new_y = None
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with(
+        line = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )[0]
         pos = line.position
@@ -93,7 +93,7 @@ def test_move_line():
         new_y = pos.y() + 18
         line.move_to(new_x, new_y)
 
-        moved_line = pdf.page(0).select_text_lines_at(new_x, new_y, 1)[0]
+        moved_line = pdf.page(1).select_text_lines_at(new_x, new_y, 1)[0]
         assert moved_line is not None
         assert moved_line.object_ref().status is not None
         # assert moved_line.object_ref().status.is_encodable()
@@ -111,20 +111,20 @@ def test_modify_line():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        line = pdf.page(0).select_text_lines_starting_with(
+        line = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )[0]
         result = line.edit().replace(" replaced ").apply()
 
         # Validate replacements
         assert (
-            pdf.page(0).select_text_lines_starting_with(
+            pdf.page(1).select_text_lines_starting_with(
                 "This is regular Sans text showing alignment and styles."
             )
             == []
         )
-        assert pdf.page(0).select_paragraphs_starting_with(" replaced ") != []
-        lines = pdf.page(0).select_text_lines_starting_with(" replaced ")
+        assert pdf.page(1).select_paragraphs_starting_with(" replaced ") != []
+        lines = pdf.page(1).select_text_lines_starting_with(" replaced ")
         assert lines != []
         assert lines[0] is not None
         assert lines[0].object_ref().status is not None

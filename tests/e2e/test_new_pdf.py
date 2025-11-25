@@ -82,7 +82,7 @@ def test_create_blank_pdf_add_content():
             .text("Hello from blank PDF")
             .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)
             .color(Color(0, 255, 00))
-            .at(0, 100, 201.5)
+            .at(1, 100, 201.5)
             .add()
         )
 
@@ -103,10 +103,10 @@ def test_create_blank_pdf_add_and_modify_content():
             .text("Hello from blank PDF")
             .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)
             .color(Color(128, 56, 127))
-            .at(0, 100, 201.5)
+            .at(1, 100, 201.5)
             .add()
         )
-        assert pdf.page(0).select_text_lines()[0].internal_id
+        assert pdf.page(1).select_text_lines()[0].internal_id
         pdf.save("/tmp/test_create_blank_pdf_add_and_modify_content.pdf")
 
         with PDFDancer.open(
@@ -115,7 +115,7 @@ def test_create_blank_pdf_add_and_modify_content():
             base_url=base_url,
         ) as pdf2:
             for i in range(0, 10):
-                line = pdf2.page(0).select_text_lines()[0]
+                line = pdf2.page(1).select_text_lines()[0]
                 assert line.edit().replace(f"hello {i}").apply()
             pdf2.save("/tmp/test_create_blank_pdf_add_and_modify_content2.pdf")
 
@@ -126,7 +126,7 @@ def test_create_blank_pdf_add_page():
     with PDFDancer.new(token=token, base_url=base_url) as pdf:
         assert 1 == len(pdf.pages())
         page_ref = pdf.new_page().add()
-        assert 1 == page_ref.position.page_index
+        assert 2 == page_ref.position.page_number
         assert Orientation.PORTRAIT == page_ref.orientation
         assert 2 == len(pdf.pages())
 

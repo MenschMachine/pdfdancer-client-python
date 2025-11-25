@@ -262,7 +262,7 @@ class Position:
     Spatial locator used to find or place objects on a page.
 
     Parameters:
-    - page_index: Zero-based page index this position refers to. Required for most operations
+    - page_number: One-based page number this position refers to. Required for most operations
       that place or search on a specific page; use `Position.at_page()` as a shortcut.
     - shape: Optional geometric shape used when matching by area (`POINT`, `LINE`, `CIRCLE`, `RECT`).
     - mode: How to match objects relative to the shape (`INTERSECT` or `CONTAINS`).
@@ -272,8 +272,8 @@ class Position:
     - name: Named anchor or element name to target (e.g. form field name).
 
     Builder helpers:
-    - `Position.at_page(page_index)` – target a whole page.
-    - `Position.at_page_coordinates(page_index, x, y)` – target a point on a page.
+    - `Position.at_page(page_number)` – target a whole page.
+    - `Position.at_page_coordinates(page_number, x, y)` – target a point on a page.
     - `Position.by_name(name)` – target object(s) by name.
     - `pos.at_coordinates(Point(x, y))` – switch to a point on the current page.
     - `pos.move_x(dx)`, `pos.move_y(dy)` – offset the current coordinates.
@@ -294,7 +294,7 @@ class Position:
     ```
     """
 
-    page_index: Optional[int] = None
+    page_number: Optional[int] = None
     shape: Optional[ShapeType] = None
     mode: Optional[PositionMode] = None
     bounding_rect: Optional[BoundingRect] = None
@@ -303,18 +303,18 @@ class Position:
     name: Optional[str] = None
 
     @staticmethod
-    def at_page(page_index: int) -> "Position":
+    def at_page(page_number: int) -> "Position":
         """
         Creates a position specification for an entire page.
         """
-        return Position(page_index=page_index, mode=PositionMode.CONTAINS)
+        return Position(page_number=page_number, mode=PositionMode.CONTAINS)
 
     @staticmethod
-    def at_page_coordinates(page_index: int, x: float, y: float) -> "Position":
+    def at_page_coordinates(page_number: int, x: float, y: float) -> "Position":
         """
         Creates a position specification for specific coordinates on a page.
         """
-        position = Position.at_page(page_index)
+        position = Position.at_page(page_number)
         position.at_coordinates(Point(x, y))
         return position
 
@@ -823,7 +823,7 @@ class FindRequest:
     def _position_to_dict(position: Position) -> dict:
         """Convert Position to dictionary for JSON serialization."""
         result = {
-            "pageIndex": position.page_index,
+            "pageNumber": position.page_number,
             "textStartsWith": position.text_starts_with,
             "textPattern": position.text_pattern,
         }
@@ -898,24 +898,24 @@ class PageMoveRequest:
     """Request to reorder pages.
 
     Parameters:
-    - from_page_index: Zero-based index of the page to move.
-    - to_page_index: Zero-based destination index.
+    - from_page: 1-based page number of the page to move.
+    - to_page: 1-based destination page number.
 
     Example:
     ```python
     # Move first page to the end
-    req = PageMoveRequest(from_page_index=0, to_page_index=doc_page_count - 1)
+    req = PageMoveRequest(from_page=1, to_page=doc_page_count)
     payload = req.to_dict()
     ```
     """
 
-    from_page_index: int
-    to_page_index: int
+    from_page: int
+    to_page: int
 
     def to_dict(self) -> dict:
         return {
-            "fromPageIndex": self.from_page_index,
-            "toPageIndex": self.to_page_index,
+            "fromPage": self.from_page,
+            "toPage": self.to_page,
         }
 
 
@@ -924,7 +924,7 @@ class AddPageRequest:
     """Request to add a new page to the document.
 
     Parameters:
-    - page_index: Optional zero-based index where the new page should be inserted.
+    - page_number: Optional 1-based page number where the new page should be inserted.
     - orientation: Optional page orientation (portrait or landscape).
     - page_size: Optional size of the page.
 
@@ -932,14 +932,14 @@ class AddPageRequest:
     with default server behavior.
     """
 
-    page_index: Optional[int] = None
+    page_number: Optional[int] = None
     orientation: Optional[Orientation] = None
     page_size: Optional[PageSize] = None
 
     def to_dict(self) -> dict:
         payload: Dict[str, Any] = {}
-        if self.page_index is not None:
-            payload["pageIndex"] = int(self.page_index)
+        if self.page_number is not None:
+            payload["pageNumber"] = int(self.page_number)
         if self.orientation is not None:
             orientation_value: Orientation
             if isinstance(self.orientation, Orientation):
@@ -1449,14 +1449,14 @@ class PageRef(ObjectRef):
 
     Parameters (usually provided by the server):
     - internal_id: Identifier of the page object.
-    - position: Position referencing the page (often via `Position.at_page(page_index)`).
+    - position: Position referencing the page (often via `Position.at_page(page_number)`).
     - type: Should be `ObjectType.PAGE`.
     - page_size: `PageSize` of the page.
     - orientation: `Orientation.PORTRAIT` or `Orientation.LANDSCAPE`.
 
     Usage:
     - Returned inside `PageSnapshot` objects. You can inspect page size/orientation
-      and use the page index for subsequent operations.
+      and use the page number for subsequent operations.
     """
 
     page_size: Optional[PageSize]
@@ -1531,7 +1531,7 @@ class PageSnapshot:
 
     Usage:
     - Iterate over `elements` to find items to modify or move.
-    - Use `page_ref.position.page_index` as the page index for follow-up operations.
+    - Use `page_ref.position.page_number` as the page number for follow-up operations.
     """
 
     page_ref: PageRef

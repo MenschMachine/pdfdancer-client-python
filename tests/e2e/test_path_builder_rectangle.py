@@ -31,13 +31,13 @@ class TestPathBuilderRectangleBasic:
         )
 
         # Add a 100x80 rectangle at (50, 50)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.0
         ).add_rectangle(50, 50, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_custom_stroke(self):
         """Build a rectangle with custom stroke color and width."""
@@ -51,13 +51,13 @@ class TestPathBuilderRectangleBasic:
         )
 
         # Red rectangle with thick stroke
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             3.0
         ).add_rectangle(100, 100, 150, 100).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_fill(self):
         """Build a rectangle with both stroke and fill color."""
@@ -71,13 +71,13 @@ class TestPathBuilderRectangleBasic:
         )
 
         # Blue stroke, yellow fill
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).fill_color(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).fill_color(
             Color(255, 255, 0)
         ).stroke_width(2.0).add_rectangle(200, 200, 120, 90).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(200, 200, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(200, 200, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_dash_pattern(self):
         """Build a dashed rectangle."""
@@ -91,13 +91,13 @@ class TestPathBuilderRectangleBasic:
         )
 
         # Dashed border rectangle
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.5
         ).dash_pattern([10.0, 5.0]).add_rectangle(75, 75, 200, 150).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(75, 75, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(75, 75, page=1, tolerance=5.0)
 
 
 class TestPathBuilderRectangleSizes:
@@ -115,13 +115,13 @@ class TestPathBuilderRectangleSizes:
         )
 
         # 100x100 square
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             2.0
         ).add_rectangle(100, 100, 100, 100).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_add_wide_rectangle(self):
         """Build a wide horizontal rectangle."""
@@ -135,13 +135,13 @@ class TestPathBuilderRectangleSizes:
         )
 
         # Wide rectangle 300x50
-        pdf.page(0).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
             1.0
         ).add_rectangle(50, 400, 300, 50).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 400, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 400, page=1, tolerance=5.0)
 
     def test_add_tall_rectangle(self):
         """Build a tall vertical rectangle."""
@@ -155,13 +155,13 @@ class TestPathBuilderRectangleSizes:
         )
 
         # Tall rectangle 50x300
-        pdf.page(0).new_path().stroke_color(Color(64, 64, 64)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(64, 64, 64)).stroke_width(
             1.0
         ).add_rectangle(400, 50, 50, 300).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(400, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(400, 50, page=1, tolerance=5.0)
 
     def test_add_small_rectangle(self):
         """Build a very small rectangle."""
@@ -175,13 +175,13 @@ class TestPathBuilderRectangleSizes:
         )
 
         # Small 10x10 rectangle
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
             0.5
         ).add_rectangle(300, 300, 10, 10).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(300, 300, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(300, 300, page=1, tolerance=5.0)
 
     def test_add_large_rectangle(self):
         """Build a large rectangle covering most of the page."""
@@ -195,13 +195,13 @@ class TestPathBuilderRectangleSizes:
         )
 
         # Large rectangle (almost full page A4 is ~595x842 pts)
-        pdf.page(0).new_path().stroke_color(Color(0, 128, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 128, 0)).stroke_width(
             2.0
         ).add_rectangle(20, 20, 550, 800).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(20, 20, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(20, 20, page=1, tolerance=5.0)
 
 
 class TestPathBuilderRectangleMultiple:
@@ -219,23 +219,23 @@ class TestPathBuilderRectangleMultiple:
         )
 
         # Rectangle 1
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             1.0
         ).add_rectangle(50, 50, 100, 80).add()
 
         # Rectangle 2
-        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
             1.0
         ).add_rectangle(200, 50, 100, 80).add()
 
         # Rectangle 3
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             1.0
         ).add_rectangle(350, 50, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(3, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
     def test_add_nested_rectangles(self):
         """Add nested rectangles (one inside another)."""
@@ -249,23 +249,23 @@ class TestPathBuilderRectangleMultiple:
         )
 
         # Outer rectangle
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             3.0
         ).add_rectangle(100, 100, 200, 150).add()
 
         # Middle rectangle
-        pdf.page(0).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(128, 128, 128)).stroke_width(
             2.0
         ).add_rectangle(120, 120, 160, 110).add()
 
         # Inner rectangle
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             1.0
         ).add_rectangle(140, 140, 120, 70).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(3, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_add_rectangles_different_pages(self):
         """Add rectangles to different pages."""
@@ -280,22 +280,22 @@ class TestPathBuilderRectangleMultiple:
         )
 
         # Rectangle on page 0
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             2.0
         ).add_rectangle(100, 100, 150, 100).add()
 
         # Rectangle on page 1
-        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+        pdf.page(2).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
             2.0
         ).add_rectangle(100, 100, 150, 100).add()
 
         # Rectangle on page 2
-        pdf.page(2).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(3).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             2.0
         ).add_rectangle(100, 100, 150, 100).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
+        assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=1)
         assertions.assert_number_of_paths(1, page=2)
 
@@ -317,15 +317,15 @@ class TestPathBuilderRectangleAdvanced:
         # Complex path: rectangle + line
         from pdfdancer import Point
 
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             2.0
         ).add_rectangle(100, 100, 150, 100).add_line(
             Point(250, 150), Point(350, 200)
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_changing_stroke_properties(self):
         """Add separate rectangle paths with different stroke properties."""
@@ -339,21 +339,21 @@ class TestPathBuilderRectangleAdvanced:
         )
 
         # Three separate paths, each with its own rectangle and properties
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             1.0
         ).add_rectangle(50, 50, 80, 60).add()
 
-        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
             2.0
         ).add_rectangle(150, 50, 80, 60).add()
 
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             3.0
         ).add_rectangle(250, 50, 80, 60).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(3, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_even_odd_fill(self):
         """Add overlapping filled rectangles with even-odd fill rule."""
@@ -367,7 +367,7 @@ class TestPathBuilderRectangleAdvanced:
         )
 
         # Overlapping rectangles with even-odd fill
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).fill_color(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).fill_color(
             Color(255, 0, 0, 128)
         ).stroke_width(1.0).even_odd_fill(True).add_rectangle(
             100, 100, 200, 150
@@ -376,8 +376,8 @@ class TestPathBuilderRectangleAdvanced:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 100, page=1, tolerance=5.0)
 
     def test_add_rectangle_at_origin(self):
         """Add a rectangle at the origin (0,0)."""
@@ -391,13 +391,13 @@ class TestPathBuilderRectangleAdvanced:
         )
 
         # Rectangle at origin
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             2.0
         ).add_rectangle(0, 0, 100, 80).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_add_rectangle_with_decimal_coordinates(self):
         """Add a rectangle with precise decimal coordinates."""
@@ -411,13 +411,13 @@ class TestPathBuilderRectangleAdvanced:
         )
 
         # Rectangle with decimal coordinates
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.0
         ).add_rectangle(123.456, 234.567, 111.222, 88.999).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(123.456, 234.567, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(123.456, 234.567, page=1, tolerance=5.0)
 
 
 class TestPathBuilderRectangleValidation:
@@ -435,7 +435,7 @@ class TestPathBuilderRectangleValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+            pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
                 100, 100, 0, 100
             ).add()
 
@@ -453,7 +453,7 @@ class TestPathBuilderRectangleValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+            pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
                 100, 100, -50, 100
             ).add()
 
@@ -471,7 +471,7 @@ class TestPathBuilderRectangleValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+            pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
                 100, 100, 100, 0
             ).add()
 
@@ -489,7 +489,7 @@ class TestPathBuilderRectangleValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+            pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
                 100, 100, 100, -80
             ).add()
 
@@ -507,7 +507,7 @@ class TestPathBuilderRectangleValidation:
         )
 
         with pytest.raises(ValidationException) as exc_info:
-            pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
+            pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).add_rectangle(
                 100, 100, -50, -80
             ).add()
 

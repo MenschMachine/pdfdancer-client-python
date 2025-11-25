@@ -162,13 +162,13 @@ class TestPath:
 
     def test_path_with_position(self):
         """Test Path with position information."""
-        position = Position.at_page_coordinates(0, 50.0, 50.0)
+        position = Position.at_page_coordinates(1, 50.0, 50.0)
         line = Line(p0=Point(0.0, 0.0), p1=Point(50.0, 50.0))
 
         path = Path(position=position, path_segments=[line])
 
         assert path.get_position() == position
-        assert path.get_position().page_index == 0
+        assert path.get_position().page_number == 1
 
     def test_path_defaults(self):
         """Test Path with default values."""
@@ -198,7 +198,7 @@ class TestPath:
         path.set_position(position)
 
         assert path.get_position() == position
-        assert path.get_position().page_index == 1
+        assert path.get_position().page_number == 1
 
 
 class TestPathIntegration:
@@ -230,7 +230,7 @@ class TestPathIntegration:
         ]
 
         path = Path(
-            path_segments=segments, position=Position.at_page(0), even_odd_fill=False
+            path_segments=segments, position=Position.at_page(1), even_odd_fill=False
         )
 
         assert len(path.get_path_segments()) == 3

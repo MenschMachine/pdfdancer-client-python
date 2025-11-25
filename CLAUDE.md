@@ -83,7 +83,7 @@ pdf.save("output.pdf")
 - **Dual initialization**: `PDFDancer.open()` for existing PDFs, `PDFDancer.new()` for blank PDFs
 - **Session-based operations**: All constructors create server session automatically
 - **Object-oriented API**: Selected objects (paragraphs, images, etc.) have methods like `.delete()`, `.move()`
-- **Page-level operations**: `pdf.page(index)` provides page-scoped selections and operations
+- **Page-level operations**: `pdf.page(number)` provides page-scoped selections and operations
 - **Builder pattern**: `new_paragraph()` and `new_image()` for fluent construction
 - **Strict validation**: All validation matches Java client exactly
 - **Exception handling**: FontNotFoundException, ValidationException, HttpClientException, etc.
@@ -188,7 +188,7 @@ page.delete()
 ### API Design
 
 - **Use object-oriented patterns**: Selected objects should have methods (`.delete()`, `.move()`, etc.)
-- **Provide page-level operations**: `pdf.page(index)` for page-scoped selections
+- **Provide page-level operations**: `pdf.page(number)` for page-scoped selections
 - **Support fluent builders**: `new_paragraph()` and `new_image()` return builder instances
 - **Use snake_case for methods**: `select_paragraphs()`, `select_images_at()`, etc.
 

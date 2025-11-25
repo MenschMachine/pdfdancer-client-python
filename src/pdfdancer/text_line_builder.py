@@ -157,14 +157,14 @@ class TextLineBuilder:
                 "Cannot move text line without an existing position"
             )
 
-        page_index = position.page_index
-        if page_index is None:
+        page_number = position.page_number
+        if page_number is None:
             raise ValidationException(
-                "Text line position must include a page index to move"
+                "Text line position must include a page number to move"
             )
 
         self._position_changed = True
-        return self.at(page_index, x, y)
+        return self.at(page_number, x, y)
 
     def at_position(self, position: Position) -> "TextLineBuilder":
         if position is None:
@@ -174,8 +174,8 @@ class TextLineBuilder:
         self._position_changed = True
         return self
 
-    def at(self, page_index: int, x: float, y: float) -> "TextLineBuilder":
-        return self.at_position(Position.at_page_coordinates(page_index, x, y))
+    def at(self, page_number: int, x: float, y: float) -> "TextLineBuilder":
+        return self.at_position(Position.at_page_coordinates(page_number, x, y))
 
     def get_text(self) -> Optional[str]:
         return self._text
@@ -281,10 +281,10 @@ class TextLineBuilder:
 
 
 class TextLinePageBuilder(TextLineBuilder):
-    def __init__(self, client: "PDFDancer", page_index: int):
+    def __init__(self, client: "PDFDancer", page_number: int):
         super().__init__(client)
-        self._page_index: Optional[int] = page_index
+        self._page_number: Optional[int] = page_number
 
     # noinspection PyMethodOverriding
     def at(self, x: float, y: float) -> "TextLineBuilder":
-        return super().at(self._page_index, x, y)
+        return super().at(self._page_number, x, y)

@@ -14,10 +14,10 @@ def test_page_snapshot_matches_select_paragraphs():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        page = pdf.page(0)
+        page = pdf.page(1)
 
         # Get data via snapshot
-        snapshot = pdf.get_page_snapshot(0)
+        snapshot = pdf.get_page_snapshot(1)
         snapshot_paragraphs = [
             e for e in snapshot.elements if e.type == ObjectType.PARAGRAPH
         ]
@@ -43,9 +43,9 @@ def test_page_snapshot_matches_select_images():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        page = pdf.page(0)
+        page = pdf.page(1)
 
-        snapshot = pdf.get_page_snapshot(0)
+        snapshot = pdf.get_page_snapshot(1)
         snapshot_images = [e for e in snapshot.elements if e.type == ObjectType.IMAGE]
 
         selected_images = page.select_images()
@@ -68,9 +68,9 @@ def test_page_snapshot_matches_select_forms():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        page = pdf.page(0)
+        page = pdf.page(1)
 
-        snapshot = pdf.get_page_snapshot(0)
+        snapshot = pdf.get_page_snapshot(1)
         snapshot_forms = [
             e for e in snapshot.elements if e.type == ObjectType.FORM_X_OBJECT
         ]
@@ -95,9 +95,9 @@ def test_page_snapshot_matches_select_form_fields():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        page = pdf.page(0)
+        page = pdf.page(1)
 
-        snapshot = pdf.get_page_snapshot(0)
+        snapshot = pdf.get_page_snapshot(1)
         snapshot_form_fields = [
             e
             for e in snapshot.elements
@@ -130,7 +130,7 @@ def test_page_snapshot_contains_all_element_types():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        snapshot = pdf.get_page_snapshot(0)
+        snapshot = pdf.get_page_snapshot(1)
 
         # Count elements by type
         paragraph_count = sum(
@@ -161,8 +161,8 @@ def test_document_snapshot_matches_all_pages():
         doc_snapshot = pdf.get_document_snapshot()
 
         # Verify each page matches individual page snapshot
-        for i in range(doc_snapshot.page_count):
-            doc_page_snap = doc_snapshot.pages[i]
+        for i in range(1, doc_snapshot.page_count + 1):
+            doc_page_snap = doc_snapshot.pages[i - 1]
             individual_page_snap = pdf.get_page_snapshot(i)
 
             assert len(individual_page_snap.elements) == len(
@@ -183,10 +183,10 @@ def test_type_filter_matches_select_method():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Get snapshot with PARAGRAPH filter
-        paragraph_snapshot = pdf.get_page_snapshot(0, "PARAGRAPH")
+        paragraph_snapshot = pdf.get_page_snapshot(1, "PARAGRAPH")
 
         # Get paragraphs via select method
-        selected_paragraphs = pdf.page(0).select_paragraphs()
+        selected_paragraphs = pdf.page(1).select_paragraphs()
 
         assert len(selected_paragraphs) == len(
             paragraph_snapshot.elements
@@ -211,7 +211,7 @@ def test_multiple_type_filters_combined():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Get snapshot with multiple type filter
-        multi_snapshot = pdf.get_page_snapshot(0, "PARAGRAPH,TEXT_LINE")
+        multi_snapshot = pdf.get_page_snapshot(1, "PARAGRAPH,TEXT_LINE")
 
         # Verify only specified types are present
         assert all(
@@ -220,7 +220,7 @@ def test_multiple_type_filters_combined():
         ), "Multi-type filter should only contain specified types"
 
         # Count should be sum of those types from unfiltered snapshot
-        full_snapshot = pdf.get_page_snapshot(0)
+        full_snapshot = pdf.get_page_snapshot(1)
         expected_count = sum(
             1
             for e in full_snapshot.elements
@@ -262,12 +262,12 @@ def test_snapshot_consistency_across_multiple_pages():
         assert doc_snapshot.page_count > 1, "Need multiple pages for this test"
 
         # Test that each page's snapshot is independent
-        for i in range(min(3, doc_snapshot.page_count)):
+        for i in range(1, min(4, doc_snapshot.page_count + 1)):
             page_snap = pdf.get_page_snapshot(i)
             assert page_snap is not None, f"Page {i} snapshot should not be None"
             assert (
-                    page_snap.page_ref.position.page_index == i
-            ), "Page snapshot should have correct page index"
+                    page_snap.page_ref.position.page_number == i
+            ), "Page snapshot should have correct page number"
 
 
 @pytest.mark.skip(reason="TODO Not yet implemented")

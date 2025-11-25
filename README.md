@@ -12,7 +12,7 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 
 ## Highlights
 
-- Locate paragraphs, text lines, images, vector paths, form fields, and pages by index, coordinates, or text prefixes.
+- Locate paragraphs, text lines, images, vector paths, form fields, and pages by page number, coordinates, or text prefixes.
 - Edit existing content in place with fluent editors and context managers that apply changes safely.
 - Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
 - Add content with precise XY positioning using paragraph and image builders, custom fonts, and color helpers.
@@ -61,7 +61,7 @@ with PDFDancer.open(
         .font(StandardFonts.HELVETICA, 12) \
         .color(Color(70, 70, 70)) \
         .line_spacing(1.4) \
-        .at(page_index=0, x=72, y=520) \
+        .at(page_number=0, x=72, y=520) \
         .add()
 
     # Persist the modified document
@@ -82,7 +82,7 @@ with PDFDancer.new(token="your-api-token") as pdf:
         .font(StandardFonts.TIMES_BOLD, 18) \
         .color(Color(10, 10, 80)) \
         .line_spacing(1.2) \
-        .at(page_index=0, x=72, y=730) \
+        .at(page_number=0, x=72, y=730) \
         .add()
 
     pdf.new_image() \

@@ -32,7 +32,7 @@ class TestPathBuilderSimplePaths:
         )
 
         # Build and add a horizontal line with absolute coordinates
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             2.0
         ).add_line(Point(50, 100), Point(250, 150)).add()
 
@@ -40,8 +40,8 @@ class TestPathBuilderSimplePaths:
         assertions = PDFAssertions(pdf)
 
         # Verify the path exists
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 100, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 100, page=1, tolerance=5.0)
 
     def test_add_vertical_line_with_custom_width(self):
         """Build a vertical line with thick stroke."""
@@ -55,13 +55,13 @@ class TestPathBuilderSimplePaths:
         )
 
         # Thick vertical line with absolute coordinates
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             5.0
         ).add_line(Point(100, 50), Point(100, 300)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 50, page=1, tolerance=5.0)
 
     def test_add_diagonal_line_with_dash_pattern(self):
         """Build a dashed diagonal line."""
@@ -75,13 +75,13 @@ class TestPathBuilderSimplePaths:
         )
 
         # Dashed diagonal line with absolute coordinates
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.5
         ).dash_pattern([10.0, 5.0]).add_line(Point(50, 50), Point(250, 250)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(50, 50, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(50, 50, page=1, tolerance=5.0)
 
 
 class TestPathBuilderBezierCurves:
@@ -99,7 +99,7 @@ class TestPathBuilderBezierCurves:
         )
 
         # Smooth S-curve using Bezier with absolute coordinates
-        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
             2.0
         ).add_bezier(
             Point(100, 300),  # Start
@@ -109,8 +109,8 @@ class TestPathBuilderBezierCurves:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(100, 300, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(100, 300, page=1, tolerance=5.0)
 
     def test_add_bezier_with_fill_color(self):
         """Build a Bezier curve with both stroke and fill."""
@@ -124,15 +124,15 @@ class TestPathBuilderBezierCurves:
         )
 
         # Curve with fill (semi-transparent)
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0, 255)).fill_color(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0, 255)).fill_color(
             Color(255, 255, 0, 128)
         ).stroke_width(1.0).add_bezier(
             Point(0, 0), Point(25, 50), Point(75, 50), Point(100, 0)
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
 
 class TestPathBuilderComplexPaths:
@@ -150,7 +150,7 @@ class TestPathBuilderComplexPaths:
         )
 
         # Complex path: line → curve → line
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
             Point(0, 0), Point(100, 0)
         ).add_bezier(
             Point(100, 0), Point(125, 25), Point(125, 75), Point(100, 100)
@@ -159,8 +159,8 @@ class TestPathBuilderComplexPaths:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_add_closed_rectangle(self):
         """Build a closed rectangle using 4 line segments."""
@@ -174,7 +174,7 @@ class TestPathBuilderComplexPaths:
         )
 
         # Rectangle (closed shape)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             2.0
         ).add_line(Point(0, 0), Point(150, 0)).add_line(
             Point(150, 0), Point(150, 100)
@@ -185,8 +185,8 @@ class TestPathBuilderComplexPaths:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_add_rounded_rectangle(self):
         """Build a rounded rectangle using lines and Bezier curves for corners."""
@@ -204,7 +204,7 @@ class TestPathBuilderComplexPaths:
         width = 120.0
         height = 80.0
 
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 255)).stroke_width(
             2.0
         ).add_line(Point(radius, 0), Point(width - radius, 0)).add_bezier(
             Point(width - radius, 0),
@@ -232,8 +232,8 @@ class TestPathBuilderComplexPaths:
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(1, page=0)
-        assertions.assert_path_exists_at(10, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(1, page=1)
+        assertions.assert_path_exists_at(10, 0, page=1, tolerance=5.0)
 
 
 class TestPathBuilderMultiplePaths:
@@ -251,24 +251,24 @@ class TestPathBuilderMultiplePaths:
         )
 
         # Red line
-        pdf.page(0).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             2.0
         ).add_line(Point(0, 0), Point(100, 0)).add()
 
         # Green line
-        pdf.page(0).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 255, 0)).stroke_width(
             2.0
         ).add_line(Point(0, 0), Point(100, 0)).add()
 
         # Blue line
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 255)).stroke_width(
             2.0
         ).add_line(Point(0, 0), Point(100, 0)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
+        assertions.assert_number_of_paths(3, page=1)
         # All three lines start at (0, 0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_add_paths_with_varying_widths(self):
         """Add paths with different stroke widths."""
@@ -282,23 +282,23 @@ class TestPathBuilderMultiplePaths:
         )
 
         # Thin line (0.5pt)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(0.5).add_line(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(0.5).add_line(
             Point(0, 0), Point(150, 0)
         ).add()
 
         # Medium line (2.0pt)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(2.0).add_line(
             Point(0, 0), Point(150, 0)
         ).add()
 
         # Thick line (5.0pt)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(5.0).add_line(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(5.0).add_line(
             Point(0, 0), Point(150, 0)
         ).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(3, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
     def test_add_solid_and_dashed_paths(self):
         """Add mix of solid and dashed paths."""
@@ -312,23 +312,23 @@ class TestPathBuilderMultiplePaths:
         )
 
         # Solid line
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.5
         ).solid().add_line(Point(0, 0), Point(200, 0)).add()
 
         # Dashed line (simple pattern)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.5
         ).dash_pattern([10.0, 5.0]).add_line(Point(0, 0), Point(200, 0)).add()
 
         # Dashed line (complex pattern)
-        pdf.page(0).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
+        pdf.page(1).new_path().stroke_color(Color(0, 0, 0)).stroke_width(
             1.5
         ).dash_pattern([15.0, 5.0, 3.0, 5.0]).add_line(Point(0, 0), Point(200, 0)).add()
 
         assertions = PDFAssertions(pdf)
-        assertions.assert_number_of_paths(3, page=0)
-        assertions.assert_path_exists_at(0, 0, page=0, tolerance=5.0)
+        assertions.assert_number_of_paths(3, page=1)
+        assertions.assert_path_exists_at(0, 0, page=1, tolerance=5.0)
 
 
 class TestPathBuilderPageSpecific:
@@ -347,17 +347,17 @@ class TestPathBuilderPageSpecific:
         )
 
         # Add path to page 1 using page-specific builder
-        pdf.page(1).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
+        pdf.page(2).new_path().stroke_color(Color(255, 0, 0)).stroke_width(
             2.0
         ).add_line(Point(0, 0), Point(100, 100)).add()
 
         assertions = PDFAssertions(pdf)
-        # Page 0 should have no paths
-        assertions.assert_number_of_paths(0, page=0)
-        # Page 1 should have 1 path
-        assertions.assert_number_of_paths(1, page=1)
-        # Page 2 should have no paths
-        assertions.assert_number_of_paths(0, page=2)
+        # Page 1 should have no paths
+        assertions.assert_number_of_paths(0, page=1)
+        # Page 2 should have 1 path
+        assertions.assert_number_of_paths(1, page=2)
+        # Page 3 should have no paths
+        assertions.assert_number_of_paths(0, page=3)
 
 
 class TestPathBuilderValidation:
@@ -376,7 +376,7 @@ class TestPathBuilderValidation:
 
         # Try to add empty path
         with pytest.raises(Exception) as exc_info:
-            pdf.page(0).new_path().add()
+            pdf.page(1).new_path().add()
 
         assert "at least one segment" in str(exc_info.value).lower()
 
@@ -393,7 +393,7 @@ class TestPathBuilderValidation:
 
         # Try to set negative stroke width
         with pytest.raises(Exception) as exc_info:
-            pdf.page(0).new_path().stroke_width(-1.0).add_line(
+            pdf.page(1).new_path().stroke_width(-1.0).add_line(
                 Point(0, 0), Point(100, 100)
             ).add()
 

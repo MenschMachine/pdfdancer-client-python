@@ -12,7 +12,7 @@ def test_text_line_edit_text_only():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Select a text line
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
 
@@ -26,9 +26,9 @@ def test_text_line_edit_text_only():
 
         (
             PDFAssertions(pdf)
-            .assert_textline_exists("This text has been replaced", page=0)
+            .assert_textline_exists("This text has been replaced", page=1)
             .assert_textline_does_not_exist(
-                "This is regular Sans text showing alignment and styles.", page=0
+                "This is regular Sans text showing alignment and styles.", page=1
             )
         )
 
@@ -38,7 +38,7 @@ def test_text_line_edit_font_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -59,7 +59,7 @@ def test_text_line_edit_color_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -80,7 +80,7 @@ def test_text_line_edit_move_only():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -91,7 +91,7 @@ def test_text_line_edit_move_only():
             editor.move_to(150, 300)
 
         # Verify the text line was moved by searching at the new position
-        text_lines_after = pdf.page(0).select_text_lines_at(150, 300, tolerance=5.0)
+        text_lines_after = pdf.page(1).select_text_lines_at(150, 300, tolerance=5.0)
 
         # Check if we found a text line at the new position with the same text
         found = any(
@@ -107,7 +107,7 @@ def test_text_line_edit_text_and_font():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -134,7 +134,7 @@ def test_text_line_edit_all_properties():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -157,7 +157,7 @@ def test_text_line_edit_line_spacing_fails():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -181,7 +181,7 @@ def test_text_line_edit_chaining():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -209,7 +209,7 @@ def test_text_line_edit_with_exception_no_apply():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -234,7 +234,7 @@ def test_text_line_edit_multiple_sequential():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # First edit
-        text_lines = pdf.page(0).select_text_lines_starting_with(
+        text_lines = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -244,7 +244,7 @@ def test_text_line_edit_multiple_sequential():
             editor.replace("First Edit")
 
         # Second edit - text only (no font change since it's not supported)
-        text_lines = pdf.page(0).select_text_lines_starting_with("First Edit")
+        text_lines = pdf.page(1).select_text_lines_starting_with("First Edit")
         text_line = text_lines[0]
         with text_line.edit() as editor:
             editor.replace("Second Edit")
@@ -265,7 +265,7 @@ def test_text_line_edit_vs_manual_apply():
 
     # Test with context manager
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf1:
-        text_lines = pdf1.page(0).select_text_lines_starting_with(
+        text_lines = pdf1.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1
@@ -279,7 +279,7 @@ def test_text_line_edit_vs_manual_apply():
 
     # Test with manual apply()
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf2:
-        text_lines = pdf2.page(0).select_text_lines_starting_with(
+        text_lines = pdf2.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )
         assert len(text_lines) >= 1

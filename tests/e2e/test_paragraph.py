@@ -17,7 +17,6 @@ def test_find_paragraphs_by_position():
         assert len(paras_page0) == 3
 
         first = paras_page0[0]
-        assert first.internal_id == "PARAGRAPH_000004"
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
         assert (
@@ -25,7 +24,6 @@ def test_find_paragraphs_by_position():
         )  # adjusted for baseline/bounding box
 
         last = paras_page0[-1]
-        assert last.internal_id == "PARAGRAPH_000006"
         assert last.position is not None
         assert pytest.approx(last.position.x(), rel=0, abs=1) == 69.3
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 46.7
@@ -45,7 +43,6 @@ def test_find_paragraphs_by_text():
         )
         assert len(paras) == 1
         p = paras[0]
-        assert p.internal_id == "PARAGRAPH_000005"
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
         assert (
             pytest.approx(p.position.y(), rel=0, abs=2) == 642

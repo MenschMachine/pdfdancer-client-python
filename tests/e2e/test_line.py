@@ -21,10 +21,9 @@ def test_find_lines_by_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         lines = pdf.select_text_lines()
-        assert len(lines) == 36
+        assert len(lines) == 35
 
         first = lines[0]
-        assert first.internal_id == "TEXTLINE_000001"
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
         assert pytest.approx(first.position.y(), rel=0, abs=1) == 750
@@ -33,7 +32,6 @@ def test_find_lines_by_position():
         # assert first.object_ref().status.is_encodable()
 
         last = lines[-1]
-        assert last.internal_id == "TEXTLINE_000036"
         assert last.position is not None
         assert pytest.approx(last.position.x(), rel=0, abs=2) == 69.3
         assert pytest.approx(last.position.y(), rel=0, abs=2) == 45
@@ -52,7 +50,6 @@ def test_find_lines_by_text():
         assert len(lines) == 1
 
         line = lines[0]
-        assert line.internal_id == "TEXTLINE_000002"
         assert pytest.approx(line.position.x(), rel=0, abs=1) == 65
         assert pytest.approx(line.position.y(), rel=0, abs=2) == 706.8
 

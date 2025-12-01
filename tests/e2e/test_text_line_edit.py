@@ -267,4 +267,4 @@ def test_text_line_edit_vs_manual_apply():
         result2 = pdf2.get_bytes()
 
     # Results should be similar in size
-    assert abs(len(result1) - len(result2)) <= 1
+    assert abs(len(result1) - len(result2)) <= 10

@@ -36,6 +36,7 @@ from .models import (
     AddPageRequest,
     AddRequest,
     ChangeFormFieldRequest,
+    Color,
     CommandResult,
     DeleteRequest,
     DocumentSnapshot,
@@ -58,6 +59,9 @@ from .models import (
     Paragraph,
     Position,
     PositionMode,
+    RedactRequest,
+    RedactResponse,
+    RedactTarget,
     ShapeType,
     TextLine,
     TextObjectRef,
@@ -70,6 +74,7 @@ from .types import (
     ImageObject,
     ParagraphObject,
     PathObject,
+    PDFObjectBase,
     TextLineObject,
 )
 
@@ -2071,6 +2076,58 @@ class PDFDancer:
             self._invalidate_snapshots()
 
         return result
+
+    def _redact(
+        self,
+        targets: List["RedactTarget"],
+        default_replacement: str = "[REDACTED]",
+        placeholder_color: Optional[Color] = None,
+    ) -> "RedactResponse":
+        """
+        Redacts specified objects from the PDF document.
+
+        Args:
+            targets: List of RedactTarget objects identifying what to redact
+            default_replacement: Default replacement text for redacted content
+            placeholder_color: Color for image/path placeholder rectangles
+
+        Returns:
+            RedactResponse with count, success status, and any warnings
+        """
+        if not targets:
+            raise ValidationException("At least one redaction target is required")
+
+        if placeholder_color is None:
+            placeholder_color = Color(0, 0, 0)
+
+        request = RedactRequest(targets, default_replacement, placeholder_color)
+        response = self._make_request("POST", "/pdf/redact", data=request.to_dict())
+        result = RedactResponse.from_dict(response.json())
+
+        if result.success:
+            self._invalidate_snapshots()
+
+        return result
+
+    def redact(
+        self,
+        objects: List["PDFObjectBase"],
+        replacement: str = "[REDACTED]",
+        placeholder_color: Optional[Color] = None,
+    ) -> "RedactResponse":
+        """
+        Redacts multiple objects from the PDF document.
+
+        Args:
+            objects: List of PDF objects to redact
+            replacement: Replacement text for all redacted content
+            placeholder_color: Color for image/path placeholder rectangles
+
+        Returns:
+            RedactResponse with count, success status, and any warnings
+        """
+        targets = [RedactTarget(obj.internal_id, replacement) for obj in objects]
+        return self._redact(targets, replacement, placeholder_color)
 
     # Add Operations
 

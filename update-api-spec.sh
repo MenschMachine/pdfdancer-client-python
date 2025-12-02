@@ -1,3 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 
-wget -qO docs/openapi.yml https://bucket.pdfdancer.com/api-doc/development-0.0.yml && echo success
+wget -O docs/api-schemas/v0.yml https://bucket.pdfdancer.com/api-doc/v0.yml
+wget -O docs/api-schemas/v1.yml https://bucket.pdfdancer.com/api-doc/v1.yml
+

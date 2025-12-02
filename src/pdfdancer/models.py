@@ -894,6 +894,55 @@ class MoveRequest:
 
 
 @dataclass
+class RedactTarget:
+    """A single redaction target identifying an object by its internal ID."""
+
+    id: str
+    replacement: str
+
+    def to_dict(self) -> dict:
+        return {"id": self.id, "replacement": self.replacement}
+
+
+@dataclass
+class RedactRequest:
+    """Request for redacting content from a PDF document."""
+
+    targets: List["RedactTarget"]
+    default_replacement: str
+    placeholder_color: "Color"
+
+    def to_dict(self) -> dict:
+        return {
+            "targets": [t.to_dict() for t in self.targets],
+            "defaultReplacement": self.default_replacement,
+            "placeholderColor": {
+                "r": self.placeholder_color.r,
+                "g": self.placeholder_color.g,
+                "b": self.placeholder_color.b,
+                "a": self.placeholder_color.a,
+            },
+        }
+
+
+@dataclass
+class RedactResponse:
+    """Response from a redaction operation."""
+
+    count: int
+    success: bool
+    warnings: List[str]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RedactResponse":
+        return cls(
+            count=data.get("count", 0),
+            success=data.get("success", False),
+            warnings=data.get("warnings", []),
+        )
+
+
+@dataclass
 class PageMoveRequest:
     """Request to reorder pages.
 

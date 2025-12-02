@@ -64,6 +64,14 @@ class PDFObjectBase:
             Position.at_page_coordinates(self.position.page_number, x, y),
         )
 
+    def redact(self, replacement: str = "[REDACTED]") -> bool:
+        """Redact this object from the PDF document."""
+        from .models import RedactTarget
+
+        target = RedactTarget(self.internal_id, replacement)
+        result = self._client._redact([target], replacement)
+        return result.success
+
 
 # -------------------------------------------------------------------
 # Subclasses

@@ -14,6 +14,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from importlib.metadata import version as get_package_version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, List, Mapping, Optional, Union
 
@@ -77,6 +78,14 @@ if TYPE_CHECKING:
     from .path_builder import RectangleBuilder
 
 load_dotenv()
+
+# Client identifier header for all HTTP requests
+# Always reads from installed package metadata (stays in sync with pyproject.toml)
+try:
+    CLIENT_HEADER_VALUE = f"python/{get_package_version('pdfdancer-client-python')}"
+except Exception:
+    # Fallback in case package metadata is not available
+    CLIENT_HEADER_VALUE = "python/unknown"
 
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)
@@ -748,7 +757,10 @@ class PDFDancer:
 
             while attempt <= max_retries:
                 try:
-                    headers = {"X-Fingerprint": Fingerprint.generate()}
+                    headers = {
+                        "X-Fingerprint": Fingerprint.generate(),
+                        "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                    }
 
                     response = temp_client.post(
                         cls._cleanup_url_path(base_url, "/keys/anon"),
@@ -910,7 +922,10 @@ class PDFDancer:
         # Create HTTP client for connection reuse with HTTP/2 support
         instance._client = httpx.Client(
             http2=True,
-            headers={"Authorization": f"Bearer {instance._token}"},
+            headers={
+                "Authorization": f"Bearer {instance._token}",
+                "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+            },
             verify=not DISABLE_SSL_VERIFY,
         )
 
@@ -976,7 +991,10 @@ class PDFDancer:
         # Create HTTP client for connection reuse with HTTP/2 support
         self._client = httpx.Client(
             http2=True,
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers={
+                "Authorization": f"Bearer {self._token}",
+                "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+            },
             verify=not DISABLE_SSL_VERIFY,
         )
 

@@ -21,6 +21,7 @@ import httpx
 from dotenv import load_dotenv
 
 from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
+from . import __version__
 from .exceptions import (
     FontNotFoundException,
     HttpClientException,
@@ -77,6 +78,9 @@ if TYPE_CHECKING:
     from .path_builder import RectangleBuilder
 
 load_dotenv()
+
+# Client identifier header for all HTTP requests
+CLIENT_HEADER_VALUE = f"python/{__version__}"
 
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)
@@ -750,7 +754,7 @@ class PDFDancer:
                 try:
                     headers = {
                         "X-Fingerprint": Fingerprint.generate(),
-                        "X-PDFDancer-Client": "python/0.9.1",
+                        "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
                     }
 
                     response = temp_client.post(
@@ -915,7 +919,7 @@ class PDFDancer:
             http2=True,
             headers={
                 "Authorization": f"Bearer {instance._token}",
-                "X-PDFDancer-Client": "python/0.9.1",
+                "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
             },
             verify=not DISABLE_SSL_VERIFY,
         )
@@ -984,7 +988,7 @@ class PDFDancer:
             http2=True,
             headers={
                 "Authorization": f"Bearer {self._token}",
-                "X-PDFDancer-Client": "python/0.9.1",
+                "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
             },
             verify=not DISABLE_SSL_VERIFY,
         )

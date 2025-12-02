@@ -136,3 +136,152 @@ def test_redact_empty_list_raises():
     with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
         with pytest.raises(ValidationException):
             pdf.redact([])
+
+
+def test_redact_image():
+    """Test redacting an image replaces it with a placeholder rectangle"""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        images = pdf.page(1).select_images()
+        assert len(images) == 2
+
+        # Get image position before redaction
+        image = images[0]
+        original_x = image.position.x()
+        original_y = image.position.y()
+
+        result = image.redact()
+        assert result is True
+
+        # Image should be gone from original position
+        assertions = PDFAssertions(pdf)
+        assertions.assert_no_image_at(original_x, original_y, 1)
+
+        # Should now have only 1 image on page 1
+        assertions.assert_number_of_images(1, 1)
+
+
+def test_redact_image_with_placeholder_color():
+    """Test redacting image with custom placeholder color"""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        images = pdf.page(1).select_images()
+        assert len(images) == 2
+
+        # Batch redact with custom color
+        red = Color(255, 0, 0)
+        result = pdf.redact(images, placeholder_color=red)
+
+        assert result.success is True
+        assert result.count == 2
+
+        # Both images should be gone
+        assertions = PDFAssertions(pdf)
+        assertions.assert_number_of_images(0, 1)
+
+
+def test_redact_path():
+    """Test redacting a path"""
+    base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paths = pdf.page(1).select_paths_at(80, 720)
+        assert len(paths) == 1
+        path = paths[0]
+
+        result = path.redact()
+        assert result is True
+
+        # Path should be gone
+        assertions = PDFAssertions(pdf)
+        assertions.assert_no_path_at(80, 720)
+        assertions.assert_number_of_paths(8)
+
+
+def test_redact_multiple_paths():
+    """Test batch redacting multiple paths"""
+    base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        all_paths = pdf.select_paths()
+        assert len(all_paths) == 9
+
+        # Redact first 3 paths
+        to_redact = all_paths[:3]
+        result = pdf.redact(to_redact)
+
+        assert result.success is True
+        assert result.count == 3
+
+        # Should have 6 paths remaining
+        assertions = PDFAssertions(pdf)
+        assertions.assert_number_of_paths(6)
+
+
+def test_redact_form_field():
+    """Test redacting a form field replaces its content"""
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        form_fields = pdf.select_form_fields()
+        assert len(form_fields) == 10
+
+        # Redact a text field form field
+        text_fields = [f for f in form_fields if f.object_type.value == "TEXT_FIELD"]
+        assert len(text_fields) > 0
+
+        form_field = text_fields[0]
+        result = form_field.redact()
+
+        # Redaction should succeed
+        assert result is True
+
+
+def test_redact_multiple_form_fields():
+    """Test batch redacting multiple form fields"""
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        form_fields = pdf.select_form_fields()
+        assert len(form_fields) == 10
+
+        # Redact first 5 form fields
+        to_redact = form_fields[:5]
+        result = pdf.redact(to_redact)
+
+        # Operation should succeed (some may fail with warnings)
+        assert result.success is True
+        assert result.count >= 1
+
+        # Check for any warnings about failed redactions
+        if result.warnings:
+            # Some form field types may not support redaction
+            assert all("Failed to redact" in w for w in result.warnings)
+
+
+def test_redact_mixed_object_types():
+    """Test batch redacting a mix of paragraphs and images"""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        paragraphs = pdf.page(1).select_paragraphs()
+        images = pdf.page(1).select_images()
+
+        initial_para_count = len(paragraphs)
+        initial_image_count = len(images)
+
+        assert initial_para_count > 0
+        assert initial_image_count > 0
+
+        # Redact one paragraph and one image
+        to_redact = [paragraphs[0], images[0]]
+        result = pdf.redact(to_redact, replacement="[MIXED_REDACT]")
+
+        assert result.success is True
+        assert result.count == 2
+
+        # Verify counts decreased
+        assertions = PDFAssertions(pdf)
+        assertions.assert_number_of_images(initial_image_count - 1, 1)

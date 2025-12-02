@@ -748,7 +748,10 @@ class PDFDancer:
 
             while attempt <= max_retries:
                 try:
-                    headers = {"X-Fingerprint": Fingerprint.generate()}
+                    headers = {
+                        "X-Fingerprint": Fingerprint.generate(),
+                        "X-PDFDancer-Client": "python/0.9.1",
+                    }
 
                     response = temp_client.post(
                         cls._cleanup_url_path(base_url, "/keys/anon"),
@@ -910,7 +913,10 @@ class PDFDancer:
         # Create HTTP client for connection reuse with HTTP/2 support
         instance._client = httpx.Client(
             http2=True,
-            headers={"Authorization": f"Bearer {instance._token}"},
+            headers={
+                "Authorization": f"Bearer {instance._token}",
+                "X-PDFDancer-Client": "python/0.9.1",
+            },
             verify=not DISABLE_SSL_VERIFY,
         )
 
@@ -976,7 +982,10 @@ class PDFDancer:
         # Create HTTP client for connection reuse with HTTP/2 support
         self._client = httpx.Client(
             http2=True,
-            headers={"Authorization": f"Bearer {self._token}"},
+            headers={
+                "Authorization": f"Bearer {self._token}",
+                "X-PDFDancer-Client": "python/0.9.1",
+            },
             verify=not DISABLE_SSL_VERIFY,
         )
 

@@ -1892,6 +1892,33 @@ class PDFDancer:
         """
         return self._to_textline_objects(self._find_text_lines(None))
 
+    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
+        """
+        Searches for text line objects matching a regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against text line text
+
+        Returns:
+            List of TextLineObject instances matching the pattern
+        """
+        position = Position()
+        position.text_pattern = pattern
+        return self._to_textline_objects(self._find_text_lines(position))
+
+    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
+        """
+        Select the first text line matching the specified regex pattern.
+
+        Args:
+            pattern: Regex pattern to match against text line text
+
+        Returns:
+            First TextLineObject matching the pattern, or None if no match
+        """
+        results = self.select_text_lines_matching(pattern)
+        return results[0] if results else None
+
     def page(self, page_number: int) -> PageClient:
         """
         Get a specific page by page number, using snapshot cache when available.

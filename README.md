@@ -12,10 +12,12 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 
 ## Highlights
 
-- Locate paragraphs, text lines, images, vector paths, form fields, and pages by page number, coordinates, or text prefixes.
+- Locate paragraphs, text lines, images, vector paths, form fields, and pages by page number, coordinates, or text patterns.
 - Edit existing content in place with fluent editors and context managers that apply changes safely.
 - Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
-- Add content with precise XY positioning using paragraph and image builders, custom fonts, and color helpers.
+- Add content with precise XY positioning using paragraph, image, and vector path builders with custom fonts and colors.
+- Draw lines, rectangles, and Bezier curves with configurable stroke width, dash patterns, and fill colors.
+- Redact sensitive content—replace text, images, or form fields with customizable placeholders.
 - Export results as bytes for downstream processing or save directly to disk with one call.
 
 ## What Makes PDFDancer Different
@@ -25,6 +27,8 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 - **Surgical text replacement**: Swap or rewrite paragraphs without reflowing the rest of the page.
 - **Form manipulation**: Inspect, fill, and update AcroForm fields programmatically.
 - **Coordinate-based selection**: Select objects by position, bounding box, or text patterns.
+- **Vector graphics**: Draw lines, rectangles, and Bezier curves with full control over stroke and fill properties.
+- **Secure redaction**: Permanently remove sensitive content and replace with customizable markers.
 - **Real PDF editing**: Modify the underlying PDF structure instead of merely stamping overlays.
 
 ## Installation
@@ -116,7 +120,87 @@ with PDFDancer.open("contract.pdf") as pdf:
 ```
 
 Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageClient`, …)
-with helpers such as `delete()`, `move_to(x, y)`, or `edit()` depending on the object type.
+with helpers such as `delete()`, `move_to(x, y)`, `redact()`, or `edit()` depending on the object type.
+
+**Singular selection methods** return the first match (or `None`) for convenience:
+
+```python
+# Instead of: paragraphs = page.select_paragraphs_starting_with("Invoice")[0]
+paragraph = page.select_paragraph_starting_with("Invoice")  # Returns first match or None
+image = page.select_image_at(100, 200)                      # Returns first match or None
+field = pdf.select_form_field_by_name("email")              # Returns first match or None
+```
+
+## Draw Vector Paths
+
+Add lines, curves, and shapes to your PDFs with fluent builders:
+
+```python
+from pdfdancer import PDFDancer, Color, Point
+
+with PDFDancer.open("document.pdf") as pdf:
+    page = pdf.page(0)
+
+    # Draw a simple line
+    page.new_line() \
+        .from_point(100, 700) \
+        .to_point(500, 700) \
+        .stroke_color(Color(0, 0, 255)) \
+        .stroke_width(2.0) \
+        .add()
+
+    # Draw a rectangle
+    page.new_rectangle() \
+        .at_coordinates(100, 500) \
+        .with_size(200, 100) \
+        .stroke_color(Color(0, 0, 0)) \
+        .fill_color(Color(255, 255, 200)) \
+        .add()
+
+    # Draw a bezier curve
+    page.new_bezier() \
+        .from_point(100, 400) \
+        .control_point_1(150, 450) \
+        .control_point_2(250, 350) \
+        .to_point(300, 400) \
+        .stroke_width(1.5) \
+        .add()
+
+    # Build complex paths with multiple segments
+    page.new_path() \
+        .stroke_color(Color(255, 0, 0)) \
+        .add_line(Point(50, 200), Point(150, 200)) \
+        .add_line(Point(150, 200), Point(100, 280)) \
+        .add_line(Point(100, 280), Point(50, 200)) \
+        .add()
+
+    pdf.save("annotated.pdf")
+```
+
+## Redact Sensitive Content
+
+Remove text, images, or form fields and replace them with redaction markers:
+
+```python
+from pdfdancer import PDFDancer, Color
+
+with PDFDancer.open("confidential.pdf") as pdf:
+    # Redact paragraphs containing sensitive patterns
+    for para in pdf.select_paragraphs():
+        if "SSN:" in para.text or "Password:" in para.text:
+            para.redact("[REDACTED]")
+
+    # Redact all images on a specific page
+    for image in pdf.page(0).select_images():
+        image.redact()
+
+    # Bulk redact multiple objects with custom placeholder color
+    form_fields = pdf.select_form_fields_by_name("credit_card")
+    result = pdf.redact(form_fields, replacement="[REMOVED]", placeholder_color=Color(0, 0, 0))
+    print(f"Redacted {result.count} items")
+
+    pdf.save("redacted.pdf")
+```
 
 ## Configuration
 
@@ -133,6 +217,7 @@ Operations raise subclasses of `PdfDancerException`:
 - `FontNotFoundException`: requested font unavailable on the service.
 - `HttpClientException`: transport or server errors with detailed context.
 - `SessionException`: session creation and lifecycle failures.
+- `RateLimitException`: API rate limit exceeded; includes retry-after timing.
 
 Wrap automated workflows in `try/except` blocks to surface actionable errors to your users.
 
@@ -150,7 +235,7 @@ Wrap automated workflows in `try/except` blocks to surface actionable errors to 
 
 ```bash
 git clone https://github.com/MenschMachine/pdfdancer-client-python.git
-cd pdfdancer-client-python/_main
+cd pdfdancer-client-python
 ```
 
 #### 2. Create a Virtual Environment
@@ -275,25 +360,27 @@ mypy src/pdfdancer/
 ### Project Structure
 
 ```
-pdfdancer-client-python/_main/
-├── src/pdfdancer/          # Main package source
-│   ├── __init__.py         # Package exports
-│   ├── pdfdancer_v1.py     # Core PDFDancer and PageClient classes
+pdfdancer-client-python/
+├── src/pdfdancer/           # Main package source
+│   ├── __init__.py          # Package exports
+│   ├── pdfdancer_v1.py      # Core PDFDancer and PageClient classes
 │   ├── paragraph_builder.py # Fluent paragraph builders
-│   ├── image_builder.py    # Fluent image builders
-│   ├── models.py           # Data models (Position, Font, Color, etc.)
-│   ├── types.py            # Object wrappers (ParagraphObject, etc.)
-│   └── exceptions.py       # Exception hierarchy
-├── tests/                  # Test suite
-│   ├── test_models.py      # Model unit tests
-│   ├── e2e/                # End-to-end integration tests
-│   └── fixtures/           # Test fixtures and sample PDFs
-├── docs/                   # Documentation
-├── dist/                   # Build artifacts (created after packaging)
-├── logs/                   # Local execution logs (ignored in VCS)
-├── pyproject.toml          # Project metadata and dependencies
-├── release.py              # Helper for publishing releases
-└── README.md               # This file
+│   ├── text_line_builder.py # Fluent text line builders
+│   ├── image_builder.py     # Fluent image builders
+│   ├── path_builder.py      # Vector path builders (lines, beziers, rectangles)
+│   ├── page_builder.py      # Page creation builder
+│   ├── models.py            # Data models (Position, Font, Color, etc.)
+│   ├── types.py             # Object wrappers (ParagraphObject, etc.)
+│   └── exceptions.py        # Exception hierarchy
+├── tests/                   # Test suite
+│   ├── test_models.py       # Model unit tests
+│   ├── e2e/                 # End-to-end integration tests
+│   └── fixtures/            # Test fixtures and sample PDFs
+├── docs/                    # Documentation
+├── dist/                    # Build artifacts (created after packaging)
+├── pyproject.toml           # Project metadata and dependencies
+├── release.py               # Helper for publishing releases
+└── README.md                # This file
 ```
 
 ### Troubleshooting

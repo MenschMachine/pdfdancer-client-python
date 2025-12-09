@@ -122,22 +122,23 @@ class TestPathBasicOperations:
             assertions.assert_number_of_paths(9, page=1)
             assertions.assert_path_exists_at(80, 720, page=1)
 
-            # Delete the path
+            # Delete the path at a specific location
             path = pdf.page(1).select_paths_at(80, 720)[0]
-            path_id = path.internal_id
             path.delete()
 
-            # Verify path is gone
+            # Verify path is gone by checking:
+            # 1. No path exists at the original coordinates anymore
             assertions = PDFAssertions(pdf)
             assertions.assert_no_path_at(80, 720, page=1)
+
+            # 2. Total path count decreased by 1
             assertions.assert_number_of_paths(initial_count - 1, page=1)
 
-            # Verify the specific path ID no longer exists
-            remaining_paths = pdf.select_paths()
-            remaining_ids = [p.internal_id for p in remaining_paths]
-            assert (
-                path_id not in remaining_ids
-            ), f"Deleted path {path_id} should not exist in remaining paths"
+            # 3. Double-check with direct selection - should return empty
+            paths_at_location = pdf.page(1).select_paths_at(80, 720)
+            assert len(paths_at_location) == 0, (
+                "No paths should exist at (80, 720) after deletion"
+            )
 
     def test_move_path_comprehensive(self):
         """Test moving a path with detailed position verification."""

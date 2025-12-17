@@ -79,7 +79,7 @@ from .types import (
 )
 
 if TYPE_CHECKING:
-    from .models import PathSegment
+    from .models import ImageTransformRequest, PathSegment
     from .path_builder import RectangleBuilder
 
 load_dotenv()
@@ -2246,6 +2246,31 @@ class PDFDancer:
         result = self._parse_page_ref(response.json())
 
         # Invalidate snapshot caches after adding page
+        self._invalidate_snapshots()
+
+        return result
+
+    # Image Transform Operations
+    def _transform_image(self, request: "ImageTransformRequest") -> CommandResult:
+        """
+        Transforms an image in the PDF document.
+
+        Args:
+            request: ImageTransformRequest specifying the transformation
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        if request is None:
+            raise ValidationException("Transform request cannot be null")
+        if request.object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        request_data = request.to_dict()
+        response = self._make_request("PUT", "/pdf/image/transform", data=request_data)
+        result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
         self._invalidate_snapshots()
 
         return result

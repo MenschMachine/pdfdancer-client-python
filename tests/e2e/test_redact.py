@@ -57,12 +57,12 @@ def test_batch_redact_multiple_paragraphs():
 
     with PDFDancer.new(token=token, base_url=base_url, timeout=30.0) as pdf:
         # Add multiple paragraphs
-        pdf.new_paragraph().text("SSN: 123-45-6789").font(StandardFonts.HELVETICA, 12).at(
-            1, 100, 100
-        ).add()
-        pdf.new_paragraph().text("Phone: 555-1234").font(StandardFonts.HELVETICA, 12).at(
-            1, 100, 200
-        ).add()
+        pdf.new_paragraph().text("SSN: 123-45-6789").font(
+            StandardFonts.HELVETICA, 12
+        ).at(1, 100, 100).add()
+        pdf.new_paragraph().text("Phone: 555-1234").font(
+            StandardFonts.HELVETICA, 12
+        ).at(1, 100, 200).add()
         pdf.new_paragraph().text("Public Info").font(StandardFonts.HELVETICA, 12).at(
             1, 100, 300
         ).add()
@@ -87,7 +87,9 @@ def test_batch_redact_multiple_paragraphs():
         redacted_lines = assertions.pdf.page(1).select_text_lines_starting_with(
             "[CONFIDENTIAL]"
         )
-        assert len(redacted_lines) == 2, f"Expected 2 redacted lines, got {len(redacted_lines)}"
+        assert (
+            len(redacted_lines) == 2
+        ), f"Expected 2 redacted lines, got {len(redacted_lines)}"
 
 
 def test_redact_with_placeholder_color():

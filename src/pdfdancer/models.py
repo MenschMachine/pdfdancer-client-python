@@ -1630,3 +1630,121 @@ class DocumentSnapshot:
     def get_pages(self) -> List[PageSnapshot]:
         """Get the list of page snapshots."""
         return self.pages
+
+
+@dataclass
+class Size:
+    """Represents dimensions with width and height."""
+
+    width: float
+    height: float
+
+    def to_dict(self) -> dict:
+        return {"width": self.width, "height": self.height}
+
+
+class ImageTransformType(Enum):
+    """Type of image transformation operation."""
+
+    REPLACE = "REPLACE"
+    SCALE = "SCALE"
+    ROTATE = "ROTATE"
+    CROP = "CROP"
+    OPACITY = "OPACITY"
+    FLIP = "FLIP"
+
+
+class ImageFlipDirection(Enum):
+    """Direction for image flip operation."""
+
+    HORIZONTAL = "HORIZONTAL"
+    VERTICAL = "VERTICAL"
+    BOTH = "BOTH"
+
+
+@dataclass
+class ImageTransformRequest:
+    """Request to transform an image in the PDF document.
+
+    Parameters:
+    - object_ref: Reference to the image to transform.
+    - transform_type: Type of transformation (REPLACE, SCALE, ROTATE, CROP, OPACITY, FLIP).
+    - new_image: For REPLACE - the replacement Image object.
+    - scale_factor: For SCALE - scaling factor (e.g., 0.5 for half size).
+    - target_size: For SCALE - target Size with width/height.
+    - preserve_aspect_ratio: For SCALE - maintain proportions.
+    - rotation_angle: For ROTATE - angle in degrees.
+    - crop_left/crop_top/crop_right/crop_bottom: For CROP - pixels to crop from edges.
+    - opacity: For OPACITY - value 0.0-1.0.
+    - flip_direction: For FLIP - HORIZONTAL, VERTICAL, or BOTH.
+    """
+
+    object_ref: ObjectRef
+    transform_type: ImageTransformType
+    new_image: Optional[Image] = None
+    scale_factor: Optional[float] = None
+    target_size: Optional[Size] = None
+    preserve_aspect_ratio: Optional[bool] = None
+    rotation_angle: Optional[float] = None
+    crop_left: Optional[int] = None
+    crop_top: Optional[int] = None
+    crop_right: Optional[int] = None
+    crop_bottom: Optional[int] = None
+    opacity: Optional[float] = None
+    flip_direction: Optional[ImageFlipDirection] = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        import base64
+
+        result: Dict[str, Any] = {
+            "objectRef": self.object_ref.to_dict(),
+            "transformType": self.transform_type.value,
+        }
+
+        if self.new_image is not None:
+            image_dict: Dict[str, Any] = {}
+            if self.new_image.format:
+                image_dict["format"] = self.new_image.format
+            if self.new_image.width is not None and self.new_image.height is not None:
+                image_dict["size"] = {
+                    "width": self.new_image.width,
+                    "height": self.new_image.height,
+                }
+            if self.new_image.data is not None:
+                image_dict["data"] = base64.b64encode(self.new_image.data).decode(
+                    "ascii"
+                )
+            result["newImage"] = image_dict
+
+        if self.scale_factor is not None:
+            result["scaleFactor"] = self.scale_factor
+
+        if self.target_size is not None:
+            result["targetSize"] = self.target_size.to_dict()
+
+        if self.preserve_aspect_ratio is not None:
+            result["preserveAspectRatio"] = self.preserve_aspect_ratio
+
+        if self.rotation_angle is not None:
+            result["rotationAngle"] = self.rotation_angle
+
+        if self.crop_left is not None:
+            result["cropLeft"] = self.crop_left
+
+        if self.crop_top is not None:
+            result["cropTop"] = self.crop_top
+
+        if self.crop_right is not None:
+            result["cropRight"] = self.crop_right
+
+        if self.crop_bottom is not None:
+            result["cropBottom"] = self.crop_bottom
+
+        if self.opacity is not None:
+            result["opacity"] = self.opacity
+
+        if self.flip_direction is not None:
+            result["flipDirection"] = self.flip_direction.value
+
+        return result

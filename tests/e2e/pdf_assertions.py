@@ -552,3 +552,268 @@ class PDFAssertions(object):
                 "Path even-odd fill inspection requires full path data from API"
             )
         return self
+
+    # ========================================
+    # Image-specific assertions
+    # ========================================
+
+    def get_image_by_id(self, internal_id: str, page: int = None):
+        """Get an image by its internal ID.
+
+        Args:
+            internal_id: The internal ID of the image
+            page: Optional page number to search on. If None, searches all pages.
+
+        Returns:
+            The ImageObject with the specified ID
+
+        Raises:
+            AssertionError if no image with the ID is found
+        """
+        if page is not None:
+            images = self.pdf.page(page).select_images()
+        else:
+            images = self.pdf.select_images()
+
+        for img in images:
+            if img.internal_id == internal_id:
+                return img
+
+        assert False, f"No image found with internal_id={internal_id}"
+
+    def get_image_at(self, x: float, y: float, page: int = 1, tolerance: float = 5.0):
+        """Get the first image at the specified coordinates.
+
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            page: Page number (1-based)
+            tolerance: Coordinate tolerance
+
+        Returns:
+            The ImageObject at the coordinates
+
+        Raises:
+            AssertionError if no image is found at the coordinates
+        """
+        images = self.pdf.page(page).select_images_at(x, y, tolerance)
+        assert len(images) > 0, f"No image found at ({x}, {y}) on page {page}"
+        return images[0]
+
+    def assert_image_size(
+            self,
+            internal_id: str,
+            width: float,
+            height: float,
+            page: int = None,
+            epsilon: float = 1.0
+    ) -> "PDFAssertions":
+        """Assert that an image has the expected size (from bounding rect).
+
+        Args:
+            internal_id: The internal ID of the image
+            width: Expected width
+            height: Expected height
+            page: Optional page number
+            epsilon: Tolerance for float comparison
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        assert bbox.width == pytest.approx(
+            width, abs=epsilon
+        ), f"Image width {bbox.width} != expected {width}"
+        assert bbox.height == pytest.approx(
+            height, abs=epsilon
+        ), f"Image height {bbox.height} != expected {height}"
+        return self
+
+    def assert_image_size_at(
+            self,
+            x: float,
+            y: float,
+            width: float,
+            height: float,
+            page: int = 1,
+            tolerance: float = 5.0,
+            epsilon: float = 1.0
+    ) -> "PDFAssertions":
+        """Assert that an image at the coordinates has the expected size.
+
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            width: Expected width
+            height: Expected height
+            page: Page number (1-based)
+            tolerance: Coordinate tolerance for finding the image
+            epsilon: Tolerance for size comparison
+        """
+        image = self.get_image_at(x, y, page, tolerance)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image at ({x}, {y}) has no bounding rect"
+        assert bbox.width == pytest.approx(
+            width, abs=epsilon
+        ), f"Image width {bbox.width} != expected {width}"
+        assert bbox.height == pytest.approx(
+            height, abs=epsilon
+        ), f"Image height {bbox.height} != expected {height}"
+        return self
+
+    def assert_image_aspect_ratio(
+            self,
+            internal_id: str,
+            expected_ratio: float,
+            page: int = None,
+            epsilon: float = 0.05
+    ) -> "PDFAssertions":
+        """Assert that an image has the expected aspect ratio (width/height).
+
+        Args:
+            internal_id: The internal ID of the image
+            expected_ratio: Expected width/height ratio
+            page: Optional page number
+            epsilon: Tolerance for ratio comparison
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+
+        actual_ratio = bbox.width / bbox.height
+        assert actual_ratio == pytest.approx(
+            expected_ratio, abs=epsilon
+        ), f"Image aspect ratio {actual_ratio:.3f} != expected {expected_ratio:.3f}"
+        return self
+
+    def assert_image_aspect_ratio_at(
+            self,
+            x: float,
+            y: float,
+            expected_ratio: float,
+            page: int = 1,
+            tolerance: float = 5.0,
+            epsilon: float = 0.05
+    ) -> "PDFAssertions":
+        """Assert that an image at coordinates has the expected aspect ratio.
+
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            expected_ratio: Expected width/height ratio
+            page: Page number (1-based)
+            tolerance: Coordinate tolerance for finding the image
+            epsilon: Tolerance for ratio comparison
+        """
+        image = self.get_image_at(x, y, page, tolerance)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image at ({x}, {y}) has no bounding rect"
+        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+
+        actual_ratio = bbox.width / bbox.height
+        assert actual_ratio == pytest.approx(
+            expected_ratio, abs=epsilon
+        ), f"Image aspect ratio {actual_ratio:.3f} != expected {expected_ratio:.3f}"
+        return self
+
+    def assert_image_width_changed(
+            self,
+            internal_id: str,
+            original_width: float,
+            page: int = None,
+            epsilon: float = 1.0
+    ) -> "PDFAssertions":
+        """Assert that an image's width has changed from the original.
+
+        Args:
+            internal_id: The internal ID of the image
+            original_width: The original width before transformation
+            page: Optional page number
+            epsilon: Tolerance - actual width must differ by more than this
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        assert abs(bbox.width - original_width) > epsilon, (
+            f"Image width {bbox.width} has not changed significantly from original {original_width}"
+        )
+        return self
+
+    def assert_image_height_changed(
+            self,
+            internal_id: str,
+            original_height: float,
+            page: int = None,
+            epsilon: float = 1.0
+    ) -> "PDFAssertions":
+        """Assert that an image's height has changed from the original.
+
+        Args:
+            internal_id: The internal ID of the image
+            original_height: The original height before transformation
+            page: Optional page number
+            epsilon: Tolerance - actual height must differ by more than this
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        assert abs(bbox.height - original_height) > epsilon, (
+            f"Image height {bbox.height} has not changed significantly from original {original_height}"
+        )
+        return self
+
+    def assert_image_scaled_by_factor(
+            self,
+            internal_id: str,
+            original_width: float,
+            original_height: float,
+            scale_factor: float,
+            page: int = None,
+            epsilon: float = 2.0
+    ) -> "PDFAssertions":
+        """Assert that an image has been scaled by the expected factor.
+
+        Args:
+            internal_id: The internal ID of the image
+            original_width: The original width before scaling
+            original_height: The original height before scaling
+            scale_factor: The expected scale factor
+            page: Optional page number
+            epsilon: Tolerance for size comparison
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+
+        expected_width = original_width * scale_factor
+        expected_height = original_height * scale_factor
+
+        assert bbox.width == pytest.approx(
+            expected_width, abs=epsilon
+        ), f"Scaled width {bbox.width} != expected {expected_width} (original {original_width} * {scale_factor})"
+        assert bbox.height == pytest.approx(
+            expected_height, abs=epsilon
+        ), f"Scaled height {bbox.height} != expected {expected_height} (original {original_height} * {scale_factor})"
+        return self
+
+    def get_image_size(self, internal_id: str, page: int = None) -> tuple:
+        """Get the width and height of an image.
+
+        Args:
+            internal_id: The internal ID of the image
+            page: Optional page number
+
+        Returns:
+            Tuple of (width, height)
+        """
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        return (bbox.width, bbox.height)

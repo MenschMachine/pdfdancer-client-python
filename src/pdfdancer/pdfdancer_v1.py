@@ -2250,6 +2250,33 @@ class PDFDancer:
 
         return result
 
+    # Image Transform Operations
+    def _transform_image(self, request: "ImageTransformRequest") -> CommandResult:
+        """
+        Transforms an image in the PDF document.
+
+        Args:
+            request: ImageTransformRequest specifying the transformation
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import ImageTransformRequest
+
+        if request is None:
+            raise ValidationException("Transform request cannot be null")
+        if request.object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        request_data = request.to_dict()
+        response = self._make_request("PUT", "/pdf/image/transform", data=request_data)
+        result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
+        self._invalidate_snapshots()
+
+        return result
+
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)
 

@@ -97,6 +97,162 @@ class PathObject(PDFObjectBase):
 
 
 class ImageObject(PDFObjectBase):
+    """Represents an image object inside a PDF page."""
+
+    def scale(self, factor: float) -> "CommandResult":
+        """Scale this image by a factor.
+
+        Args:
+            factor: Scale factor (e.g., 0.5 for half size, 2.0 for double size)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.SCALE,
+            scale_factor=factor,
+        )
+        return self._client._transform_image(request)
+
+    def scale_to(
+        self, width: float, height: float, preserve_aspect_ratio: bool = True
+    ) -> "CommandResult":
+        """Scale this image to a target size.
+
+        Args:
+            width: Target width
+            height: Target height
+            preserve_aspect_ratio: If True, maintain proportions (default True)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import (
+            CommandResult,
+            ImageTransformRequest,
+            ImageTransformType,
+            Size,
+        )
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.SCALE,
+            target_size=Size(width, height),
+            preserve_aspect_ratio=preserve_aspect_ratio,
+        )
+        return self._client._transform_image(request)
+
+    def rotate(self, angle: float) -> "CommandResult":
+        """Rotate this image by a specified angle.
+
+        Args:
+            angle: Rotation angle in degrees (positive = counter-clockwise)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.ROTATE,
+            rotation_angle=angle,
+        )
+        return self._client._transform_image(request)
+
+    def crop(
+        self, left: int = 0, top: int = 0, right: int = 0, bottom: int = 0
+    ) -> "CommandResult":
+        """Crop this image by removing pixels from edges.
+
+        Args:
+            left: Pixels to crop from left edge
+            top: Pixels to crop from top edge
+            right: Pixels to crop from right edge
+            bottom: Pixels to crop from bottom edge
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.CROP,
+            crop_left=left,
+            crop_top=top,
+            crop_right=right,
+            crop_bottom=bottom,
+        )
+        return self._client._transform_image(request)
+
+    def set_opacity(self, opacity: float) -> "CommandResult":
+        """Set the opacity of this image.
+
+        Args:
+            opacity: Opacity value from 0.0 (fully transparent) to 1.0 (fully opaque)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+
+        if not 0.0 <= opacity <= 1.0:
+            raise ValidationException(
+                f"Opacity must be between 0.0 and 1.0, got {opacity}"
+            )
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.OPACITY,
+            opacity=opacity,
+        )
+        return self._client._transform_image(request)
+
+    def flip(self, direction: "ImageFlipDirection") -> "CommandResult":
+        """Flip this image in the specified direction.
+
+        Args:
+            direction: Flip direction (HORIZONTAL, VERTICAL, or BOTH)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import (
+            CommandResult,
+            ImageFlipDirection,
+            ImageTransformRequest,
+            ImageTransformType,
+        )
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.FLIP,
+            flip_direction=direction,
+        )
+        return self._client._transform_image(request)
+
+    def replace(self, new_image: "Image") -> "CommandResult":
+        """Replace this image with a new image.
+
+        Args:
+            new_image: The new Image object to replace this one with
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.REPLACE,
+            new_image=new_image,
+        )
+        return self._client._transform_image(request)
+
     def __eq__(self, other):
         if not isinstance(other, ImageObject):
             return False

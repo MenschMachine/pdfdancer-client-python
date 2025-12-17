@@ -79,7 +79,7 @@ from .types import (
 )
 
 if TYPE_CHECKING:
-    from .models import PathSegment
+    from .models import ImageTransformRequest, PathSegment
     from .path_builder import RectangleBuilder
 
 load_dotenv()
@@ -2261,8 +2261,6 @@ class PDFDancer:
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import ImageTransformRequest
-
         if request is None:
             raise ValidationException("Transform request cannot be null")
         if request.object_ref is None:

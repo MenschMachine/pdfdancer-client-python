@@ -136,9 +136,9 @@ class TestPathBasicOperations:
 
             # 3. Double-check with direct selection - should return empty
             paths_at_location = pdf.page(1).select_paths_at(80, 720)
-            assert len(paths_at_location) == 0, (
-                "No paths should exist at (80, 720) after deletion"
-            )
+            assert (
+                len(paths_at_location) == 0
+            ), "No paths should exist at (80, 720) after deletion"
 
     def test_move_path_comprehensive(self):
         """Test moving a path with detailed position verification."""

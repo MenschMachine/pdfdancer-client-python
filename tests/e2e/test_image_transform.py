@@ -96,8 +96,12 @@ class TestImageScale:
             target_height = 75.0
             target_ratio = target_width / target_height  # 2.0
 
-            result = image.scale_to(target_width, target_height, preserve_aspect_ratio=False)
-            assert result.success, f"Scale without aspect ratio failed: {result.message}"
+            result = image.scale_to(
+                target_width, target_height, preserve_aspect_ratio=False
+            )
+            assert (
+                result.success
+            ), f"Scale without aspect ratio failed: {result.message}"
 
             # Verify aspect ratio changed from original
             assertions = PDFAssertions(pdf)
@@ -106,7 +110,9 @@ class TestImageScale:
             # The new ratio should be closer to target_ratio than original_ratio
             # (unless original was already 2.0)
             if abs(original_ratio - target_ratio) > 0.1:
-                assert abs(new_ratio - target_ratio) < abs(original_ratio - target_ratio), (
+                assert abs(new_ratio - target_ratio) < abs(
+                    original_ratio - target_ratio
+                ), (
                     f"Aspect ratio should change toward target. Original: {original_ratio:.3f}, "
                     f"New: {new_ratio:.3f}, Target: {target_ratio:.3f}"
                 )
@@ -391,7 +397,9 @@ class TestImageCrop:
             # Verify dimensions decreased
             assertions = PDFAssertions(pdf)
             assertions.assert_image_width_changed(image_id, original_width, epsilon=5.0)
-            assertions.assert_image_height_changed(image_id, original_height, epsilon=5.0)
+            assertions.assert_image_height_changed(
+                image_id, original_height, epsilon=5.0
+            )
 
     def test_crop_image_from_left_only(self):
         """Test cropping from left edge only reduces width."""
@@ -431,7 +439,9 @@ class TestImageCrop:
 
             # Height should decrease
             assertions = PDFAssertions(pdf)
-            assertions.assert_image_height_changed(image_id, original_height, epsilon=5.0)
+            assertions.assert_image_height_changed(
+                image_id, original_height, epsilon=5.0
+            )
 
 
 class TestImageReplace:

@@ -8,6 +8,7 @@ from . import FormFieldRef, ObjectRef, ObjectType, Point, Position, TextObjectRe
 from .exceptions import ValidationException
 
 if TYPE_CHECKING:
+    from .models import CommandResult, Image, ImageFlipDirection
     from .pdfdancer_v1 import PDFDancer
 
 
@@ -108,7 +109,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+        from .models import ImageTransformRequest, ImageTransformType
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),
@@ -130,12 +131,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import (
-            CommandResult,
-            ImageTransformRequest,
-            ImageTransformType,
-            Size,
-        )
+        from .models import ImageTransformRequest, ImageTransformType, Size
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),
@@ -154,7 +150,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+        from .models import ImageTransformRequest, ImageTransformType
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),
@@ -177,7 +173,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+        from .models import ImageTransformRequest, ImageTransformType
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),
@@ -198,7 +194,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+        from .models import ImageTransformRequest, ImageTransformType
 
         if not 0.0 <= opacity <= 1.0:
             raise ValidationException(
@@ -221,12 +217,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import (
-            CommandResult,
-            ImageFlipDirection,
-            ImageTransformRequest,
-            ImageTransformType,
-        )
+        from .models import ImageTransformRequest, ImageTransformType
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),
@@ -244,7 +235,7 @@ class ImageObject(PDFObjectBase):
         Returns:
             CommandResult indicating success or failure
         """
-        from .models import CommandResult, ImageTransformRequest, ImageTransformType
+        from .models import ImageTransformRequest, ImageTransformType
 
         request = ImageTransformRequest(
             object_ref=self.object_ref(),

@@ -11,7 +11,8 @@ def _get_base_url():
 
 
 def _read_token() -> str | None:
-    token = os.getenv("PDFDANCER_TOKEN")
+    # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
+    token = os.getenv("PDFDANCER_API_TOKEN") or os.getenv("PDFDANCER_TOKEN")
     if token:
         return token.strip()
     # Try common token files in repo
@@ -53,6 +54,6 @@ def _require_env() -> tuple[str, str | None]:
         )
     if not token:
         pytest.fail(
-            "PDFDANCER_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo"
+            "PDFDANCER_API_TOKEN not set and no token file found; set env or place jwt-token-*.txt in repo"
         )
     return base_url, token

@@ -50,7 +50,7 @@ from pdfdancer import Color, PDFDancer, StandardFonts
 
 with PDFDancer.open(
     pdf_data=Path("input.pdf"),
-    token="your-api-token",             # optional when PDFDANCER_TOKEN is set
+    token="your-api-token",             # optional when PDFDANCER_API_TOKEN is set
     base_url="https://api.pdfdancer.com",
 ) as pdf:
     # Locate and update an existing paragraph
@@ -204,7 +204,7 @@ with PDFDancer.open("confidential.pdf") as pdf:
 
 ## Configuration
 
-- Set `PDFDANCER_TOKEN` for authentication (preferred for local development and CI).
+- Set `PDFDANCER_API_TOKEN` for authentication (preferred). `PDFDANCER_TOKEN` is also supported for backwards compatibility.
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox or local environments). Defaults to `https://api.pdfdancer.com`.
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()` (default: 30 seconds).
 - For testing against self-signed certificates, call `pdfdancer.set_ssl_verify(False)` to temporarily disable TLS verification.
@@ -274,13 +274,13 @@ Set your PDFDancer API token as an environment variable:
 
 ```bash
 # On macOS/Linux:
-export PDFDANCER_TOKEN="your-api-token-here"
+export PDFDANCER_API_TOKEN="your-api-token-here"
 
 # On Windows (Command Prompt):
-set PDFDANCER_TOKEN=your-api-token-here
+set PDFDANCER_API_TOKEN=your-api-token-here
 
 # On Windows (PowerShell):
-$env:PDFDANCER_TOKEN="your-api-token-here"
+$env:PDFDANCER_API_TOKEN="your-api-token-here"
 ```
 
 For permanent configuration, add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
@@ -412,7 +412,7 @@ pip install -e .
 
 #### Test Failures
 
-- Ensure `PDFDANCER_TOKEN` is set for e2e tests
+- Ensure `PDFDANCER_API_TOKEN` is set for e2e tests
 - Check network connectivity to the PDFDancer API
 - Verify you're using Python 3.10 or higher
 

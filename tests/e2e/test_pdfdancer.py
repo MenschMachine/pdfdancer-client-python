@@ -9,19 +9,21 @@ from tests.e2e import _require_env_and_fixture
 def test_env_vars():
     base_url, _, pdf_path = _require_env_and_fixture("Showcase.pdf")
     original_base_url_env = os.environ.get("PDFDANCER_BASE_URL")
+    original_api_token_env = os.environ.get("PDFDANCER_API_TOKEN")
     original_token_env = os.environ.get("PDFDANCER_TOKEN")
     try:
+        os.environ.pop("PDFDANCER_API_TOKEN", None)
         os.environ.pop("PDFDANCER_TOKEN", None)
 
         # With the anonymous token fallback, opening without a token should now succeed
         # (it will automatically obtain an anonymous token)
-        # This test now verifies that the client works without PDFDANCER_TOKEN set
+        # This test now verifies that the client works without PDFDANCER_API_TOKEN set
         with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
             # Verify we got a valid session
             assert pdf._session_id is not None
             assert pdf._token is not None  # Should have obtained an anonymous token
 
-        os.environ["PDFDANCER_TOKEN"] = "42"
+        os.environ["PDFDANCER_API_TOKEN"] = "42"
         with PDFDancer.open(pdf_path, base_url=base_url) as pdf:
             pass
 
@@ -43,6 +45,10 @@ def test_env_vars():
             os.environ["PDFDANCER_BASE_URL"] = original_base_url_env
         elif "PDFDANCER_BASE_URL" in os.environ:
             del os.environ["PDFDANCER_BASE_URL"]
+        if original_api_token_env is not None:
+            os.environ["PDFDANCER_API_TOKEN"] = original_api_token_env
+        elif "PDFDANCER_API_TOKEN" in os.environ:
+            del os.environ["PDFDANCER_API_TOKEN"]
         if original_token_env is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token_env
         elif "PDFDANCER_TOKEN" in os.environ:

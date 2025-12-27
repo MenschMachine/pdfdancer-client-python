@@ -2,8 +2,8 @@
 Tests for anonymous token fallback functionality.
 
 These tests verify that the PDFDancer client can automatically obtain
-anonymous tokens when no PDFDANCER_TOKEN is provided, matching the
-behavior of the Java client.
+anonymous tokens when no PDFDANCER_API_TOKEN or PDFDANCER_TOKEN is provided,
+matching the behavior of the Java client.
 """
 
 import os
@@ -16,7 +16,7 @@ from pdfdancer.exceptions import HttpClientException
 
 
 class TestAnonymousTokenFallback:
-    """Test anonymous token fallback when PDFDANCER_TOKEN is not set."""
+    """Test anonymous token fallback when PDFDANCER_API_TOKEN or PDFDANCER_TOKEN is not set."""
 
     @pytest.fixture
     def mock_httpx_client(self):
@@ -28,13 +28,18 @@ class TestAnonymousTokenFallback:
 
     @pytest.fixture
     def clear_env_token(self):
-        """Temporarily clear PDFDANCER_TOKEN from environment."""
+        """Temporarily clear PDFDANCER_TOKEN and PDFDANCER_API_TOKEN from environment."""
         original_token = os.environ.get("PDFDANCER_TOKEN")
+        original_api_token = os.environ.get("PDFDANCER_API_TOKEN")
         if "PDFDANCER_TOKEN" in os.environ:
             del os.environ["PDFDANCER_TOKEN"]
+        if "PDFDANCER_API_TOKEN" in os.environ:
+            del os.environ["PDFDANCER_API_TOKEN"]
         yield
         if original_token is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token
+        if original_api_token is not None:
+            os.environ["PDFDANCER_API_TOKEN"] = original_api_token
 
     def test_resolve_token_returns_none_when_no_token(self, clear_env_token):
         """Test that _resolve_token returns None when no token is available."""
@@ -49,9 +54,24 @@ class TestAnonymousTokenFallback:
 
     def test_resolve_token_uses_env_token(self):
         """Test that _resolve_token uses PDFDANCER_TOKEN from environment."""
-        with patch.dict(os.environ, {"PDFDANCER_TOKEN": "env-token-456"}):
+        with patch.dict(os.environ, {"PDFDANCER_TOKEN": "env-token-456"}, clear=True):
             result = PDFDancer._resolve_token(None)
             assert result == "env-token-456"
+
+    def test_resolve_token_uses_api_token_env_var(self):
+        """Test that _resolve_token uses PDFDANCER_API_TOKEN from environment."""
+        with patch.dict(os.environ, {"PDFDANCER_API_TOKEN": "api-token-789"}, clear=True):
+            result = PDFDancer._resolve_token(None)
+            assert result == "api-token-789"
+
+    def test_resolve_token_prefers_api_token_over_legacy_token(self):
+        """Test that PDFDANCER_API_TOKEN takes precedence over PDFDANCER_TOKEN."""
+        with patch.dict(
+            os.environ,
+            {"PDFDANCER_API_TOKEN": "api-token", "PDFDANCER_TOKEN": "legacy-token"},
+        ):
+            result = PDFDancer._resolve_token(None)
+            assert result == "api-token"
 
     def test_resolve_token_prefers_explicit_over_env(self):
         """Test that explicit token takes precedence over environment variable."""

@@ -95,7 +95,7 @@ pdf.save("output.pdf")
 ### Initialization
 
 ```python
-# Open existing PDF with token from env var PDFDANCER_TOKEN
+# Open existing PDF with token from env var PDFDANCER_API_TOKEN
 pdf = PDFDancer.open(pdf_data="document.pdf")
 
 # Open with explicit token

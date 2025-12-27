@@ -690,13 +690,14 @@ class PDFDancer:
 
         Authentication:
         - If token is provided, uses it
-        - Otherwise, checks PDFDANCER_TOKEN environment variable
+        - Otherwise, checks PDFDANCER_API_TOKEN environment variable (preferred)
+        - Falls back to PDFDANCER_TOKEN environment variable (legacy)
         - If no token is found, automatically obtains an anonymous token
 
         Args:
             pdf_data: PDF payload supplied directly or via filesystem handles.
-            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable,
-                then to anonymous token if not set.
+            token: Override for the API token; falls back to `PDFDANCER_API_TOKEN` or
+                `PDFDANCER_TOKEN` environment variable, then to anonymous token if not set.
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
@@ -856,10 +857,15 @@ class PDFDancer:
         """
         Resolve token from argument or environment variable.
         Returns None if no token is found (allowing fallback to anonymous token).
+
+        Checks environment variables in order:
+        1. PDFDANCER_API_TOKEN (preferred)
+        2. PDFDANCER_TOKEN (legacy)
         """
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
-            env_token = os.getenv("PDFDANCER_TOKEN")
+            # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
+            env_token = os.getenv("PDFDANCER_API_TOKEN") or os.getenv("PDFDANCER_TOKEN")
             resolved_token = (
                 env_token.strip() if env_token and env_token.strip() else None
             )
@@ -882,12 +888,13 @@ class PDFDancer:
 
         Authentication:
         - If token is provided, uses it
-        - Otherwise, checks PDFDANCER_TOKEN environment variable
+        - Otherwise, checks PDFDANCER_API_TOKEN environment variable (preferred)
+        - Falls back to PDFDANCER_TOKEN environment variable (legacy)
         - If no token is found, automatically obtains an anonymous token
 
         Args:
-            token: Override for the API token; falls back to `PDFDANCER_TOKEN` environment variable,
-                then to anonymous token if not set.
+            token: Override for the API token; falls back to `PDFDANCER_API_TOKEN` or
+                `PDFDANCER_TOKEN` environment variable, then to anonymous token if not set.
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
@@ -1101,7 +1108,7 @@ class PDFDancer:
             raise ValidationException(
                 "Authentication with the PDFDancer API failed. "
                 "Confirm that your API token is valid, has not expired, and is supplied via "
-                "the `token` argument or the PDFDANCER_TOKEN environment variable. "
+                "the `token` argument or the PDFDANCER_API_TOKEN environment variable. "
                 f"Server response: {details}"
             )
 

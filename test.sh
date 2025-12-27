@@ -162,7 +162,8 @@ LONG OPTIONS (use either format):
     --help                Show this help message
 
 ENVIRONMENT:
-    PDFDANCER_TOKEN        Token if --token/-t not provided
+    PDFDANCER_API_TOKEN    Token if --token/-t not provided (preferred)
+    PDFDANCER_TOKEN        Token if --token/-t not provided (legacy fallback)
 
 SERVER URL FORMATS:
     localhost:8080                  Hostname with port (auto-detects https)
@@ -300,8 +301,11 @@ validate_args() {
     fi
     
     # Check for token (optional - use from args or environment)
+    # Priority: --token arg > PDFDANCER_API_TOKEN > PDFDANCER_TOKEN
     if [[ -z "$TOKEN" ]]; then
-        if [[ -n "${PDFDANCER_TOKEN:-}" ]]; then
+        if [[ -n "${PDFDANCER_API_TOKEN:-}" ]]; then
+            TOKEN="$PDFDANCER_API_TOKEN"
+        elif [[ -n "${PDFDANCER_TOKEN:-}" ]]; then
             TOKEN="$PDFDANCER_TOKEN"
         else
             TOKEN=""
@@ -374,7 +378,7 @@ run_pytest_with_gnu_parallel() {
     echo "   • Use -S/--stdout for live logs"
 
     # Set environment variables for this test run
-    export PDFDANCER_TOKEN="$TOKEN"
+    export PDFDANCER_API_TOKEN="$TOKEN"
     export PDFDANCER_BASE_URL="$server_url"
 
     # Get list of test files to distribute across workers
@@ -431,11 +435,11 @@ run_pytest_on_server() {
     log_message "$server" "Starting pytest with $PARALLEL workers"
     log_message "$server" "Server URL: $server_url"
     log_message "$server" "Pytest args: ${PYTEST_ARGS[*]:-tests/ -v}"
-    
+
     # Set environment variables for this test run
-    export PDFDANCER_TOKEN="$TOKEN"
+    export PDFDANCER_API_TOKEN="$TOKEN"
     export PDFDANCER_BASE_URL="$server_url"
-    
+
     # Determine python executable (prefer venv if available)
     local python_cmd="${PYTHON_CMD:-python}"
 

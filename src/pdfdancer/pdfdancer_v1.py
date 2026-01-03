@@ -62,7 +62,10 @@ from .models import (
     RedactRequest,
     RedactResponse,
     RedactTarget,
+    ReflowPreset,
     ShapeType,
+    TemplateReplacement,
+    TemplateReplaceRequest,
     TextLine,
     TextObjectRef,
 )
@@ -605,6 +608,42 @@ class PageClient:
             self.page_number = target_page_number
             self.position = Position.at_page(target_page_number)
         return moved
+
+    def replace_templates(
+        self,
+        replacements: List[TemplateReplacement],
+        reflow_preset: Optional[ReflowPreset] = None,
+    ) -> bool:
+        """
+        Replace template placeholders on this page.
+
+        Finds exact text matches for placeholders and replaces them with specified
+        content. All placeholders must be found or the operation fails atomically.
+
+        Args:
+            replacements: List of TemplateReplacement objects specifying
+                placeholder/replacement pairs
+            reflow_preset: Optional ReflowPreset to control text reflow behavior.
+                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
+                - FIT_OR_FAIL: Reflow must succeed or operation fails
+                - NONE: No reflow, replacement placed as-is
+
+        Returns:
+            True if all replacements were successful
+
+        Example:
+            ```python
+            page.replace_templates([
+                TemplateReplacement("{{NAME}}", "John Doe"),
+            ])
+            ```
+        """
+        # noinspection PyProtectedMember
+        return self.root._replace_templates(
+            replacements=replacements,
+            page_number=self.page_number,
+            reflow_preset=reflow_preset,
+        )
 
     def _ref(self):
         return ObjectRef(
@@ -2162,6 +2201,84 @@ class PDFDancer:
         """
         targets = [RedactTarget(obj.internal_id, replacement) for obj in objects]
         return self._redact(targets, replacement, placeholder_color)
+
+    # Template Replacement Operations
+
+    def _replace_templates(
+        self,
+        replacements: List[TemplateReplacement],
+        page_number: Optional[int] = None,
+        reflow_preset: Optional[ReflowPreset] = None,
+    ) -> bool:
+        """
+        Internal method to replace template placeholders in the PDF.
+
+        Args:
+            replacements: List of TemplateReplacement objects
+            page_number: Optional 1-based page number. If None, applies to all pages.
+            reflow_preset: Optional reflow behavior preset
+
+        Returns:
+            True if replacement was successful
+        """
+        if not replacements:
+            raise ValidationException("At least one replacement is required")
+
+        # Convert 1-based page_number to 0-based page_index for API
+        page_index = None
+        if page_number is not None:
+            page_index = page_number - 1
+
+        request = TemplateReplaceRequest(
+            replacements=replacements,
+            page_index=page_index,
+            reflow_preset=reflow_preset,
+        )
+        response = self._make_request(
+            "POST", "/template/replace", data=request.to_dict()
+        )
+        result = response.json()
+
+        if result:
+            self._invalidate_snapshots()
+
+        return result
+
+    def replace_templates(
+        self,
+        replacements: List[TemplateReplacement],
+        reflow_preset: Optional[ReflowPreset] = None,
+    ) -> bool:
+        """
+        Replace template placeholders in the PDF document.
+
+        Finds exact text matches for placeholders and replaces them with specified
+        content. All placeholders must be found or the operation fails atomically.
+
+        Args:
+            replacements: List of TemplateReplacement objects specifying
+                placeholder/replacement pairs
+            reflow_preset: Optional ReflowPreset to control text reflow behavior.
+                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
+                - FIT_OR_FAIL: Reflow must succeed or operation fails
+                - NONE: No reflow, replacement placed as-is
+
+        Returns:
+            True if all replacements were successful
+
+        Example:
+            ```python
+            pdf.replace_templates([
+                TemplateReplacement("{{NAME}}", "John Doe"),
+                TemplateReplacement("{{DATE}}", "2025-01-15"),
+            ])
+            ```
+        """
+        return self._replace_templates(
+            replacements=replacements,
+            page_number=None,
+            reflow_preset=reflow_preset,
+        )
 
     # Add Operations
 

@@ -1662,6 +1662,89 @@ class ImageFlipDirection(Enum):
     BOTH = "BOTH"
 
 
+class ReflowPreset(Enum):
+    """Reflow preset for template replacement operations.
+
+    Controls how text reflow is handled when replacement text differs in length
+    from the original placeholder.
+
+    Values:
+    - BEST_EFFORT: Attempt to reflow text, but proceed even if it doesn't fit perfectly.
+    - FIT_OR_FAIL: Reflow must succeed or the operation fails.
+    - NONE: No reflow - replacement text is placed as-is.
+    """
+
+    BEST_EFFORT = "BEST_EFFORT"
+    FIT_OR_FAIL = "FIT_OR_FAIL"
+    NONE = "NONE"
+
+
+@dataclass
+class TemplateReplacement:
+    """A single template placeholder replacement.
+
+    Parameters:
+    - placeholder: The exact text to find and replace in the PDF.
+    - text: The text to replace the placeholder with.
+
+    Example:
+    ```python
+    replacement = TemplateReplacement(
+        placeholder="{{NAME}}",
+        text="John Doe"
+    )
+    ```
+    """
+
+    placeholder: str
+    text: str
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "placeholder": self.placeholder,
+            "text": self.text,
+        }
+
+
+@dataclass
+class TemplateReplaceRequest:
+    """Request for batch template placeholder replacements.
+
+    Parameters:
+    - replacements: List of TemplateReplacement objects.
+    - page_index: Optional 0-based page index. If None, applies to all pages.
+    - reflow_preset: Optional ReflowPreset for text reflow behavior.
+
+    Example:
+    ```python
+    request = TemplateReplaceRequest(
+        replacements=[
+            TemplateReplacement("{{NAME}}", "John Doe"),
+            TemplateReplacement("{{DATE}}", "2025-01-15"),
+        ],
+        page_index=0,  # First page (0-based)
+        reflow_preset=ReflowPreset.BEST_EFFORT,
+    )
+    ```
+    """
+
+    replacements: List[TemplateReplacement]
+    page_index: Optional[int] = None
+    reflow_preset: Optional[ReflowPreset] = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        result: Dict[str, Any] = {
+            "replacements": [r.to_dict() for r in self.replacements],
+        }
+        if self.page_index is not None:
+            result["pageIndex"] = self.page_index
+        if self.reflow_preset is not None:
+            result["reflowPreset"] = self.reflow_preset.value
+        return result
+
+
 @dataclass
 class ImageTransformRequest:
     """Request to transform an image in the PDF document.

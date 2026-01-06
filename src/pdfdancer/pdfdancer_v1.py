@@ -609,7 +609,7 @@ class PageClient:
             self.position = Position.at_page(target_page_number)
         return moved
 
-    def replace_templates(
+    def apply_replacements(
         self,
         replacements: List[TemplateReplacement],
         reflow_preset: Optional[ReflowPreset] = None,
@@ -633,13 +633,13 @@ class PageClient:
 
         Example:
             ```python
-            page.replace_templates([
+            page.apply_replacements([
                 TemplateReplacement("{{NAME}}", "John Doe"),
             ])
             ```
         """
         # noinspection PyProtectedMember
-        return self.root._replace_templates(
+        return self.root._apply_replacements(
             replacements=replacements,
             page_number=self.page_number,
             reflow_preset=reflow_preset,
@@ -2204,7 +2204,7 @@ class PDFDancer:
 
     # Template Replacement Operations
 
-    def _replace_templates(
+    def _apply_replacements(
         self,
         replacements: List[TemplateReplacement],
         page_number: Optional[int] = None,
@@ -2244,7 +2244,7 @@ class PDFDancer:
 
         return result
 
-    def replace_templates(
+    def apply_replacements(
         self,
         replacements: List[TemplateReplacement],
         reflow_preset: Optional[ReflowPreset] = None,
@@ -2268,13 +2268,13 @@ class PDFDancer:
 
         Example:
             ```python
-            pdf.replace_templates([
+            pdf.apply_replacements([
                 TemplateReplacement("{{NAME}}", "John Doe"),
                 TemplateReplacement("{{DATE}}", "2025-01-15"),
             ])
             ```
         """
-        return self._replace_templates(
+        return self._apply_replacements(
             replacements=replacements,
             page_number=None,
             reflow_preset=reflow_preset,

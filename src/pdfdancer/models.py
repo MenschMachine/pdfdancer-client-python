@@ -1686,25 +1686,31 @@ class TemplateReplacement:
     Parameters:
     - placeholder: The exact text to find and replace in the PDF.
     - text: The text to replace the placeholder with.
-
-    Example:
-    ```python
-    replacement = TemplateReplacement(
-        placeholder="{{NAME}}",
-        text="John Doe"
-    )
-    ```
+    - font: Optional font for the replacement text.
+    - color: Optional color for the replacement text.
     """
 
     placeholder: str
     text: str
+    font: Optional[Font] = None
+    color: Optional[Color] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result: Dict[str, Any] = {
             "placeholder": self.placeholder,
             "text": self.text,
         }
+        if self.font:
+            result["font"] = {"name": self.font.name, "size": self.font.size}
+        if self.color:
+            result["color"] = {
+                "red": self.color.r,
+                "green": self.color.g,
+                "blue": self.color.b,
+                "alpha": self.color.a,
+            }
+        return result
 
 
 @dataclass

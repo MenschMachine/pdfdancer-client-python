@@ -2,7 +2,7 @@
 
 import pytest
 
-from pdfdancer import ReflowPreset, TemplateReplacement, ValidationException
+from pdfdancer import Color, Font, ReflowPreset, ValidationException
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -21,9 +21,7 @@ def test_replace_single_template():
         )
 
         # Replace the existing "Showcase" text
-        result = pdf.apply_replacements([
-            TemplateReplacement(placeholder="Showcase", text="Replaced"),
-        ])
+        result = pdf.apply_replacements({"Showcase": "Replaced"})
 
         assert result is True
 
@@ -42,10 +40,10 @@ def test_replace_multiple_templates():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         # Replace multiple placeholders
-        result = pdf.apply_replacements([
-            TemplateReplacement(placeholder="PDFDancer", text="TestApp"),
-            TemplateReplacement(placeholder="Engine", text="System"),
-        ])
+        result = pdf.apply_replacements({
+            "PDFDancer": "TestApp",
+            "Engine": "System",
+        })
 
         assert result is True
 
@@ -71,9 +69,7 @@ def test_replace_template_on_specific_page():
         )
 
         # Replace only on page 1
-        result = pdf.page(1).apply_replacements([
-            TemplateReplacement(placeholder="Showcase", text="PageOneOnly"),
-        ])
+        result = pdf.page(1).apply_replacements({"Showcase": "PageOneOnly"})
 
         assert result is True
 
@@ -98,7 +94,7 @@ def test_replace_template_with_reflow_best_effort():
 
         # Replace with longer text using BEST_EFFORT reflow
         result = pdf.apply_replacements(
-            [TemplateReplacement(placeholder="Showcase", text="ThisIsAMuchLongerReplacementText")],
+            {"Showcase": "ThisIsAMuchLongerReplacementText"},
             reflow_preset=ReflowPreset.BEST_EFFORT,
         )
 
@@ -125,7 +121,7 @@ def test_replace_template_with_reflow_none():
 
         # Replace without reflow
         result = pdf.apply_replacements(
-            [TemplateReplacement(placeholder="Showcase", text="NoReflow")],
+            {"Showcase": "NoReflow"},
             reflow_preset=ReflowPreset.NONE,
         )
 
@@ -139,40 +135,86 @@ def test_replace_template_with_reflow_none():
         )
 
 
-def test_replace_template_empty_list_raises():
-    """Test that replacing with an empty list raises ValidationException."""
+def test_replace_template_empty_dict_raises():
+    """Test that replacing with an empty dict raises ValidationException."""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         with pytest.raises(ValidationException):
-            pdf.apply_replacements([])
+            pdf.apply_replacements({})
 
 
-def test_replace_template_page_level_empty_list_raises():
-    """Test that page-level replacement with empty list raises ValidationException."""
+def test_replace_template_page_level_empty_dict_raises():
+    """Test that page-level replacement with empty dict raises ValidationException."""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         with pytest.raises(ValidationException):
-            pdf.page(1).apply_replacements([])
+            pdf.page(1).apply_replacements({})
 
 
-def test_template_replacement_dataclass():
-    """Test TemplateReplacement dataclass structure and serialization."""
-    replacement = TemplateReplacement(
-        placeholder="{{NAME}}",
-        text="John Doe",
-    )
+def test_replace_template_with_font():
+    """Test template replacement with custom font."""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
-    assert replacement.placeholder == "{{NAME}}"
-    assert replacement.text == "John Doe"
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        result = pdf.apply_replacements({
+            "Showcase": {
+                "text": "FontTest",
+                "font": Font("Helvetica-Bold", 14),
+            }
+        })
 
-    # Test to_dict
-    d = replacement.to_dict()
-    assert d == {
-        "placeholder": "{{NAME}}",
-        "text": "John Doe",
-    }
+        assert result is True
+
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("Showcase")
+            .assert_textline_exists("FontTest")
+        )
+
+
+def test_replace_template_with_color():
+    """Test template replacement with custom color."""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        result = pdf.apply_replacements({
+            "Showcase": {
+                "text": "ColorTest",
+                "color": Color(255, 0, 0),
+            }
+        })
+
+        assert result is True
+
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("Showcase")
+            .assert_textline_exists("ColorTest")
+        )
+
+
+def test_replace_template_with_font_and_color():
+    """Test template replacement with both font and color."""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        result = pdf.apply_replacements({
+            "Showcase": {
+                "text": "StyledText",
+                "font": Font("Helvetica-Bold", 16),
+                "color": Color(0, 100, 0),
+            }
+        })
+
+        assert result is True
+
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("Showcase")
+            .assert_textline_exists("StyledText")
+        )
 
 
 def test_reflow_preset_values():

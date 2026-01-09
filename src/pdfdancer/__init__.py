@@ -44,7 +44,6 @@ from .models import (
     ShapeType,
     Size,
     StandardFonts,
-    TemplateReplacement,
     TextObjectRef,
     TextStatus,
 )
@@ -93,7 +92,6 @@ __all__ = [
     "RedactTarget",
     "RedactResponse",
     "ReflowPreset",
-    "TemplateReplacement",
     "PdfDancerException",
     "FontNotFoundException",
     "ValidationException",

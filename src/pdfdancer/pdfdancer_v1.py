@@ -16,7 +16,7 @@ import time
 from datetime import datetime, timezone
 from importlib.metadata import version as get_package_version
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, List, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Mapping, Optional, Union
 
 import httpx
 from dotenv import load_dotenv
@@ -121,6 +121,26 @@ DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
     os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
 )
+
+
+def _dict_to_replacements(
+    replacements: Dict[str, Union[str, dict]]
+) -> List[TemplateReplacement]:
+    """Convert dict-based replacements to TemplateReplacement list."""
+    result = []
+    for placeholder, value in replacements.items():
+        if isinstance(value, str):
+            result.append(TemplateReplacement(placeholder=placeholder, text=value))
+        else:
+            result.append(
+                TemplateReplacement(
+                    placeholder=placeholder,
+                    text=value["text"],
+                    font=value.get("font"),
+                    color=value.get("color"),
+                )
+            )
+    return result
 
 
 def _generate_timestamp() -> str:
@@ -611,7 +631,7 @@ class PageClient:
 
     def apply_replacements(
         self,
-        replacements: List[TemplateReplacement],
+        replacements: Dict[str, Union[str, dict]],
         reflow_preset: Optional[ReflowPreset] = None,
     ) -> bool:
         """
@@ -621,8 +641,9 @@ class PageClient:
         content. All placeholders must be found or the operation fails atomically.
 
         Args:
-            replacements: List of TemplateReplacement objects specifying
-                placeholder/replacement pairs
+            replacements: Dict mapping placeholder strings to replacement values.
+                - Simple: {"{{NAME}}": "John Doe"}
+                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
             reflow_preset: Optional ReflowPreset to control text reflow behavior.
                 - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
                 - FIT_OR_FAIL: Reflow must succeed or operation fails
@@ -633,14 +654,15 @@ class PageClient:
 
         Example:
             ```python
-            page.apply_replacements([
-                TemplateReplacement("{{NAME}}", "John Doe"),
-            ])
+            page.apply_replacements({
+                "{{NAME}}": "John Doe",
+            })
             ```
         """
+        replacement_list = _dict_to_replacements(replacements)
         # noinspection PyProtectedMember
         return self.root._apply_replacements(
-            replacements=replacements,
+            replacements=replacement_list,
             page_number=self.page_number,
             reflow_preset=reflow_preset,
         )
@@ -2246,7 +2268,7 @@ class PDFDancer:
 
     def apply_replacements(
         self,
-        replacements: List[TemplateReplacement],
+        replacements: Dict[str, Union[str, dict]],
         reflow_preset: Optional[ReflowPreset] = None,
     ) -> bool:
         """
@@ -2256,8 +2278,9 @@ class PDFDancer:
         content. All placeholders must be found or the operation fails atomically.
 
         Args:
-            replacements: List of TemplateReplacement objects specifying
-                placeholder/replacement pairs
+            replacements: Dict mapping placeholder strings to replacement values.
+                - Simple: {"{{NAME}}": "John Doe"}
+                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
             reflow_preset: Optional ReflowPreset to control text reflow behavior.
                 - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
                 - FIT_OR_FAIL: Reflow must succeed or operation fails
@@ -2268,14 +2291,15 @@ class PDFDancer:
 
         Example:
             ```python
-            pdf.apply_replacements([
-                TemplateReplacement("{{NAME}}", "John Doe"),
-                TemplateReplacement("{{DATE}}", "2025-01-15"),
-            ])
+            pdf.apply_replacements({
+                "{{NAME}}": "John Doe",
+                "{{DATE}}": "2025-01-15",
+            })
             ```
         """
+        replacement_list = _dict_to_replacements(replacements)
         return self._apply_replacements(
-            replacements=replacements,
+            replacements=replacement_list,
             page_number=None,
             reflow_preset=reflow_preset,
         )

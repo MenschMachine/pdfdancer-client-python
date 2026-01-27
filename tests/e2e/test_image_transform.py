@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdfdancer import Image, ImageFlipDirection, ObjectType, ValidationException
+from pdfdancer import Color, Image, ImageFlipDirection, ObjectType, ValidationException
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -562,3 +562,123 @@ class TestImageTransformChaining:
             assertions.assert_image_size(
                 image_id, original_width, original_height, epsilon=2.0
             )
+
+
+class TestImageFillRegion:
+    def test_fill_region_basic(self):
+        """Test filling a region within an image with a solid color."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            assert len(images) > 0
+
+            image = images[0]
+            image_id = image.internal_id
+            page_num = image.position.page_number
+
+            # Fill a region with black color
+            result = image.fill_region(
+                x=10, y=10, width=50, height=30, color=Color(0, 0, 0)
+            )
+            assert result.success, f"Fill region failed: {result.message}"
+
+            # Verify image still exists
+            assertions = PDFAssertions(pdf)
+            image_after = assertions.get_image_by_id(image_id, page_num)
+            assert image_after is not None
+
+    def test_fill_region_with_red_color(self):
+        """Test filling a region with red color."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            image = images[0]
+            image_id = image.internal_id
+            page_num = image.position.page_number
+
+            result = image.fill_region(
+                x=0, y=0, width=5, height=5, color=Color(255, 0, 0)
+            )
+            assert result.success, f"Fill region failed: {result.message}"
+
+            # Verify image still exists
+            assertions = PDFAssertions(pdf)
+            image_after = assertions.get_image_by_id(image_id, page_num)
+            assert image_after is not None
+
+    def test_fill_region_with_different_colors(self):
+        """Test fill_region with various colors."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            image = images[0]
+            image_id = image.internal_id
+            page_num = image.position.page_number
+
+            # Test with white
+            result = image.fill_region(
+                x=0, y=0, width=10, height=10, color=Color(255, 255, 255)
+            )
+            assert result.success, f"Fill with white failed: {result.message}"
+
+            # Re-select image after transform
+            images = pdf.select_images()
+            image = next(i for i in images if i.internal_id == image_id)
+
+            # Test with blue
+            result = image.fill_region(
+                x=20, y=20, width=15, height=15, color=Color(0, 0, 255)
+            )
+            assert result.success, f"Fill with blue failed: {result.message}"
+
+            assertions = PDFAssertions(pdf)
+            image_after = assertions.get_image_by_id(image_id, page_num)
+            assert image_after is not None
+
+    def test_fill_region_invalid_width_raises_error(self):
+        """Test that width <= 0 raises ValidationException."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            image = images[0]
+
+            with pytest.raises(ValidationException):
+                image.fill_region(x=0, y=0, width=0, height=10, color=Color(0, 0, 0))
+
+    def test_fill_region_invalid_height_raises_error(self):
+        """Test that height <= 0 raises ValidationException."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            image = images[0]
+
+            with pytest.raises(ValidationException):
+                image.fill_region(x=0, y=0, width=10, height=-5, color=Color(0, 0, 0))
+
+    def test_fill_region_invalid_color_type_raises_error(self):
+        """Test that non-Color object raises ValidationException."""
+        base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+
+        with PDFDancer.open(
+            pdf_path, token=token, base_url=base_url, timeout=30.0
+        ) as pdf:
+            images = pdf.select_images()
+            image = images[0]
+
+            with pytest.raises(ValidationException):
+                image.fill_region(x=0, y=0, width=10, height=10, color=0xFF0000)

@@ -8,7 +8,7 @@ from . import FormFieldRef, ObjectRef, ObjectType, Point, Position, TextObjectRe
 from .exceptions import ValidationException
 
 if TYPE_CHECKING:
-    from .models import CommandResult, Image, ImageFlipDirection
+    from .models import Color, CommandResult, Image, ImageFlipDirection
     from .pdfdancer_v1 import PDFDancer
 
 
@@ -241,6 +241,44 @@ class ImageObject(PDFObjectBase):
             object_ref=self.object_ref(),
             transform_type=ImageTransformType.REPLACE,
             new_image=new_image,
+        )
+        return self._client._transform_image(request)
+
+    def fill_region(
+        self, x: int, y: int, width: int, height: int, color: "Color"
+    ) -> "CommandResult":
+        """Fill a rectangular region within this image with a solid color.
+
+        Args:
+            x: X coordinate of the region (pixels from left edge of image)
+            y: Y coordinate of the region (pixels from top edge of image)
+            width: Width of the region in pixels
+            height: Height of the region in pixels
+            color: Fill color as a Color object (alpha channel is ignored)
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        from .models import Color, ImageTransformRequest, ImageTransformType
+
+        if not isinstance(color, Color):
+            raise ValidationException("color must be a Color object")
+        if width <= 0:
+            raise ValidationException(f"width must be positive, got {width}")
+        if height <= 0:
+            raise ValidationException(f"height must be positive, got {height}")
+
+        # Convert Color to integer: 0xRRGGBB format (RGB only, no alpha)
+        fill_color_int = (color.r << 16) | (color.g << 8) | color.b
+
+        request = ImageTransformRequest(
+            object_ref=self.object_ref(),
+            transform_type=ImageTransformType.FILL_REGION,
+            fill_region_x=x,
+            fill_region_y=y,
+            fill_region_width=width,
+            fill_region_height=height,
+            fill_color=fill_color_int,
         )
         return self._client._transform_image(request)
 

@@ -1652,6 +1652,7 @@ class ImageTransformType(Enum):
     CROP = "CROP"
     OPACITY = "OPACITY"
     FLIP = "FLIP"
+    FILL_REGION = "FILL_REGION"
 
 
 class ImageFlipDirection(Enum):
@@ -1781,6 +1782,11 @@ class ImageTransformRequest:
     crop_bottom: Optional[int] = None
     opacity: Optional[float] = None
     flip_direction: Optional[ImageFlipDirection] = None
+    fill_region_x: Optional[int] = None
+    fill_region_y: Optional[int] = None
+    fill_region_width: Optional[int] = None
+    fill_region_height: Optional[int] = None
+    fill_color: Optional[int] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -1835,5 +1841,20 @@ class ImageTransformRequest:
 
         if self.flip_direction is not None:
             result["flipDirection"] = self.flip_direction.value
+
+        if self.fill_region_x is not None:
+            result["fillRegionX"] = self.fill_region_x
+
+        if self.fill_region_y is not None:
+            result["fillRegionY"] = self.fill_region_y
+
+        if self.fill_region_width is not None:
+            result["fillRegionWidth"] = self.fill_region_width
+
+        if self.fill_region_height is not None:
+            result["fillRegionHeight"] = self.fill_region_height
+
+        if self.fill_color is not None:
+            result["fillColor"] = self.fill_color
 
         return result

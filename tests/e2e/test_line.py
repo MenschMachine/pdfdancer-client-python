@@ -111,7 +111,9 @@ def test_modify_line():
         line = pdf.page(1).select_text_lines_starting_with(
             "This is regular Sans text showing alignment and styles."
         )[0]
-        result = line.edit().replace(" replaced ").apply()
+
+        line.edit().replace(" replaced ").apply()
+        # TODO assert line.text == " replaced "
 
         # Validate replacements
         assert (

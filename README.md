@@ -4,6 +4,8 @@
 
 **Stop fighting PDFs. Start editing them.**
 
+## PDF used to be read-only. We fixed that.
+
 Edit text in real-world PDFs—even ones you didn't create. Move images, reposition headers, and change fonts with
 pixel-perfect control from Python. The same API is also available for TypeScript and Java.
 
@@ -425,6 +427,12 @@ Contributions are welcome via pull request. Please:
 3. Ensure all tests pass: `pytest tests/ -v`
 4. Follow existing code style and patterns
 5. Update documentation as needed
+
+## Helpful links
+
+- Docs: https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python
+- Product overview: https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python
+- PyPI: https://pypi.org/project/pdfdancer-client-python/
 
 ## Related SDKs
 

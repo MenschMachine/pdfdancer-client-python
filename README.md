@@ -1,6 +1,6 @@
 # PDFDancer Python Client
 
-![PDFDancer logo](media/logo-orange-60h.webp)
+![PDFDancer logo](media/logo-silver-60h.webp)
 
 **Stop fighting PDFs. Start editing them.**
 
@@ -428,7 +428,7 @@ Contributions are welcome via pull request. Please:
 
 ## Related SDKs
 
-- TypeScript client: https://github.com/MenschMachine/pdfdancer-client-js
+- TypeScript client: https://github.com/MenschMachine/pdfdancer-client-typescript
 - Java client: https://github.com/MenschMachine/pdfdancer-client-java
 
 ## License

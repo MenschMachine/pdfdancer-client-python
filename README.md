@@ -433,6 +433,7 @@ Contributions are welcome via pull request. Please:
 - [PyPI](https://pypi.org/project/pdfdancer-client-python/)
 - [Changelog](https://www.pdfdancer.com/changelog/?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
 - [Status](https://status.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
+- [Issue tracker](https://github.com/MenschMachine/pdfdancer)
 
 ## Related SDKs
 

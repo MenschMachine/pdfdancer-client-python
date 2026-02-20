@@ -1,8 +1,8 @@
 # PDFDancer Python Client
 
-![PDFDancer logo](media/logo-orange-60h.webp)
+![PDFDancer logo](media/logo-silver-60h.webp)
 
-**Stop fighting PDFs. Start editing them.**
+## PDF used to be read-only. We fixed that.
 
 Edit text in real-world PDFs—even ones you didn't create. Move images, reposition headers, and change fonts with
 pixel-perfect control from Python. The same API is also available for TypeScript and Java.
@@ -426,9 +426,17 @@ Contributions are welcome via pull request. Please:
 4. Follow existing code style and patterns
 5. Update documentation as needed
 
+## Helpful links
+
+- [API documentation](https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
+- [Product overview](https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
+- [PyPI](https://pypi.org/project/pdfdancer-client-python/)
+- [Changelog](https://www.pdfdancer.com/changelog/?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
+- [Status](https://status.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
+
 ## Related SDKs
 
-- TypeScript client: https://github.com/MenschMachine/pdfdancer-client-js
+- TypeScript client: https://github.com/MenschMachine/pdfdancer-client-typescript
 - Java client: https://github.com/MenschMachine/pdfdancer-client-java
 
 ## License

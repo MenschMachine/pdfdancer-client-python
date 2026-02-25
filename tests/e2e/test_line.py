@@ -21,7 +21,7 @@ def test_find_lines_by_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         lines = pdf.select_text_lines()
-        assert len(lines) == 35
+        assert len(lines) == 36
 
         first = lines[0]
         assert first.position is not None

@@ -4,6 +4,7 @@ from typing import Tuple
 
 import httpx
 import pytest
+from dotenv import load_dotenv
 
 
 def _get_base_url():
@@ -11,6 +12,7 @@ def _get_base_url():
 
 
 def _read_token() -> str | None:
+    load_dotenv()
     # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
     token = os.getenv("PDFDANCER_API_TOKEN") or os.getenv("PDFDANCER_TOKEN")
     if token:

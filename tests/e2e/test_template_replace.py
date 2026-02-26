@@ -1,5 +1,7 @@
 """E2E tests for template replacement functionality."""
 
+from pathlib import Path
+
 import pytest
 
 from pdfdancer import Color, Font, ReflowPreset, ValidationException
@@ -222,3 +224,53 @@ def test_reflow_preset_values():
     assert ReflowPreset.BEST_EFFORT.value == "BEST_EFFORT"
     assert ReflowPreset.FIT_OR_FAIL.value == "FIT_OR_FAIL"
     assert ReflowPreset.NONE.value == "NONE"
+
+
+def test_replace_template_with_image():
+    """Test replacing a placeholder with an image file (natural size)."""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+    logo_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
+    assert logo_path.exists(), "logo-80.png fixture not found"
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        # Count images before replacement
+        images_before = pdf.select_images()
+        count_before = len(images_before)
+
+        # Replace "Showcase" placeholder with an image
+        result = pdf.apply_replacements({
+            "Showcase": {"image": logo_path},
+        })
+
+        assert result is True
+
+        # The placeholder text should be gone
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("Showcase")
+        )
+
+        # There should be more images now
+        images_after = pdf.select_images()
+        assert len(images_after) > count_before
+
+
+def test_replace_template_with_image_explicit_size():
+    """Test replacing a placeholder with an image file with explicit width/height."""
+    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
+    logo_path = Path(__file__).resolve().parent.parent / "fixtures" / "logo-80.png"
+    assert logo_path.exists(), "logo-80.png fixture not found"
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        # Replace "Showcase" placeholder with a sized image
+        result = pdf.apply_replacements({
+            "Showcase": {"image": logo_path, "width": 50, "height": 50},
+        })
+
+        assert result is True
+
+        # The placeholder text should be gone
+        (
+            PDFAssertions(pdf)
+            .assert_textline_does_not_exist("Showcase")
+        )

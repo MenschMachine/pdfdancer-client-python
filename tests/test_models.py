@@ -16,9 +16,13 @@ from pdfdancer import (
     PositionMode,
     ShapeType,
 )
+from pdfdancer.models import TemplateReplacement
 
 # Import Point class for tests
+from pathlib import Path
+
 from pdfdancer.models import Point
+from pdfdancer.pdfdancer_v1 import _dict_to_replacements
 
 
 class TestPosition:
@@ -274,3 +278,94 @@ class TestPoint:
 
         assert point.x == 123.45
         assert point.y == 678.90
+
+
+class TestTemplateReplacement:
+    """Test TemplateReplacement serialization."""
+
+    def test_text_replacement_to_dict(self):
+        """Test basic text replacement serializes correctly."""
+        r = TemplateReplacement(placeholder="{{NAME}}", text="John")
+        d = r.to_dict()
+        assert d == {"placeholder": "{{NAME}}", "text": "John"}
+
+    def test_text_none_with_image_to_dict(self):
+        """Test image replacement has text=None in serialized output."""
+        img = Image(data=b"\x89PNG", format="PNG")
+        r = TemplateReplacement(placeholder="{{LOGO}}", text=None, image=img)
+        d = r.to_dict()
+        assert d["text"] is None
+        assert "image" in d
+        assert d["image"]["format"] == "PNG"
+
+    def test_image_replacement_base64_encoding(self):
+        """Test image data is base64-encoded in serialized output."""
+        import base64
+
+        raw = b"\x89PNG\r\n\x1a\nfakedata"
+        img = Image(data=raw, format="PNG")
+        r = TemplateReplacement(placeholder="{{LOGO}}", image=img)
+        d = r.to_dict()
+        assert d["image"]["data"] == base64.b64encode(raw).decode("utf-8")
+
+    def test_image_replacement_with_size(self):
+        """Test image replacement with explicit width/height includes size."""
+        img = Image(data=b"img", format="JPEG", width=50, height=30)
+        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
+        d = r.to_dict()
+        assert d["image"]["size"] == {"width": 50, "height": 30}
+
+    def test_image_replacement_without_size(self):
+        """Test image replacement without width/height omits size."""
+        img = Image(data=b"img", format="PNG")
+        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
+        d = r.to_dict()
+        assert "size" not in d["image"]
+
+    def test_image_replacement_with_partial_size(self):
+        """Test image replacement with only width includes partial size."""
+        img = Image(data=b"img", format="PNG", width=100)
+        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
+        d = r.to_dict()
+        assert d["image"]["size"] == {"width": 100}
+
+
+class TestDictToReplacements:
+    """Test _dict_to_replacements helper."""
+
+    def test_string_value(self):
+        """Test simple string values produce text replacements."""
+        result = _dict_to_replacements({"{{A}}": "hello"})
+        assert len(result) == 1
+        assert result[0].placeholder == "{{A}}"
+        assert result[0].text == "hello"
+        assert result[0].image is None
+
+    def test_dict_with_text(self):
+        """Test dict values with 'text' key produce text replacements."""
+        result = _dict_to_replacements({"{{A}}": {"text": "hi", "font": Font("Arial", 12)}})
+        assert result[0].text == "hi"
+        assert result[0].font.name == "Arial"
+
+    def test_dict_with_image_path(self):
+        """Test dict values with 'image' Path produce image replacements."""
+        logo = Path(__file__).parent / "fixtures" / "logo-80.png"
+        result = _dict_to_replacements({"{{LOGO}}": {"image": logo}})
+        assert len(result) == 1
+        assert result[0].text is None
+        assert result[0].image is not None
+        assert result[0].image.data == logo.read_bytes()
+        assert result[0].image.format == "PNG"
+
+    def test_dict_with_image_path_and_size(self):
+        """Test dict values with 'image' Path and width/height."""
+        logo = Path(__file__).parent / "fixtures" / "logo-80.png"
+        result = _dict_to_replacements({"{{LOGO}}": {"image": logo, "width": 50, "height": 30}})
+        assert result[0].image.width == 50
+        assert result[0].image.height == 30
+
+    def test_dict_with_image_bytes(self):
+        """Test dict values with 'image' as raw bytes."""
+        result = _dict_to_replacements({"{{LOGO}}": {"image": b"rawdata"}})
+        assert result[0].image.data == b"rawdata"
+        assert result[0].text is None

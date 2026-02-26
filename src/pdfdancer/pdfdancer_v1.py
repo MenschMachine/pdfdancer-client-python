@@ -131,6 +131,34 @@ def _dict_to_replacements(
     for placeholder, value in replacements.items():
         if isinstance(value, str):
             result.append(TemplateReplacement(placeholder=placeholder, text=value))
+        elif "image" in value:
+            image_source = value["image"]
+            if isinstance(image_source, Path):
+                image_data = image_source.read_bytes()
+                image_format = image_source.suffix.lstrip(".").upper()
+                if image_format == "JPG":
+                    image_format = "JPEG"
+            elif isinstance(image_source, bytes):
+                image_data = image_source
+                image_format = None
+            else:
+                raise ValueError(
+                    f"Unsupported image source type: {type(image_source)}. "
+                    "Use a Path or bytes."
+                )
+            img = Image(
+                data=image_data,
+                format=value.get("format", image_format),
+                width=value.get("width"),
+                height=value.get("height"),
+            )
+            result.append(
+                TemplateReplacement(
+                    placeholder=placeholder,
+                    text=None,
+                    image=img,
+                )
+            )
         else:
             result.append(
                 TemplateReplacement(
@@ -644,6 +672,8 @@ class PageClient:
             replacements: Dict mapping placeholder strings to replacement values.
                 - Simple: {"{{NAME}}": "John Doe"}
                 - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
+                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
+                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
             reflow_preset: Optional ReflowPreset to control text reflow behavior.
                 - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
                 - FIT_OR_FAIL: Reflow must succeed or operation fails
@@ -2281,6 +2311,8 @@ class PDFDancer:
             replacements: Dict mapping placeholder strings to replacement values.
                 - Simple: {"{{NAME}}": "John Doe"}
                 - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
+                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
+                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
             reflow_preset: Optional ReflowPreset to control text reflow behavior.
                 - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
                 - FIT_OR_FAIL: Reflow must succeed or operation fails

@@ -1686,18 +1686,22 @@ class TemplateReplacement:
 
     Parameters:
     - placeholder: The exact text to find and replace in the PDF.
-    - text: The text to replace the placeholder with.
+    - text: The text to replace the placeholder with. None for image replacements.
     - font: Optional font for the replacement text.
     - color: Optional color for the replacement text.
+    - image: Optional Image to replace the placeholder with. When set, text should be None.
     """
 
     placeholder: str
-    text: str
+    text: Optional[str] = None
     font: Optional[Font] = None
     color: Optional[Color] = None
+    image: Optional[Image] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
+        import base64
+
         result: Dict[str, Any] = {
             "placeholder": self.placeholder,
             "text": self.text,
@@ -1711,6 +1715,20 @@ class TemplateReplacement:
                 "blue": self.color.b,
                 "alpha": self.color.a,
             }
+        if self.image:
+            image_dict: Dict[str, Any] = {}
+            if self.image.data:
+                image_dict["data"] = base64.b64encode(self.image.data).decode("utf-8")
+            if self.image.format:
+                image_dict["format"] = self.image.format
+            if self.image.width is not None or self.image.height is not None:
+                size: Dict[str, float] = {}
+                if self.image.width is not None:
+                    size["width"] = self.image.width
+                if self.image.height is not None:
+                    size["height"] = self.image.height
+                image_dict["size"] = size
+            result["image"] = image_dict
         return result
 
 

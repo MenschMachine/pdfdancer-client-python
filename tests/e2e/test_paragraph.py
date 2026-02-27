@@ -20,7 +20,7 @@ def test_find_paragraphs_by_position():
         assert first.position is not None
         assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
         assert (
-            pytest.approx(first.position.y(), rel=0, abs=1) == 749
+                pytest.approx(first.position.y(), rel=0, abs=1) == 749
         )  # adjusted for baseline/bounding box
 
         last = paras_page0[-1]
@@ -45,7 +45,7 @@ def test_find_paragraphs_by_text():
         p = paras[0]
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
         assert (
-            pytest.approx(p.position.y(), rel=0, abs=2) == 642
+                pytest.approx(p.position.y(), rel=0, abs=2) == 642
         )  # adjust for baseline/bounding box
 
 
@@ -115,7 +115,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(
@@ -128,16 +128,16 @@ def test_select_paragraphs_matching_multiple_pages():
 
         pdf.new_paragraph().text("Chapter 2: Methods").font(
             StandardFonts.HELVETICA, 14
-        ).at(1, 100, 100).add()
+        ).at(2, 100, 100).add()
         pdf.new_paragraph().text("Section 2.1").font(StandardFonts.HELVETICA, 12).at(
-            1, 100, 200
+            2, 100, 200
         ).add()
 
         pdf.new_paragraph().text("Chapter 3: Results").font(
             StandardFonts.HELVETICA, 14
-        ).at(2, 100, 100).add()
+        ).at(3, 100, 100).add()
         pdf.new_paragraph().text("Section 3.1").font(StandardFonts.HELVETICA, 12).at(
-            2, 100, 200
+            3, 100, 200
         ).add()
 
         # Test matching all chapters (document-level)
@@ -152,8 +152,8 @@ def test_select_paragraphs_matching_multiple_pages():
 
         # Compare with page-level matching
         page1_chapters = pdf.page(1).select_paragraphs_matching(r"^Chapter [0-9]+:")
-        assert len(page1_chapters) == 2
-        assert "Chapter 2" in page1_chapters[1].text
+        assert len(page1_chapters) == 1
+        assert "Chapter 1" in page1_chapters[0].text
 
 
 def test_select_paragraphs_matching_empty_results():

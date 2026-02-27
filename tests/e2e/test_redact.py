@@ -71,7 +71,7 @@ def test_batch_redact_multiple_paragraphs():
         all_paragraphs = pdf.select_paragraphs()
         assert len(all_paragraphs) == 3
 
-        to_redact = all_paragraphs[:2]
+        to_redact = all_paragraphs[1:]
         result = pdf.redact(to_redact, replacement="[CONFIDENTIAL]")
 
         assert isinstance(result, RedactResponse)
@@ -88,7 +88,7 @@ def test_batch_redact_multiple_paragraphs():
             "[CONFIDENTIAL]"
         )
         assert (
-            len(redacted_lines) == 2
+                len(redacted_lines) == 2
         ), f"Expected 2 redacted lines, got {len(redacted_lines)}"
 
 

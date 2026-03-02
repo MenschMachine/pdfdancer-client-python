@@ -35,4 +35,4 @@ def test_find_form_by_position():
 
         found = pdf.page(1).select_forms_at(320, 600)
         assert len(found) == 1
-        assert found[0].internal_id == "FORM_000005"
+        assert found[0].internal_id == "FORM_0_000005"

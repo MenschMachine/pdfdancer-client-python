@@ -28,7 +28,7 @@ def test_find_form_fields():
         assert len(first_form) == 1
         f = first_form[0]
         assert f.object_type == ObjectType.RADIO_BUTTON
-        assert f.internal_id == "FORM_FIELD_000008"
+        assert f.internal_id == "FORM_FIELD_0_000008"
 
 
 def test_delete_form_fields():
@@ -85,7 +85,7 @@ def test_edit_form_fields():
         assert f.name == "firstName"
         assert f.value is None
         assert f.object_type == ObjectType.TEXT_FIELD
-        assert f.internal_id == "FORM_FIELD_000001"
+        assert f.internal_id == "FORM_FIELD_0_000001"
 
         f.edit().value("Donald Duck").apply()
 

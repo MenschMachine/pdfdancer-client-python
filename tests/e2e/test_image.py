@@ -76,7 +76,7 @@ def test_find_image_by_position():
 
         images_found = pdf.page(6).select_images_at(57, 55, 1)
         assert len(images_found) == 1
-        assert images_found[0].internal_id == "IMAGE_000011"
+        assert images_found[0].internal_id == "IMAGE_5_000001"
 
 
 def test_add_image():
@@ -99,7 +99,7 @@ def test_add_image():
 
         new_image = images_page6[1]
         assert new_image.position.page_number == 6
-        assert new_image.internal_id == "IMAGE_000013"
+        assert new_image.internal_id == "IMAGE_5_000002"
         assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
 
@@ -126,7 +126,7 @@ def test_add_image_on_page_client():
 
         new_image = images_page6[1]
         assert new_image.position.page_number == 6
-        assert new_image.internal_id == "IMAGE_000013"
+        assert new_image.internal_id == "IMAGE_5_000002"
         assert pytest.approx(new_image.position.x(), rel=0, abs=0.05) == 50.1
         assert pytest.approx(new_image.position.y(), rel=0, abs=0.05) == 98.0
 

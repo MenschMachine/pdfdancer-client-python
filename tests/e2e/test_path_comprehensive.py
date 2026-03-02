@@ -68,7 +68,7 @@ class TestPathBasicOperations:
             assertions.assert_path_exists_at(80, 720, page=1, tolerance=5.0)
 
             # Assert specific path ID at coordinates
-            assertions.assert_path_has_id("PATH_000001", 80, 720, page=1)
+            assertions.assert_path_has_id("PATH_0_000001", 80, 720, page=1)
 
             # Assert exact count at coordinates
             assertions.assert_path_count_at(1, 80, 720, page=1, tolerance=5.0)

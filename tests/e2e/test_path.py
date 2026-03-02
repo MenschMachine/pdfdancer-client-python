@@ -16,11 +16,11 @@ def test_find_paths():
 
         p1 = paths[0]
         assert p1 is not None
-        assert p1.internal_id == "PATH_000001"
+        assert p1.internal_id == "PATH_0_000001"
         assert pytest.approx(p1.position.x(), rel=0, abs=1) == 80
         assert pytest.approx(p1.position.y(), rel=0, abs=1) == 720
 
-        (PDFAssertions(pdf).assert_path_is_at("PATH_000001", 80, 720))
+        (PDFAssertions(pdf).assert_path_is_at("PATH_0_000001", 80, 720))
 
 
 def test_find_paths_by_position():
@@ -29,7 +29,7 @@ def test_find_paths_by_position():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paths = pdf.page(1).select_paths_at(80, 720)
         assert len(paths) == 1
-        assert paths[0].internal_id == "PATH_000001"
+        assert paths[0].internal_id == "PATH_0_000001"
 
 
 def test_delete_path():
@@ -40,7 +40,7 @@ def test_delete_path():
         paths = pdf.page(1).select_paths_at(80, 720)
         assert len(paths) == 1
         path = paths[0]
-        assert path.internal_id == "PATH_000001"
+        assert path.internal_id == "PATH_0_000001"
 
         path.delete()
 
@@ -77,5 +77,5 @@ def test_move_path():
         (
             PDFAssertions(pdf)
             .assert_no_path_at(80, 720)
-            .assert_path_is_at("PATH_000001", 50.1, 100)
+            .assert_path_is_at("PATH_0_000001", 50.1, 100)
         )

@@ -145,6 +145,31 @@ class PDFAssertions(object):
         ), f"Expected {page_count} pages, but got {len(self.pdf.pages())}"
         return self
 
+    def get_pdf(self):
+        return self.pdf
+
+    def assert_path_has_bounds(
+            self, internal_id: str, expected_width: float, expected_height: float,
+            page=1, epsilon: float = 1.0
+    ) -> "PDFAssertions":
+        paths = self.pdf.page(page).select_paths()
+        ref = None
+        for p in paths:
+            if p.internal_id == internal_id:
+                ref = p
+                break
+        assert ref is not None, f"Path with ID {internal_id} not found on page {page}"
+
+        bbox = ref.position.bounding_rect
+        assert bbox is not None, f"Path {internal_id} has no bounding rect"
+        assert bbox.width == pytest.approx(
+            expected_width, abs=epsilon
+        ), f"Path {internal_id} width: expected {expected_width} but got {bbox.width}"
+        assert bbox.height == pytest.approx(
+            expected_height, abs=epsilon
+        ), f"Path {internal_id} height: expected {expected_height} but got {bbox.height}"
+        return self
+
     def assert_path_is_at(
             self, internal_id: str, x: float, y: float, page=1, epsilon=1e-6
     ):

@@ -1643,6 +1643,31 @@ class Size:
         return {"width": self.width, "height": self.height}
 
 
+class PathGroupTransformType(Enum):
+    SCALE = "SCALE"
+    ROTATE = "ROTATE"
+    RESIZE = "RESIZE"
+
+
+@dataclass
+class PathGroupInfo:
+    group_id: str
+    path_count: int
+    bounding_box: Optional[Dict[str, Any]]
+    x: float
+    y: float
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "PathGroupInfo":
+        return PathGroupInfo(
+            group_id=d.get("groupId", ""),
+            path_count=d.get("pathCount", 0),
+            bounding_box=d.get("boundingBox"),
+            x=d.get("x", 0.0),
+            y=d.get("y", 0.0),
+        )
+
+
 class ImageTransformType(Enum):
     """Type of image transformation operation."""
 

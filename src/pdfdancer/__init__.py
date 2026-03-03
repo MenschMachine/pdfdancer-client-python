@@ -12,6 +12,7 @@ from .exceptions import (
     PdfDancerException,
     RateLimitException,
     SessionException,
+    SessionNotFoundException,
     ValidationException,
 )
 from .models import (
@@ -97,6 +98,7 @@ __all__ = [
     "ValidationException",
     "HttpClientException",
     "SessionException",
+    "SessionNotFoundException",
     "RateLimitException",
     "set_ssl_verify",
 ]

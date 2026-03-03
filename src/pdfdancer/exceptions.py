@@ -55,6 +55,15 @@ class SessionException(PdfDancerException):
     pass
 
 
+class SessionNotFoundException(SessionException):
+    """
+    Exception raised when a session is not found (expired or invalid).
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class ValidationException(PdfDancerException):
     """
     Exception raised for input validation errors.

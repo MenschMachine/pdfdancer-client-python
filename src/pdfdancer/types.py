@@ -292,6 +292,53 @@ class ImageObject(PDFObjectBase):
         )
 
 
+class PathGroupObject:
+    """Represents a group of vector paths that can be manipulated as a unit."""
+
+    def __init__(self, client: "PDFDancer", page_index: int, info):
+        self._client = client
+        self._page_index = page_index
+        self._info = info
+
+    @property
+    def group_id(self) -> str:
+        return self._info.group_id
+
+    @property
+    def path_count(self) -> int:
+        return self._info.path_count
+
+    @property
+    def bounding_box(self):
+        return self._info.bounding_box
+
+    @property
+    def x(self) -> float:
+        return self._info.x
+
+    @property
+    def y(self) -> float:
+        return self._info.y
+
+    def move_to(self, x: float, y: float) -> bool:
+        return self._client._move_path_group(self._page_index, self.group_id, x, y)
+
+    def scale(self, factor: float) -> bool:
+        return self._client._scale_path_group(self._page_index, self.group_id, factor)
+
+    def rotate(self, degrees: float) -> bool:
+        return self._client._rotate_path_group(self._page_index, self.group_id, degrees)
+
+    def resize(self, width: float, height: float) -> bool:
+        return self._client._resize_path_group(self._page_index, self.group_id, width, height)
+
+    def remove(self) -> bool:
+        return self._client._remove_path_group(self._page_index, self.group_id)
+
+    def __repr__(self):
+        return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"
+
+
 class FormObject(PDFObjectBase):
     def __eq__(self, other):
         if not isinstance(other, FormObject):

@@ -28,6 +28,7 @@ from .exceptions import (
     PdfDancerException,
     RateLimitException,
     SessionException,
+    SessionNotFoundException,
     ValidationException,
 )
 from .fingerprint import Fingerprint
@@ -727,6 +728,29 @@ class PageClient:
         return self.root._to_path_objects(
             self.root._find_paths(Position.at_page(self.page_number))
         )
+
+    def group_paths(self, group_id, path_ids):
+        """Group paths by their IDs. Returns a PathGroupObject."""
+        from .types import PathGroupObject
+
+        page_index = self.page_number - 1
+        info = self.root._create_path_group(page_index, group_id, path_ids=path_ids)
+        return PathGroupObject(self.root, page_index, info)
+
+    def group_paths_in_region(self, group_id, region):
+        """Group paths within a bounding region. Returns a PathGroupObject."""
+        from .types import PathGroupObject
+
+        page_index = self.page_number - 1
+        info = self.root._create_path_group(page_index, group_id, region=region)
+        return PathGroupObject(self.root, page_index, info)
+
+    def get_path_groups(self):
+        """List all path groups on this page."""
+        from .types import PathGroupObject
+
+        page_index = self.page_number - 1
+        return self.root._list_path_groups(page_index)
 
     def select_elements(self):
         """
@@ -1616,13 +1640,17 @@ class PDFDancer:
 
                 _log_generated_at_header(response, method, path)
 
-                # Handle FontNotFoundException
+                # Handle 404 errors
                 if response.status_code == 404:
                     try:
                         error_data = response.json()
                         if error_data.get("error") == "FontNotFoundException":
                             raise FontNotFoundException(
                                 error_data.get("message", "Font not found")
+                            )
+                        if error_data.get("error") == "SessionNotFoundException":
+                            raise SessionNotFoundException(
+                                error_data.get("message", "Session not found")
                             )
                     except (json.JSONDecodeError, KeyError):
                         pass
@@ -2454,6 +2482,73 @@ class PDFDancer:
         self._invalidate_snapshots()
 
         return result
+
+    # Path Group Operations
+    def _create_path_group(self, page_index, group_id, path_ids=None, region=None):
+        from .models import PathGroupInfo
+
+        data = {"pageIndex": page_index}
+        if group_id is not None:
+            data["groupId"] = group_id
+        if path_ids is not None:
+            data["pathIds"] = path_ids
+        if region is not None:
+            data["region"] = {"x": region.x, "y": region.y, "width": region.width, "height": region.height}
+        response = self._make_request("POST", "/pdf/path-group/create", data=data)
+        self._invalidate_snapshots()
+        return PathGroupInfo.from_dict(response.json())
+
+    def _move_path_group(self, page_index, group_id, x, y):
+        data = {"pageIndex": page_index, "groupId": group_id, "x": x, "y": y}
+        response = self._make_request("PUT", "/pdf/path-group/move", data=data)
+        self._invalidate_snapshots()
+        return response.json()
+
+    def _transform_path_group(self, page_index, group_id, transform_type, **kwargs):
+        data = {"pageIndex": page_index, "groupId": group_id, "transformType": transform_type}
+        data.update({k: v for k, v in kwargs.items() if v is not None})
+        response = self._make_request("PUT", "/pdf/path-group/transform", data=data)
+        self._invalidate_snapshots()
+        return response.json()
+
+    def _scale_path_group(self, page_index, group_id, factor):
+        return self._transform_path_group(page_index, group_id, "SCALE", scaleFactor=factor)
+
+    def _rotate_path_group(self, page_index, group_id, degrees):
+        return self._transform_path_group(page_index, group_id, "ROTATE", rotationAngle=degrees)
+
+    def _resize_path_group(self, page_index, group_id, width, height):
+        return self._transform_path_group(page_index, group_id, "RESIZE", targetWidth=width, targetHeight=height)
+
+    def _remove_path_group(self, page_index, group_id):
+        data = {"pageIndex": page_index, "groupId": group_id}
+        response = self._make_request("DELETE", "/pdf/path-group/remove", data=data)
+        self._invalidate_snapshots()
+        return response.json()
+
+    def _list_path_groups(self, page_index):
+        from .models import PathGroupInfo
+        from .types import PathGroupObject
+
+        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
+        infos = [PathGroupInfo.from_dict(d) for d in response.json()]
+        return [PathGroupObject(self, page_index, info) for info in infos]
+
+    # Public convenience methods
+    def move_path_group(self, page_index, group_id, x, y):
+        return self._move_path_group(page_index, group_id, x, y)
+
+    def scale_path_group(self, page_index, group_id, factor):
+        return self._scale_path_group(page_index, group_id, factor)
+
+    def rotate_path_group(self, page_index, group_id, degrees):
+        return self._rotate_path_group(page_index, group_id, degrees)
+
+    def resize_path_group(self, page_index, group_id, width, height):
+        return self._resize_path_group(page_index, group_id, width, height)
+
+    def remove_path_group(self, page_index, group_id):
+        return self._remove_path_group(page_index, group_id)
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

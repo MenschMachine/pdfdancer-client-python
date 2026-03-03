@@ -751,6 +751,31 @@ class PageClient:
         page_index = self.page_number - 1
         return self.root._list_path_groups(page_index)
 
+    def move_path_group(self, group_id, x, y):
+        """Move a path group on this page."""
+        page_index = self.page_number - 1
+        return self.root._move_path_group(page_index, group_id, x, y)
+
+    def scale_path_group(self, group_id, factor):
+        """Scale a path group on this page."""
+        page_index = self.page_number - 1
+        return self.root._scale_path_group(page_index, group_id, factor)
+
+    def rotate_path_group(self, group_id, degrees):
+        """Rotate a path group on this page."""
+        page_index = self.page_number - 1
+        return self.root._rotate_path_group(page_index, group_id, degrees)
+
+    def resize_path_group(self, group_id, width, height):
+        """Resize a path group on this page."""
+        page_index = self.page_number - 1
+        return self.root._resize_path_group(page_index, group_id, width, height)
+
+    def remove_path_group(self, group_id):
+        """Remove a path group from this page."""
+        page_index = self.page_number - 1
+        return self.root._remove_path_group(page_index, group_id)
+
     def select_elements(self):
         """
         Select all elements (paragraphs, images, paths, forms) on this page.
@@ -2482,9 +2507,15 @@ class PDFDancer:
 
         return result
 
-    # Path Group Operations
+    # Path Group Operations (internal, 0-based page_index)
     def _create_path_group(self, page_index, group_id, path_ids=None, region=None):
         from .models import PathGroupInfo
+
+        if path_ids is not None:
+            if not isinstance(path_ids, list) or len(path_ids) == 0:
+                raise ValidationException("path_ids must be a non-empty list")
+        if group_id is not None and not isinstance(group_id, str):
+            raise ValidationException("group_id must be a string or None")
 
         data = {"pageIndex": page_index}
         if group_id is not None:
@@ -2492,36 +2523,62 @@ class PDFDancer:
         if path_ids is not None:
             data["pathIds"] = path_ids
         if region is not None:
-            data["region"] = {"x": region.x, "y": region.y, "width": region.width, "height": region.height}
-        response = self._make_request("POST", "/pdf/path-group/create", data=data)
+            data["region"] = {
+                "x": region.x, "y": region.y,
+                "width": region.width, "height": region.height,
+            }
+        response = self._make_request(
+            "POST", "/pdf/path-group/create", data=data
+        )
         self._invalidate_snapshots()
         return PathGroupInfo.from_dict(response.json())
 
     def _move_path_group(self, page_index, group_id, x, y):
-        data = {"pageIndex": page_index, "groupId": group_id, "x": x, "y": y}
+        data = {
+            "pageIndex": page_index, "groupId": group_id,
+            "x": x, "y": y,
+        }
         response = self._make_request("PUT", "/pdf/path-group/move", data=data)
         self._invalidate_snapshots()
         return response.json()
 
     def _transform_path_group(self, page_index, group_id, transform_type, **kwargs):
-        data = {"pageIndex": page_index, "groupId": group_id, "transformType": transform_type}
+        data = {
+            "pageIndex": page_index, "groupId": group_id,
+            "transformType": transform_type,
+        }
         data.update({k: v for k, v in kwargs.items() if v is not None})
-        response = self._make_request("PUT", "/pdf/path-group/transform", data=data)
+        response = self._make_request(
+            "PUT", "/pdf/path-group/transform", data=data
+        )
         self._invalidate_snapshots()
         return response.json()
 
     def _scale_path_group(self, page_index, group_id, factor):
-        return self._transform_path_group(page_index, group_id, "SCALE", scaleFactor=factor)
+        if factor <= 0:
+            raise ValidationException("Scale factor must be positive")
+        return self._transform_path_group(
+            page_index, group_id, "SCALE", scaleFactor=factor
+        )
 
     def _rotate_path_group(self, page_index, group_id, degrees):
-        return self._transform_path_group(page_index, group_id, "ROTATE", rotationAngle=degrees)
+        return self._transform_path_group(
+            page_index, group_id, "ROTATE", rotationAngle=degrees
+        )
 
     def _resize_path_group(self, page_index, group_id, width, height):
-        return self._transform_path_group(page_index, group_id, "RESIZE", targetWidth=width, targetHeight=height)
+        if width <= 0 or height <= 0:
+            raise ValidationException("Width and height must be positive")
+        return self._transform_path_group(
+            page_index, group_id, "RESIZE",
+            targetWidth=width, targetHeight=height,
+        )
 
     def _remove_path_group(self, page_index, group_id):
         data = {"pageIndex": page_index, "groupId": group_id}
-        response = self._make_request("DELETE", "/pdf/path-group/remove", data=data)
+        response = self._make_request(
+            "DELETE", "/pdf/path-group/remove", data=data
+        )
         self._invalidate_snapshots()
         return response.json()
 
@@ -2529,25 +2586,29 @@ class PDFDancer:
         from .models import PathGroupInfo
         from .types import PathGroupObject
 
-        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
+        response = self._make_request(
+            "GET", f"/pdf/page/{page_index}/path-groups"
+        )
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
         return [PathGroupObject(self, page_index, info) for info in infos]
 
-    # Public convenience methods
-    def move_path_group(self, page_index, group_id, x, y):
-        return self._move_path_group(page_index, group_id, x, y)
+    # Public convenience methods (1-based page_number)
+    def move_path_group(self, page_number, group_id, x, y):
+        return self._move_path_group(page_number - 1, group_id, x, y)
 
-    def scale_path_group(self, page_index, group_id, factor):
-        return self._scale_path_group(page_index, group_id, factor)
+    def scale_path_group(self, page_number, group_id, factor):
+        return self._scale_path_group(page_number - 1, group_id, factor)
 
-    def rotate_path_group(self, page_index, group_id, degrees):
-        return self._rotate_path_group(page_index, group_id, degrees)
+    def rotate_path_group(self, page_number, group_id, degrees):
+        return self._rotate_path_group(page_number - 1, group_id, degrees)
 
-    def resize_path_group(self, page_index, group_id, width, height):
-        return self._resize_path_group(page_index, group_id, width, height)
+    def resize_path_group(self, page_number, group_id, width, height):
+        return self._resize_path_group(
+            page_number - 1, group_id, width, height
+        )
 
-    def remove_path_group(self, page_index, group_id):
-        return self._remove_path_group(page_index, group_id)
+    def remove_path_group(self, page_number, group_id):
+        return self._remove_path_group(page_number - 1, group_id)
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

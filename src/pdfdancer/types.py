@@ -321,19 +321,28 @@ class PathGroupObject:
         return self._info.y
 
     def move_to(self, x: float, y: float) -> bool:
-        return self._client._move_path_group(self._page_index, self.group_id, x, y)
+        self._client._move_path_group(self._page_index, self.group_id, x, y)
+        return True
 
     def scale(self, factor: float) -> bool:
-        return self._client._scale_path_group(self._page_index, self.group_id, factor)
+        self._client._scale_path_group(self._page_index, self.group_id, factor)
+        return True
 
     def rotate(self, degrees: float) -> bool:
-        return self._client._rotate_path_group(self._page_index, self.group_id, degrees)
+        self._client._rotate_path_group(
+            self._page_index, self.group_id, degrees
+        )
+        return True
 
     def resize(self, width: float, height: float) -> bool:
-        return self._client._resize_path_group(self._page_index, self.group_id, width, height)
+        self._client._resize_path_group(
+            self._page_index, self.group_id, width, height
+        )
+        return True
 
     def remove(self) -> bool:
-        return self._client._remove_path_group(self._page_index, self.group_id)
+        self._client._remove_path_group(self._page_index, self.group_id)
+        return True
 
     def __repr__(self):
         return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"

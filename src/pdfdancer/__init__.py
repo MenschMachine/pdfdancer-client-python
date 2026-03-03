@@ -35,6 +35,7 @@ from .models import (
     PageSize,
     Paragraph,
     Path,
+    PathGroupInfo,
     PathSegment,
     Point,
     Position,
@@ -48,6 +49,7 @@ from .models import (
     TextObjectRef,
     TextStatus,
 )
+from .types import PathGroupObject
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphBuilder
 from .path_builder import BezierBuilder, LineBuilder, PathBuilder
@@ -90,6 +92,8 @@ __all__ = [
     "Line",
     "Bezier",
     "Path",
+    "PathGroupInfo",
+    "PathGroupObject",
     "RedactTarget",
     "RedactResponse",
     "ReflowPreset",

@@ -86,7 +86,7 @@ def test_group_and_move():
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
         pdf.page(1).group_paths("move-test", path_ids)
-        pdf.move_path_group(0, "move-test", 200.0, 300.0)
+        pdf.page(1).move_path_group("move-test", 200.0, 300.0)
 
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 1
@@ -113,7 +113,7 @@ def test_group_and_remove():
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 1
 
-        pdf.remove_path_group(0, "remove-test")
+        pdf.page(1).remove_path_group("remove-test")
 
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 0
@@ -140,7 +140,7 @@ def test_scale_path_group():
         orig_h = orig_bbox.height
 
         pdf.page(1).group_paths("scale-test", path_ids)
-        pdf.scale_path_group(0, "scale-test", 2.0)
+        pdf.page(1).scale_path_group("scale-test", 2.0)
 
         # After scaling 2x, path bounds should roughly double
         (
@@ -158,7 +158,7 @@ def test_rotate_path_group():
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
         pdf.page(1).group_paths("rotate-test", path_ids)
-        pdf.rotate_path_group(0, "rotate-test", 90.0)
+        pdf.page(1).rotate_path_group("rotate-test", 90.0)
 
         # Paths should have moved from original positions after 90° rotation
         (
@@ -180,7 +180,7 @@ def test_resize_path_group():
         orig_bbox = paths[0].position.bounding_rect
 
         pdf.page(1).group_paths("resize-test", path_ids)
-        pdf.resize_path_group(0, "resize-test", 50.0, 50.0)
+        pdf.page(1).resize_path_group("resize-test", 50.0, 50.0)
 
         # After resize, path bounds should have changed from original
         assertions = PDFAssertions(pdf)

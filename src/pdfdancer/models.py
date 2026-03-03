@@ -1643,12 +1643,6 @@ class Size:
         return {"width": self.width, "height": self.height}
 
 
-class PathGroupTransformType(Enum):
-    SCALE = "SCALE"
-    ROTATE = "ROTATE"
-    RESIZE = "RESIZE"
-
-
 @dataclass
 class PathGroupInfo:
     group_id: str

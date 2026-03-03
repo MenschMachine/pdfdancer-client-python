@@ -86,7 +86,16 @@ if TYPE_CHECKING:
     from .models import ImageTransformRequest, PathSegment
     from .path_builder import RectangleBuilder
 
-load_dotenv()
+_env_loaded = False
+
+
+def _load_env():
+    global _env_loaded
+    if _env_loaded:
+        return
+    load_dotenv()
+    _env_loaded = True
+
 
 # Client identifier header for all HTTP requests
 # Always reads from installed package metadata (stays in sync with pyproject.toml)
@@ -842,6 +851,7 @@ class PDFDancer:
 
     @classmethod
     def _resolve_base_url(cls, base_url: Optional[str]) -> Optional[str]:
+        _load_env()
         env_base_url = os.getenv("PDFDANCER_BASE_URL")
         resolved_base_url = base_url or (
             env_base_url.strip() if env_base_url and env_base_url.strip() else None
@@ -976,6 +986,7 @@ class PDFDancer:
         1. PDFDANCER_API_TOKEN (preferred)
         2. PDFDANCER_TOKEN (legacy)
         """
+        _load_env()
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)

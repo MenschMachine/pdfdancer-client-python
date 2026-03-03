@@ -12,32 +12,13 @@ def test_create_group_by_path_ids():
         assert len(paths) >= 2
 
         path_ids = [paths[0].internal_id, paths[1].internal_id]
-        group = pdf.page(1).group_paths("by-ids", path_ids)
+        group = pdf.page(1).group_paths(path_ids)
 
-        assert group.group_id == "by-ids"
+        assert group.group_id is not None
         assert group.path_count == 2
         assert group.bounding_box is not None
 
         # Grouping without move should not change the PDF
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_path_is_at("PATH_0_000001", 80, 720)
-        )
-
-
-def test_group_paths_auto_id():
-    base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
-        paths = pdf.page(1).select_paths()
-
-        path_ids = [paths[0].internal_id]
-        group = pdf.page(1).group_paths(None, path_ids)
-
-        assert group.group_id.startswith("pathgroup-")
-        assert group.path_count == 1
-
         (
             PDFAssertions(pdf)
             .assert_number_of_paths(9)
@@ -50,10 +31,10 @@ def test_group_paths_in_region():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         region = BoundingRect(x=70, y=710, width=100, height=100)
-        group = pdf.page(1).group_paths_in_region("region-test", region)
+        group = pdf.page(1).group_paths_in_region(region)
 
         assert group is not None
-        assert group.group_id == "region-test"
+        assert group.group_id is not None
         assert group.path_count > 0
 
         (
@@ -85,8 +66,8 @@ def test_group_and_move():
         paths = pdf.page(1).select_paths()
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
-        pdf.page(1).group_paths("move-test", path_ids)
-        pdf.page(1).move_path_group("move-test", 200.0, 300.0)
+        group = pdf.page(1).group_paths(path_ids)
+        group.move_to(200.0, 300.0)
 
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 1
@@ -108,12 +89,12 @@ def test_group_and_remove():
         paths = pdf.page(1).select_paths()
         path_ids = [paths[0].internal_id]
 
-        pdf.page(1).group_paths("remove-test", path_ids)
+        group = pdf.page(1).group_paths(path_ids)
 
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 1
 
-        pdf.page(1).remove_path_group("remove-test")
+        group.remove()
 
         groups = pdf.page(1).get_path_groups()
         assert len(groups) == 0
@@ -139,8 +120,8 @@ def test_scale_path_group():
         orig_w = orig_bbox.width
         orig_h = orig_bbox.height
 
-        pdf.page(1).group_paths("scale-test", path_ids)
-        pdf.page(1).scale_path_group("scale-test", 2.0)
+        group = pdf.page(1).group_paths(path_ids)
+        group.scale(2.0)
 
         # After scaling 2x, path bounds should roughly double
         (
@@ -157,8 +138,8 @@ def test_rotate_path_group():
         paths = pdf.page(1).select_paths()
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
-        pdf.page(1).group_paths("rotate-test", path_ids)
-        pdf.page(1).rotate_path_group("rotate-test", 90.0)
+        group = pdf.page(1).group_paths(path_ids)
+        group.rotate(90.0)
 
         # Paths should have moved from original positions after 90° rotation
         (
@@ -179,8 +160,8 @@ def test_resize_path_group():
         # Record original bounds
         orig_bbox = paths[0].position.bounding_rect
 
-        pdf.page(1).group_paths("resize-test", path_ids)
-        pdf.page(1).resize_path_group("resize-test", 50.0, 50.0)
+        group = pdf.page(1).group_paths(path_ids)
+        group.resize(50.0, 50.0)
 
         # After resize, path bounds should have changed from original
         assertions = PDFAssertions(pdf)
@@ -206,7 +187,7 @@ def test_scale_via_reference():
         orig_w = orig_bbox.width
         orig_h = orig_bbox.height
 
-        group = pdf.page(1).group_paths("scale-ref-test", path_ids)
+        group = pdf.page(1).group_paths(path_ids)
         group.scale(0.5)
 
         # After scaling 0.5x, path bounds should roughly halve
@@ -224,7 +205,7 @@ def test_rotate_via_reference():
         paths = pdf.page(1).select_paths()
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
-        group = pdf.page(1).group_paths("rotate-ref-test", path_ids)
+        group = pdf.page(1).group_paths(path_ids)
         group.rotate(45)
 
         # 45° rotation should move paths from original position
@@ -242,7 +223,7 @@ def test_move_and_remove_via_reference():
         paths = pdf.page(1).select_paths()
         path_ids = [paths[0].internal_id, paths[1].internal_id]
 
-        group = pdf.page(1).group_paths("ref-test", path_ids)
+        group = pdf.page(1).group_paths(path_ids)
         group.move_to(150.0, 250.0)
 
         groups = pdf.page(1).get_path_groups()

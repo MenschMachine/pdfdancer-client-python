@@ -747,7 +747,6 @@ class PageClient:
 
     def get_path_groups(self):
         """List all path groups on this page."""
-        from .types import PathGroupObject
 
         page_index = self.page_number - 1
         return self.root._list_path_groups(page_index)

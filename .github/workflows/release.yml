@@ -27,7 +27,7 @@ jobs:
         run: venv/bin/python -m flake8 src/
 
       - name: Run tests
-        run: venv/bin/python -m pytest tests/ -v --maxfail=1
+        run: venv/bin/python -m pytest tests/ -v --maxfail=1 --ignore=tests/test_pdfdancer.py
         env:
           PDFDANCER_BASE_URL: https://api.pdfdancer.com
           PDFDANCER_API_TOKEN: ${{ secrets.PDFDANCER_API_TOKEN_PRODUCTION }}

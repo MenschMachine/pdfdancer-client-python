@@ -332,15 +332,16 @@ Artifacts will be created in the `dist/` directory.
 
 #### Publishing to PyPI
 
+Releases are published automatically to PyPI when a `v*` tag is pushed to GitHub (via GitHub Actions with Trusted Publishers).
+
 ```bash
-# Test upload to TestPyPI (recommended first)
-python -m twine upload --repository testpypi dist/*
+# Set version, commit, and push tag — GitHub Actions handles the rest
+python release.py tag --version 1.1.0
 
-# Upload to PyPI
-python -m twine upload dist/*
-
-# Or use the release script
-python release.py
+# Or manually:
+# 1. Update version in pyproject.toml and src/pdfdancer/__init__.py
+# 2. Commit
+# 3. git tag v1.1.0 && git push origin HEAD && git push origin v1.1.0
 ```
 
 #### Code Quality

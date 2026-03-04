@@ -20,10 +20,12 @@ class ReleaseError(Exception):
 
 
 class VersionBumper:
-    """Handles version bumping in pyproject.toml."""
+    """Handles version bumping in pyproject.toml and __init__.py."""
 
-    def __init__(self, pyproject_path: Path = Path("pyproject.toml")):
+    def __init__(self, pyproject_path: Path = Path("pyproject.toml"),
+                 init_path: Path = Path("src/pdfdancer/__init__.py")):
         self.pyproject_path = pyproject_path
+        self.init_path = init_path
         if not self.pyproject_path.exists():
             raise ReleaseError(f"pyproject.toml not found at {pyproject_path}")
 
@@ -36,7 +38,8 @@ class VersionBumper:
         return match.group(1)
 
     def set_version(self, new_version: str) -> None:
-        """Set a new version in pyproject.toml."""
+        """Set a new version in pyproject.toml and __init__.py."""
+        # Update pyproject.toml
         content = self.pyproject_path.read_text()
         new_content = re.sub(
             r'^version\s*=\s*"[^"]+"',
@@ -47,6 +50,18 @@ class VersionBumper:
         if content == new_content:
             raise ReleaseError("Failed to update version in pyproject.toml")
         self.pyproject_path.write_text(new_content)
+
+        # Update __init__.py
+        if self.init_path.exists():
+            init_content = self.init_path.read_text()
+            new_init = re.sub(
+                r'^__version__\s*=\s*"[^"]+"',
+                f'__version__ = "{new_version}"',
+                init_content,
+                flags=re.MULTILINE
+            )
+            self.init_path.write_text(new_init)
+            print(f"Updated {self.init_path} to {new_version}")
 
     def bump_version(self, bump_type: str) -> str:
         """Bump version by type (major, minor, patch)."""
@@ -159,8 +174,8 @@ def main():
     parser = argparse.ArgumentParser(description="PDFDancer Python Client Release Tool")
     parser.add_argument(
         "action",
-        choices=["bump", "upload", "release"],
-        help="Action to perform: bump (version only), upload (build+upload), release (bump+test+build+upload)"
+        choices=["bump", "upload", "release", "tag"],
+        help="Action to perform: bump (version only), upload (build+upload), release (bump+test+build+upload), tag (set version + commit + push tag)"
     )
     parser.add_argument(
         "--bump-type",
@@ -229,6 +244,37 @@ def main():
                     new_version = f"{major}.{minor}.{patch}"
 
             print(f"New version: {new_version}")
+
+        if args.action == "tag":
+            if not args.version:
+                raise ReleaseError("--version is required for the tag action")
+
+            new_version = args.version
+            current_version = version_bumper.get_current_version()
+            print(f"Current version: {current_version}")
+
+            if not args.dry_run:
+                version_bumper.set_version(new_version)
+                print(f"Version set to {new_version}")
+
+                # Commit the version bump
+                uploader.run_command(
+                    ["git", "add", "pyproject.toml", "src/pdfdancer/__init__.py"]
+                )
+                uploader.run_command(
+                    ["git", "commit", "-m", f"release: v{new_version}"]
+                )
+                print(f"Committed version bump")
+
+                # Create and push tag
+                tag_name = f"v{new_version}"
+                uploader.run_command(["git", "tag", tag_name])
+                uploader.run_command(["git", "push", "origin", "HEAD"])
+                uploader.run_command(["git", "push", "origin", tag_name])
+                print(f"Pushed tag {tag_name}")
+            else:
+                print(f"Would set version to {new_version}")
+                print(f"Would commit and push tag v{new_version}")
 
         if args.action in ["upload", "release"]:
             if args.action == "release" and not args.skip_tests:

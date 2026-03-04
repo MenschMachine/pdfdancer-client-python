@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Mapping, Optional, Union
 
 import httpx
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
 from .exceptions import (
@@ -93,7 +93,7 @@ def _load_env():
     global _env_loaded
     if _env_loaded:
         return
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
     _env_loaded = True
 
 

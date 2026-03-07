@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 import tempfile
 from typing import List, Optional
 
@@ -132,6 +134,42 @@ class PDFAssertions(object):
     def assert_textline_exists(self, text, page=1):
         lines = self.pdf.page(page).select_text_lines_matching(f".*{text}.*")
         assert len(lines) > 0
+        return self
+
+    def _rendered_page_lines(self, page: int) -> List[str]:
+        mutool = shutil.which("mutool")
+        if mutool is None:
+            pytest.skip("mutool is required for rendered-text assertions")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            self.pdf.save(temp_file.name)
+            temp_pdf_path = temp_file.name
+
+        result = subprocess.run(
+            [mutool, "draw", "-F", "text", temp_pdf_path, str(page)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        lines = []
+        for raw_line in result.stdout.splitlines():
+            line = raw_line.replace("\f", "").strip()
+            if line:
+                lines.append(line)
+        return lines
+
+    def assert_rendered_page_has_line(self, page: int, expected_line: str):
+        lines = self._rendered_page_lines(page)
+        assert (
+            expected_line in lines
+        ), f"Expected rendered line '{expected_line}' on page {page}, got: {lines}"
+        return self
+
+    def assert_rendered_page_not_has_line(self, page: int, unexpected_line: str):
+        lines = self._rendered_page_lines(page)
+        assert (
+            unexpected_line not in lines
+        ), f"Did not expect rendered line '{unexpected_line}' on page {page}, got: {lines}"
         return self
 
     def assert_paragraph_exists(self, text, page=1):
@@ -704,7 +742,7 @@ class PDFAssertions(object):
         bbox = image.position.bounding_rect
 
         assert bbox is not None, f"Image {internal_id} has no bounding rect"
-        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+        assert bbox.height > 0, "Image height is 0, cannot compute aspect ratio"
 
         actual_ratio = bbox.width / bbox.height
         assert actual_ratio == pytest.approx(
@@ -735,7 +773,7 @@ class PDFAssertions(object):
         bbox = image.position.bounding_rect
 
         assert bbox is not None, f"Image at ({x}, {y}) has no bounding rect"
-        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+        assert bbox.height > 0, "Image height is 0, cannot compute aspect ratio"
 
         actual_ratio = bbox.width / bbox.height
         assert actual_ratio == pytest.approx(

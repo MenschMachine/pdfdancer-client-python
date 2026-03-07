@@ -5,6 +5,8 @@ Test script to verify OpenAPI compliance of request wrapper types.
 
 from pdfdancer.models import (
     AddRequest,
+    ClearClippingRequest,
+    ClearPathGroupClippingRequest,
     DeleteRequest,
     FindRequest,
     Font,
@@ -127,3 +129,34 @@ def test_object_ref():
     assert result["internalId"] == "test-id"
     assert result["type"] == "PARAGRAPH"
     print("✓ ObjectRef serialization correct")
+
+
+def test_clear_clipping_request():
+    """Test ClearClippingRequest serialization."""
+    print("Testing ClearClippingRequest...")
+    position = Position(page_number=1)
+    obj_ref = ObjectRef("clip-id", position, ObjectType.TEXT_LINE)
+    clear_req = ClearClippingRequest(obj_ref)
+    result = clear_req.to_dict()
+
+    expected_keys = {"objectRef"}
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"ClearClippingRequest keys mismatch: {result.keys()}"
+    assert result["objectRef"]["internalId"] == "clip-id"
+    print("✓ ClearClippingRequest serialization correct")
+
+
+def test_clear_path_group_clipping_request():
+    """Test ClearPathGroupClippingRequest serialization."""
+    print("Testing ClearPathGroupClippingRequest...")
+    clear_req = ClearPathGroupClippingRequest(page_number=2, group_id="group-123")
+    result = clear_req.to_dict()
+
+    expected_keys = {"pageNumber", "groupId"}
+    assert (
+        set(result.keys()) == expected_keys
+    ), f"ClearPathGroupClippingRequest keys mismatch: {result.keys()}"
+    assert result["pageNumber"] == 2
+    assert result["groupId"] == "group-123"
+    print("✓ ClearPathGroupClippingRequest serialization correct")

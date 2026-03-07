@@ -894,6 +894,27 @@ class MoveRequest:
 
 
 @dataclass
+class ClearClippingRequest:
+    """Request to clear clipping constraints from an existing object."""
+
+    object_ref: ObjectRef
+
+    def to_dict(self) -> dict:
+        return {"objectRef": self.object_ref.to_dict()}
+
+
+@dataclass
+class ClearPathGroupClippingRequest:
+    """Request to clear clipping constraints from a path group."""
+
+    page_number: int
+    group_id: str
+
+    def to_dict(self) -> dict:
+        return {"pageNumber": self.page_number, "groupId": self.group_id}
+
+
+@dataclass
 class RedactTarget:
     """A single redaction target identifying an object by its internal ID."""
 

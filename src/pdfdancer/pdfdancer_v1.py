@@ -37,6 +37,8 @@ from .models import (
     AddPageRequest,
     AddRequest,
     ChangeFormFieldRequest,
+    ClearClippingRequest,
+    ClearPathGroupClippingRequest,
     Color,
     CommandResult,
     DeleteRequest,
@@ -2240,6 +2242,30 @@ class PDFDancer:
 
         return result
 
+    def _clear_clipping(self, object_ref: ObjectRef) -> bool:
+        """
+        Clears clipping constraints from a PDF object.
+
+        Args:
+            object_ref: Reference to the object whose clipping should be cleared
+
+        Returns:
+            True if clipping was cleared, False if no matching object was found
+        """
+        if object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        request_data = ClearClippingRequest(object_ref).to_dict()
+        response = self._make_request(
+            "PUT", "/pdf/clipping/clear", data=request_data
+        )
+        result = bool(response.json())
+
+        if result:
+            self._invalidate_snapshots()
+
+        return result
+
     def _redact(
         self,
         targets: List["RedactTarget"],
@@ -2563,6 +2589,34 @@ class PDFDancer:
         )
         self._invalidate_snapshots()
         return response.json()
+
+    def _clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
+        if page_number is None:
+            raise ValidationException("page_number cannot be null")
+        if not isinstance(page_number, int):
+            raise ValidationException(
+                f"page_number must be an integer, got {type(page_number)}"
+            )
+        if page_number < 1:
+            raise ValidationException(
+                f"page_number must be >= 1 (1-based indexing), got {page_number}"
+            )
+        if not group_id or not str(group_id).strip():
+            raise ValidationException("group_id cannot be null or empty")
+
+        request_data = ClearPathGroupClippingRequest(
+            page_number=page_number,
+            group_id=str(group_id).strip(),
+        ).to_dict()
+        response = self._make_request(
+            "PUT", "/pdf/path-group/clipping/clear", data=request_data
+        )
+        result = bool(response.json())
+
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     def _list_path_groups(self, page_index):
         from .models import PathGroupInfo

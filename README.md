@@ -120,7 +120,7 @@ with PDFDancer.open("contract.pdf") as pdf:
 ```
 
 Selectors return typed objects (`ParagraphObject`, `TextLineObject`, `ImageObject`, `FormFieldObject`, `PageClient`, …)
-with helpers such as `delete()`, `move_to(x, y)`, `redact()`, or `edit()` depending on the object type.
+with helpers such as `delete()`, `move_to(x, y)`, `clear_clipping()`, `redact()`, or `edit()` depending on the object type.
 
 **Singular selection methods** return the first match (or `None`) for convenience:
 

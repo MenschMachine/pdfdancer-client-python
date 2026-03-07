@@ -1,0 +1,25 @@
+Implemented the new clear-clipping capability end-to-end in the SDK and tests.
+
+- Added request models:
+  - [models.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/src/pdfdancer/models.py#L897)
+- Added client internals for API endpoints:
+  - `_clear_clipping(object_ref)` -> `PUT /pdf/clipping/clear`
+  - `_clear_path_group_clipping(page_number, group_id)` -> `PUT /pdf/path-group/clipping/clear`
+  - [pdfdancer_v1.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/src/pdfdancer/pdfdancer_v1.py#L2245)
+- Exposed user-facing methods:
+  - `PDFObjectBase.clear_clipping()`
+  - `PathGroupObject.clear_clipping()`
+  - [types.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/src/pdfdancer/types.py#L76)
+- Added deep e2e assertions via rendered text extraction in `PDFAssertions`:
+  - [pdf_assertions.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/tests/e2e/pdf_assertions.py#L139)
+- Added e2e tests for text line, paragraph, and path group clipping clear:
+  - [test_clear_clipping.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/tests/e2e/test_clear_clipping.py#L1)
+- Added OpenAPI-serialization tests for new request wrappers:
+  - [test_openapi_compliance.py](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/tests/test_openapi_compliance.py#L134)
+- Updated README helper list to include `clear_clipping()`:
+  - [README.md](/private/var/folders/cr/4kbt5vt168zbpw3tt9h9lpvc0000gn/T/propagate-pdfdancer-client-python-gKd2IA/README.md#L120)
+
+Validation run (against `ghcr.io/menschmachine/pdfdancer-api:pr-66` on `http://localhost:18080`):
+- `tests/test_openapi_compliance.py`
+- `tests/e2e/test_clear_clipping.py`
+- Result: `12 passed`

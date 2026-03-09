@@ -2650,16 +2650,47 @@ class PDFDancer:
         if group_id is None or not str(group_id).strip():
             raise ValidationException("Group ID cannot be null or empty")
 
-        # Path-group endpoints use 0-based pageIndex.
         page_index = page_number - 1
         request_data = {"pageIndex": page_index, "groupId": group_id}
-        response = self._make_request(
-            "PUT", "/pdf/path-group/clipping/clear", data=request_data
-        )
+        compat_mode = getattr(self, "_clear_path_group_clipping_compat_mode", None)
+        compat_data = {"pageNumber": page_number, "groupId": group_id}
+
+        try:
+            # Path-group endpoints are documented with 0-based pageIndex.
+            response = self._make_request(
+                "PUT",
+                "/pdf/path-group/clipping/clear",
+                data=compat_data if compat_mode == "page_number_field" else request_data,
+            )
+        except HttpClientException as exc:
+            # Compatibility fallback for deployments still expecting pageNumber (1-based).
+            if (
+                compat_mode is None
+                and self._is_path_group_clipping_one_based_validation_error(exc)
+            ):
+                response = self._make_request(
+                    "PUT", "/pdf/path-group/clipping/clear", data=compat_data
+                )
+                self._clear_path_group_clipping_compat_mode = "page_number_field"
+            else:
+                raise
+
         result = response.json()
         if result:
             self._invalidate_snapshots()
         return bool(result)
+
+    def _is_path_group_clipping_one_based_validation_error(
+        self, error: HttpClientException
+    ) -> bool:
+        response = error.response
+        if response is None:
+            return False
+        if response.status_code not in (400, 422):
+            return False
+
+        message = self._extract_error_message(response).lower()
+        return "page number must be >= 1" in message and "1-based" in message
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

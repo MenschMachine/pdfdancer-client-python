@@ -1,9 +1,15 @@
+from pathlib import Path
+
 import pytest
 
 from pdfdancer import Color, FontType, StandardFonts
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
+
+FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
+ROBOTO_TTF = FIXTURES_DIR / "Roboto-Regular.ttf"
+ASIMOVIAN_TTF = FIXTURES_DIR / "Asimovian-Regular.ttf"
 
 
 def test_find_paragraphs_by_position():
@@ -486,6 +492,8 @@ def test_add_paragraph_with_custom_font1_1():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.register_font(ROBOTO_TTF)
+
         (
             pdf.new_paragraph()
             .text("Awesomely\nObvious!")
@@ -509,6 +517,8 @@ def test_add_paragraph_on_page_with_custom_font1_1():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.register_font(ROBOTO_TTF)
+
         (
             pdf.page(1)
             .new_paragraph()
@@ -533,6 +543,7 @@ def test_add_paragraph_with_custom_font1_2():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.register_font(ROBOTO_TTF)
         fonts = pdf.find_fonts("Roboto", 14)
         assert len(fonts) > 0
         assert fonts[0].name.startswith("Roboto")
@@ -561,6 +572,7 @@ def test_add_paragraph_with_custom_font2():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
+        pdf.register_font(ASIMOVIAN_TTF)
         fonts = pdf.find_fonts("Asimovian", 14)
         assert len(fonts) > 0
         assert fonts[0].name == "Asimovian-Regular"
@@ -587,10 +599,8 @@ def test_add_paragraph_with_custom_font2():
 
 def test_add_paragraph_with_custom_font3():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-    from pathlib import Path
 
-    repo_root = Path(__file__).resolve().parents[2]
-    ttf_path = repo_root / "tests/fixtures" / "DancingScript-Regular.ttf"
+    ttf_path = FIXTURES_DIR / "DancingScript-Regular.ttf"
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         (
@@ -688,6 +698,8 @@ def test_add_paragraph_to_new_page():
     base_url, token, pdf_path = _require_env_and_fixture("Empty.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        pdf.register_font(ROBOTO_TTF)
+
         (
             pdf.page(1)
             .new_paragraph()

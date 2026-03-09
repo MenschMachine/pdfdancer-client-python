@@ -19,5 +19,5 @@ __pycache__/
 /.run/
 /build
 .env
-.propagate.*md
+.propagate*md
 /.last-message.txt

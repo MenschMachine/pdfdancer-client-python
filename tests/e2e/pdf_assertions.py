@@ -204,9 +204,22 @@ class PDFAssertions(object):
             f"Page {page} out of bounds for document with {len(reader.pages)} pages"
         )
 
-        content = ContentStream(reader.pages[page - 1].get_contents(), reader)
+        page_obj = reader.pages[page - 1]
+        content = ContentStream(page_obj.get_contents(), reader)
         paint_ops = {b"S", b"s", b"f", b"F", b"f*", b"B", b"B*", b"b", b"b*"}
         path_ops = {b"m", b"l", b"c", b"v", b"y", b"h", b"re"}
+        image_xobject_names: set[str] = set()
+
+        resources = page_obj.get("/Resources")
+        if resources is not None:
+            resources = resources.get_object()
+            xobjects = resources.get("/XObject")
+            if xobjects is not None:
+                xobjects = xobjects.get_object()
+                for xobj_name, xobj_ref in xobjects.items():
+                    xobj = xobj_ref.get_object()
+                    if str(xobj.get("/Subtype")) == "/Image":
+                        image_xobject_names.add(str(xobj_name))
 
         has_clip = False
         pending_clip = False
@@ -286,6 +299,9 @@ class PDFAssertions(object):
                 continue
 
             if op == b"Do":
+                xobject_name = str(operands[0])
+                if xobject_name not in image_xobject_names:
+                    continue
                 p0 = self._apply_matrix(ctm, 0.0, 0.0)
                 p1 = self._apply_matrix(ctm, 1.0, 0.0)
                 p2 = self._apply_matrix(ctm, 0.0, 1.0)
@@ -296,7 +312,7 @@ class PDFAssertions(object):
                     {
                         "bbox": (min(xs), min(ys), max(xs), max(ys)),
                         "clipped": has_clip or pending_clip,
-                        "name": str(operands[0]),
+                        "name": xobject_name,
                     }
                 )
 

@@ -349,8 +349,9 @@ class PathGroupObject:
         return True
 
     def clear_clipping(self) -> bool:
-        self._client._clear_path_group_clipping(self._page_index + 1, self.group_id)
-        return True
+        return self._client._clear_path_group_clipping(
+            self._page_index + 1, self.group_id
+        )
 
     def __repr__(self):
         return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"

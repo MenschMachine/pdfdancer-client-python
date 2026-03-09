@@ -404,11 +404,11 @@ Upgrade to Python 3.10+ if you encounter SSL errors during large file uploads.
 
 #### Import Errors
 
-Ensure the virtual environment is activated and the package is installed in editable mode:
+Ensure the virtual environment is activated and the package is installed in editable mode with dev dependencies:
 
 ```bash
 source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 #### Test Failures

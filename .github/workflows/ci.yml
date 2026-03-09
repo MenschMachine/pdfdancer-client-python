@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Detect API URL override
         if: github.event_name == 'pull_request'
@@ -75,6 +77,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Detect API URL override
         if: github.event_name == 'pull_request'

@@ -19,5 +19,6 @@ __pycache__/
 /.run/
 /build
 .env
+.api-url
 .propagate*md
 /.last-message.txt

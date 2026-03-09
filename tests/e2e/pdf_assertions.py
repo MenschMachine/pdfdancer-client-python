@@ -155,16 +155,16 @@ class PDFAssertions(object):
     def _matrix_multiply(
             left: List[float], right: List[float]
     ) -> List[float]:
-        # PDF concatenation semantics for [a b c d e f] matrices.
+        # Matrix multiplication for PDF [a b c d e f] affine transforms.
         a1, b1, c1, d1, e1, f1 = left
         a2, b2, c2, d2, e2, f2 = right
         return [
-            a1 * a2 + b1 * c2,
-            a1 * b2 + b1 * d2,
-            c1 * a2 + d1 * c2,
-            c1 * b2 + d1 * d2,
-            e1 * a2 + f1 * c2 + e2,
-            e1 * b2 + f1 * d2 + f2,
+            a1 * a2 + c1 * b2,
+            b1 * a2 + d1 * b2,
+            a1 * c2 + c1 * d2,
+            b1 * c2 + d1 * d2,
+            a1 * e2 + c1 * f2 + e1,
+            b1 * e2 + d1 * f2 + f1,
         ]
 
     @staticmethod
@@ -231,7 +231,8 @@ class PDFAssertions(object):
                 continue
             if op == b"cm":
                 matrix = [float(v) for v in operands]
-                ctm = self._matrix_multiply(matrix, ctm)
+                # In row-vector form, PDF's "cm" concatenation is CTM = CTM * M.
+                ctm = self._matrix_multiply(ctm, matrix)
                 continue
             if op in (b"W", b"W*"):
                 pending_clip = True

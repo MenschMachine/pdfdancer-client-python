@@ -73,6 +73,10 @@ class PDFObjectBase:
         result = self._client._redact([target], replacement)
         return result.success
 
+    def clear_clipping(self) -> bool:
+        """Remove clipping constraints from this object."""
+        return self._client._clear_clipping(self.object_ref())
+
 
 # -------------------------------------------------------------------
 # Subclasses
@@ -342,6 +346,10 @@ class PathGroupObject:
 
     def remove(self) -> bool:
         self._client._remove_path_group(self._page_index, self.group_id)
+        return True
+
+    def clear_clipping(self) -> bool:
+        self._client._clear_path_group_clipping(self._page_index + 1, self.group_id)
         return True
 
     def __repr__(self):

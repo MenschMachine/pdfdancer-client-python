@@ -46,6 +46,19 @@ def _require_env_and_fixture(pdf_filename: str) -> tuple[str, str, Path]:
     return base_url, token, pdf_path
 
 
+def _require_env_and_examples_fixture(relative_path: str) -> tuple[str, str, Path]:
+    base_url, token = _require_env()
+    pdf_path = (
+        Path(__file__).resolve().parent.parent
+        / "fixtures"
+        / "examples"
+        / relative_path
+    )
+    if not pdf_path.exists():
+        pytest.fail(f"examples fixture not found: {relative_path}")
+    return base_url, token, pdf_path
+
+
 def _require_env() -> tuple[str, str | None]:
     base_url = _get_base_url()
     token = _read_token()

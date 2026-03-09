@@ -2240,6 +2240,43 @@ class PDFDancer:
 
         return result
 
+    def clear_clipping(self, object_ref: ObjectRef) -> bool:
+        """
+        Removes clipping constraints from an object reference.
+
+        Args:
+            object_ref: Reference to the object whose clipping should be cleared
+
+        Returns:
+            True if clipping was successfully cleared
+        """
+        return self._clear_clipping(object_ref)
+
+    def _clear_clipping(self, object_ref: ObjectRef) -> bool:
+        """
+        Internal helper to clear clipping from a PDF object.
+
+        Args:
+            object_ref: Reference to the object whose clipping should be cleared
+
+        Returns:
+            True if clipping was successfully cleared
+        """
+        if object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        request_data = {"objectRef": object_ref.to_dict()}
+        response = self._make_request(
+            "PUT", "/pdf/clipping/clear", data=request_data
+        )
+        result = response.json()
+
+        # Invalidate snapshot caches after mutation
+        if result:
+            self._invalidate_snapshots()
+
+        return bool(result)
+
     def _redact(
         self,
         targets: List["RedactTarget"],
@@ -2573,6 +2610,52 @@ class PDFDancer:
         )
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
         return [PathGroupObject(self, page_index, info) for info in infos]
+
+    def clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
+        """
+        Removes clipping constraints from a path group on a page.
+
+        Args:
+            page_number: 1-based page number where the path group exists
+            group_id: Path group identifier
+
+        Returns:
+            True if clipping was successfully cleared for the group
+        """
+        return self._clear_path_group_clipping(page_number, group_id)
+
+    def _clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
+        """
+        Internal helper to clear clipping from a path group.
+
+        Args:
+            page_number: 1-based page number where the path group exists
+            group_id: Path group identifier
+
+        Returns:
+            True if clipping was successfully cleared
+        """
+        if page_number is None:
+            raise ValidationException("Page number cannot be null")
+        if not isinstance(page_number, int):
+            raise ValidationException(
+                f"Page number must be an integer, got {type(page_number)}"
+            )
+        if page_number < 1:
+            raise ValidationException(
+                f"Page number must be >= 1 (1-based indexing), got {page_number}"
+            )
+        if group_id is None or not str(group_id).strip():
+            raise ValidationException("Group ID cannot be null or empty")
+
+        request_data = {"pageNumber": page_number, "groupId": group_id}
+        response = self._make_request(
+            "PUT", "/pdf/path-group/clipping/clear", data=request_data
+        )
+        result = response.json()
+        if result:
+            self._invalidate_snapshots()
+        return bool(result)
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

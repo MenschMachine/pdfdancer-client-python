@@ -1,7 +1,9 @@
 import tempfile
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
+from pypdf import PdfReader
+from pypdf.generic import ContentStream
 
 from pdfdancer import Bezier, Color, Line, Orientation, PathSegment, PDFDancer, Point
 
@@ -18,6 +20,7 @@ class PDFAssertions(object):
         ) as temp_file:
             pdf_dancer.save(temp_file.name)
             print(f"Saving PDF file to {temp_file.name}")
+            self._saved_pdf_path = temp_file.name
         self.pdf = PDFDancer.open(temp_file.name, token=token, base_url=base_url)
 
     def assert_text_has_color(self, text, color: Color, page=1):
@@ -147,6 +150,227 @@ class PDFAssertions(object):
 
     def get_pdf(self):
         return self.pdf
+
+    @staticmethod
+    def _matrix_multiply(
+            left: List[float], right: List[float]
+    ) -> List[float]:
+        # PDF concatenation semantics for [a b c d e f] matrices.
+        a1, b1, c1, d1, e1, f1 = left
+        a2, b2, c2, d2, e2, f2 = right
+        return [
+            a1 * a2 + b1 * c2,
+            a1 * b2 + b1 * d2,
+            c1 * a2 + d1 * c2,
+            c1 * b2 + d1 * d2,
+            e1 * a2 + f1 * c2 + e2,
+            e1 * b2 + f1 * d2 + f2,
+        ]
+
+    @staticmethod
+    def _apply_matrix(matrix: List[float], x: float, y: float) -> Tuple[float, float]:
+        a, b, c, d, e, f = matrix
+        return a * x + c * y + e, b * x + d * y + f
+
+    @staticmethod
+    def _bbox_area(bbox: Tuple[float, float, float, float]) -> float:
+        return max(0.0, bbox[2] - bbox[0]) * max(0.0, bbox[3] - bbox[1])
+
+    @staticmethod
+    def _bbox_contains_point(
+            bbox: Tuple[float, float, float, float], x: float, y: float, tolerance: float = 0.5
+    ) -> bool:
+        return (
+                bbox[0] - tolerance <= x <= bbox[2] + tolerance
+                and bbox[1] - tolerance <= y <= bbox[3] + tolerance
+        )
+
+    @staticmethod
+    def _bbox_intersection_area(
+            a: Tuple[float, float, float, float],
+            b: Tuple[float, float, float, float],
+    ) -> float:
+        left = max(a[0], b[0])
+        bottom = max(a[1], b[1])
+        right = min(a[2], b[2])
+        top = min(a[3], b[3])
+        if left >= right or bottom >= top:
+            return 0.0
+        return (right - left) * (top - bottom)
+
+    def _extract_page_draw_events(self, page: int) -> Dict[str, List[Dict[str, Any]]]:
+        reader = PdfReader(self._saved_pdf_path)
+        assert 1 <= page <= len(reader.pages), (
+            f"Page {page} out of bounds for document with {len(reader.pages)} pages"
+        )
+
+        content = ContentStream(reader.pages[page - 1].get_contents(), reader)
+        paint_ops = {b"S", b"s", b"f", b"F", b"f*", b"B", b"B*", b"b", b"b*"}
+        path_ops = {b"m", b"l", b"c", b"v", b"y", b"h", b"re"}
+
+        has_clip = False
+        pending_clip = False
+        ctm = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+        state_stack: List[Tuple[bool, bool, List[float]]] = []
+        current_path_points: List[Tuple[float, float]] = []
+        path_events: List[Dict[str, Any]] = []
+        image_events: List[Dict[str, Any]] = []
+
+        def add_path_point(raw_x: Any, raw_y: Any):
+            x, y = float(raw_x), float(raw_y)
+            current_path_points.append(self._apply_matrix(ctm, x, y))
+
+        for operands, op in content.operations:
+            if op == b"q":
+                state_stack.append((has_clip, pending_clip, ctm.copy()))
+                continue
+            if op == b"Q":
+                if state_stack:
+                    has_clip, pending_clip, ctm = state_stack.pop()
+                current_path_points = []
+                continue
+            if op == b"cm":
+                matrix = [float(v) for v in operands]
+                ctm = self._matrix_multiply(matrix, ctm)
+                continue
+            if op in (b"W", b"W*"):
+                pending_clip = True
+                continue
+            if op == b"n":
+                if pending_clip:
+                    has_clip = True
+                    pending_clip = False
+                current_path_points = []
+                continue
+
+            if op in path_ops:
+                if op == b"m":
+                    add_path_point(operands[0], operands[1])
+                elif op == b"l":
+                    add_path_point(operands[0], operands[1])
+                elif op == b"c":
+                    add_path_point(operands[0], operands[1])
+                    add_path_point(operands[2], operands[3])
+                    add_path_point(operands[4], operands[5])
+                elif op == b"v":
+                    add_path_point(operands[0], operands[1])
+                    add_path_point(operands[2], operands[3])
+                elif op == b"y":
+                    add_path_point(operands[0], operands[1])
+                    add_path_point(operands[2], operands[3])
+                elif op == b"re":
+                    x, y, w, h = [float(v) for v in operands]
+                    add_path_point(x, y)
+                    add_path_point(x + w, y)
+                    add_path_point(x + w, y + h)
+                    add_path_point(x, y + h)
+                continue
+
+            if op in paint_ops:
+                if current_path_points:
+                    xs = [p[0] for p in current_path_points]
+                    ys = [p[1] for p in current_path_points]
+                    bbox = (min(xs), min(ys), max(xs), max(ys))
+                    path_events.append(
+                        {
+                            "bbox": bbox,
+                            "clipped": has_clip or pending_clip,
+                            "paint_op": op.decode("ascii"),
+                        }
+                    )
+                if pending_clip:
+                    has_clip = True
+                    pending_clip = False
+                current_path_points = []
+                continue
+
+            if op == b"Do":
+                p0 = self._apply_matrix(ctm, 0.0, 0.0)
+                p1 = self._apply_matrix(ctm, 1.0, 0.0)
+                p2 = self._apply_matrix(ctm, 0.0, 1.0)
+                p3 = self._apply_matrix(ctm, 1.0, 1.0)
+                xs = [p0[0], p1[0], p2[0], p3[0]]
+                ys = [p0[1], p1[1], p2[1], p3[1]]
+                image_events.append(
+                    {
+                        "bbox": (min(xs), min(ys), max(xs), max(ys)),
+                        "clipped": has_clip or pending_clip,
+                        "name": str(operands[0]),
+                    }
+                )
+
+        return {"paths": path_events, "images": image_events}
+
+    def _find_path_clipping_state(
+            self, internal_id: str, page: int
+    ) -> bool:
+        path_ref = next(
+            (p for p in self.pdf.page(page).select_paths() if p.internal_id == internal_id),
+            None,
+        )
+        assert path_ref is not None, f"Path with ID {internal_id} not found on page {page}"
+
+        x = float(path_ref.position.x())
+        y = float(path_ref.position.y())
+        events = self._extract_page_draw_events(page)["paths"]
+        matches = [
+            event for event in events if self._bbox_contains_point(event["bbox"], x, y)
+        ]
+        assert matches, (
+            f"No draw event matched path anchor ({x}, {y}) for {internal_id}. "
+            f"Available path bboxes: {[event['bbox'] for event in events]}"
+        )
+        best = min(matches, key=lambda event: self._bbox_area(event["bbox"]))
+        return bool(best["clipped"])
+
+    def _find_image_clipping_state(
+            self, internal_id: str, page: int
+    ) -> bool:
+        image = self.get_image_by_id(internal_id, page)
+        bbox = image.position.bounding_rect
+        assert bbox is not None, f"Image {internal_id} has no bounding rect"
+        target_bbox = (
+            float(bbox.x),
+            float(bbox.y),
+            float(bbox.x + bbox.width),
+            float(bbox.y + bbox.height),
+        )
+
+        events = self._extract_page_draw_events(page)["images"]
+        matches = [
+            event
+            for event in events
+            if self._bbox_intersection_area(target_bbox, event["bbox"]) > 0
+        ]
+        assert matches, (
+            f"No image draw event overlapped expected bbox {target_bbox} for {internal_id}. "
+            f"Available image bboxes: {[event['bbox'] for event in events]}"
+        )
+        best = max(
+            matches,
+            key=lambda event: self._bbox_intersection_area(target_bbox, event["bbox"]),
+        )
+        return bool(best["clipped"])
+
+    def assert_path_has_clipping(self, internal_id: str, page=1) -> "PDFAssertions":
+        clipped = self._find_path_clipping_state(internal_id, page)
+        assert clipped, f"Expected path {internal_id} on page {page} to be clipped"
+        return self
+
+    def assert_path_has_no_clipping(self, internal_id: str, page=1) -> "PDFAssertions":
+        clipped = self._find_path_clipping_state(internal_id, page)
+        assert not clipped, f"Expected path {internal_id} on page {page} to be unclipped"
+        return self
+
+    def assert_image_has_clipping(self, internal_id: str, page=1) -> "PDFAssertions":
+        clipped = self._find_image_clipping_state(internal_id, page)
+        assert clipped, f"Expected image {internal_id} on page {page} to be clipped"
+        return self
+
+    def assert_image_has_no_clipping(self, internal_id: str, page=1) -> "PDFAssertions":
+        clipped = self._find_image_clipping_state(internal_id, page)
+        assert not clipped, f"Expected image {internal_id} on page {page} to be unclipped"
+        return self
 
     def assert_path_has_bounds(
             self, internal_id: str, expected_width: float, expected_height: float,

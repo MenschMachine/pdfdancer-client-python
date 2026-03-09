@@ -2617,6 +2617,7 @@ class PDFDancer:
 
         Args:
             page_number: 1-based page number where the path group exists
+                (translated to 0-based `pageIndex` for the API call)
             group_id: Path group identifier
 
         Returns:
@@ -2630,6 +2631,7 @@ class PDFDancer:
 
         Args:
             page_number: 1-based page number where the path group exists
+                (translated to 0-based `pageIndex` for the API call)
             group_id: Path group identifier
 
         Returns:
@@ -2648,7 +2650,9 @@ class PDFDancer:
         if group_id is None or not str(group_id).strip():
             raise ValidationException("Group ID cannot be null or empty")
 
-        request_data = {"pageNumber": page_number, "groupId": group_id}
+        # Path-group endpoints use 0-based pageIndex.
+        page_index = page_number - 1
+        request_data = {"pageIndex": page_index, "groupId": group_id}
         response = self._make_request(
             "PUT", "/pdf/path-group/clipping/clear", data=request_data
         )

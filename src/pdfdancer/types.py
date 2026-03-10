@@ -65,6 +65,10 @@ class PDFObjectBase:
             Position.at_page_coordinates(self.position.page_number, x, y),
         )
 
+    def clear_clipping(self) -> bool:
+        """Detach any active clipping path from this object."""
+        return self._client.clear_clipping(self.object_ref())
+
     def redact(self, replacement: str = "[REDACTED]") -> bool:
         """Redact this object from the PDF document."""
         from .models import RedactTarget
@@ -329,19 +333,19 @@ class PathGroupObject:
         return True
 
     def rotate(self, degrees: float) -> bool:
-        self._client._rotate_path_group(
-            self._page_index, self.group_id, degrees
-        )
+        self._client._rotate_path_group(self._page_index, self.group_id, degrees)
         return True
 
     def resize(self, width: float, height: float) -> bool:
-        self._client._resize_path_group(
-            self._page_index, self.group_id, width, height
-        )
+        self._client._resize_path_group(self._page_index, self.group_id, width, height)
         return True
 
     def remove(self) -> bool:
         self._client._remove_path_group(self._page_index, self.group_id)
+        return True
+
+    def clear_clipping(self) -> bool:
+        self._client.clear_path_group_clipping(self._page_index + 1, self.group_id)
         return True
 
     def __repr__(self):

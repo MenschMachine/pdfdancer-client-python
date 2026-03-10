@@ -134,7 +134,7 @@ DEFAULT_RETRY_BACKOFF_FACTOR = float(
 
 
 def _dict_to_replacements(
-    replacements: Dict[str, Union[str, dict]]
+    replacements: Dict[str, Union[str, dict]],
 ) -> List[TemplateReplacement]:
     """Convert dict-based replacements to TemplateReplacement list."""
     result = []
@@ -2292,6 +2292,37 @@ class PDFDancer:
         targets = [RedactTarget(obj.internal_id, replacement) for obj in objects]
         return self._redact(targets, replacement, placeholder_color)
 
+    def clear_clipping(self, object_ref: ObjectRef) -> bool:
+        """
+        Clear clipping on a single PDF object.
+
+        Args:
+            object_ref: Reference to the object whose clipping should be removed
+
+        Returns:
+            True when the server cleared clipping successfully
+        """
+        return self._clear_clipping(object_ref)
+
+    def _clear_clipping(self, object_ref: ObjectRef) -> bool:
+        """
+        Internal helper to clear clipping from a single object.
+        """
+        if object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        response = self._make_request(
+            "PUT",
+            "/pdf/clipping/clear",
+            data={"objectRef": object_ref.to_dict()},
+        )
+        result = bool(response.json())
+
+        if result:
+            self._invalidate_snapshots()
+
+        return result
+
     # Template Replacement Operations
 
     def _apply_replacements(
@@ -2506,19 +2537,21 @@ class PDFDancer:
             data["pathIds"] = path_ids
         if region is not None:
             data["region"] = {
-                "x": region.x, "y": region.y,
-                "width": region.width, "height": region.height,
+                "x": region.x,
+                "y": region.y,
+                "width": region.width,
+                "height": region.height,
             }
-        response = self._make_request(
-            "POST", "/pdf/path-group/create", data=data
-        )
+        response = self._make_request("POST", "/pdf/path-group/create", data=data)
         self._invalidate_snapshots()
         return PathGroupInfo.from_dict(response.json())
 
     def _move_path_group(self, page_index, group_id, x, y):
         data = {
-            "pageIndex": page_index, "groupId": group_id,
-            "x": x, "y": y,
+            "pageIndex": page_index,
+            "groupId": group_id,
+            "x": x,
+            "y": y,
         }
         response = self._make_request("PUT", "/pdf/path-group/move", data=data)
         self._invalidate_snapshots()
@@ -2526,13 +2559,12 @@ class PDFDancer:
 
     def _transform_path_group(self, page_index, group_id, transform_type, **kwargs):
         data = {
-            "pageIndex": page_index, "groupId": group_id,
+            "pageIndex": page_index,
+            "groupId": group_id,
             "transformType": transform_type,
         }
         data.update({k: v for k, v in kwargs.items() if v is not None})
-        response = self._make_request(
-            "PUT", "/pdf/path-group/transform", data=data
-        )
+        response = self._make_request("PUT", "/pdf/path-group/transform", data=data)
         self._invalidate_snapshots()
         return response.json()
 
@@ -2552,15 +2584,16 @@ class PDFDancer:
         if width <= 0 or height <= 0:
             raise ValidationException("Width and height must be positive")
         return self._transform_path_group(
-            page_index, group_id, "RESIZE",
-            targetWidth=width, targetHeight=height,
+            page_index,
+            group_id,
+            "RESIZE",
+            targetWidth=width,
+            targetHeight=height,
         )
 
     def _remove_path_group(self, page_index, group_id):
         data = {"pageIndex": page_index, "groupId": group_id}
-        response = self._make_request(
-            "DELETE", "/pdf/path-group/remove", data=data
-        )
+        response = self._make_request("DELETE", "/pdf/path-group/remove", data=data)
         self._invalidate_snapshots()
         return response.json()
 
@@ -2568,11 +2601,51 @@ class PDFDancer:
         from .models import PathGroupInfo
         from .types import PathGroupObject
 
-        response = self._make_request(
-            "GET", f"/pdf/page/{page_index}/path-groups"
-        )
+        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
         return [PathGroupObject(self, page_index, info) for info in infos]
+
+    def clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
+        """
+        Clear clipping for a grouped set of paths.
+
+        Args:
+            page_number: 1-based page number containing the path group
+            group_id: Identifier returned by `group_paths(...)`
+
+        Returns:
+            True when the server cleared clipping successfully
+        """
+        return self._clear_path_group_clipping(page_number, group_id)
+
+    def _clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
+        """
+        Internal helper to clear clipping from a path group using the v1 API.
+        """
+        if page_number is None:
+            raise ValidationException("page_number cannot be null")
+        if not isinstance(page_number, int):
+            raise ValidationException(
+                f"page_number must be an integer, got {type(page_number)}"
+            )
+        if page_number < 1:
+            raise ValidationException(
+                f"page_number must be >= 1 (1-based indexing), got {page_number}"
+            )
+        if group_id is None or not str(group_id).strip():
+            raise ValidationException("group_id cannot be null or empty")
+
+        response = self._make_request(
+            "PUT",
+            "/pdf/path-group/clipping/clear",
+            data={"pageNumber": page_number, "groupId": str(group_id).strip()},
+        )
+        result = bool(response.json())
+
+        if result:
+            self._invalidate_snapshots()
+
+        return result
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

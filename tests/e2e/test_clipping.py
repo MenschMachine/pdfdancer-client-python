@@ -6,7 +6,29 @@ CLIPPING_FIXTURE = "invisible-content-clipping-test.pdf"
 TARGET_PATH_ID = "PATH_0_000004"
 CONTROL_PATH_ID = "PATH_0_000003"
 CLIPPED_TEXT = "Clipped endstream endobj text line"
+CONTROL_CLIPPED_TEXT = "Control clipped text line"
 MULTI_STREAM_CLIPPED_TEXT = "Clipped text line from second stream"
+MULTI_STREAM_CONTROL_TEXT = "Control text line from second stream"
+
+
+def _build_clipped_text_section(texts: list[tuple[str, int, int]]) -> list[str]:
+    content = [
+        "q",
+        "0 0 50 50 re",
+        "W n",
+    ]
+    for text, x, y in texts:
+        content.extend(
+            [
+                "BT",
+                "/F1 24 Tf",
+                f"1 0 0 1 {x} {y} Tm",
+                f"({text}) Tj",
+                "ET",
+            ]
+        )
+    content.extend(["Q", ""])
+    return content
 
 
 def _create_pdf_with_content_streams(content_streams: list[str]) -> bytes:
@@ -58,18 +80,12 @@ def _create_pdf_with_content_streams(content_streams: list[str]) -> bytes:
 
 def _create_clipped_text_pdf() -> bytes:
     clipped_text_stream = "\n".join(
-        [
-            "q",
-            "0 0 50 50 re",
-            "W n",
-            "BT",
-            "/F1 24 Tf",
-            "1 0 0 1 200 400 Tm",
-            f"({CLIPPED_TEXT}) Tj",
-            "ET",
-            "Q",
-            "",
-        ]
+        _build_clipped_text_section(
+            [
+                (CLIPPED_TEXT, 200, 400),
+                (CONTROL_CLIPPED_TEXT, 200, 260),
+            ]
+        )
     )
     return _create_pdf_with_content_streams([clipped_text_stream])
 
@@ -84,15 +100,12 @@ def _create_multi_stream_clipped_text_pdf() -> bytes:
         ]
     )
     clipped_text_stream = "\n".join(
-        [
-            "BT",
-            "/F1 24 Tf",
-            "1 0 0 1 200 400 Tm",
-            f"({MULTI_STREAM_CLIPPED_TEXT}) Tj",
-            "ET",
-            "Q",
-            "",
-        ]
+        _build_clipped_text_section(
+            [
+                (MULTI_STREAM_CLIPPED_TEXT, 200, 400),
+                (MULTI_STREAM_CONTROL_TEXT, 200, 360),
+            ]
+        )[3:]
     )
     return _create_pdf_with_content_streams(
         [clipping_setup_stream, clipped_text_stream]
@@ -230,14 +243,22 @@ def test_clear_clipping_via_text_line_reference():
         line = pdf.page(1).select_text_line_starting_with(CLIPPED_TEXT)
         assert line is not None
 
-        PDFAssertions(pdf).assert_textline_has_clipping(CLIPPED_TEXT)
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_clipping(CLIPPED_TEXT)
+            .assert_textline_has_clipping(CONTROL_CLIPPED_TEXT)
+            .assert_textline_exists(CLIPPED_TEXT)
+            .assert_textline_exists(CONTROL_CLIPPED_TEXT)
+        )
 
         assert line.clear_clipping() is True
 
         (
             PDFAssertions(pdf)
             .assert_textline_has_no_clipping(CLIPPED_TEXT)
+            .assert_textline_has_clipping(CONTROL_CLIPPED_TEXT)
             .assert_textline_exists(CLIPPED_TEXT)
+            .assert_textline_exists(CONTROL_CLIPPED_TEXT)
         )
 
 
@@ -253,7 +274,9 @@ def test_clear_clipping_via_paragraph_reference():
         (
             PDFAssertions(pdf)
             .assert_paragraph_has_clipping(CLIPPED_TEXT)
+            .assert_paragraph_has_clipping(CONTROL_CLIPPED_TEXT)
             .assert_paragraph_exists(CLIPPED_TEXT)
+            .assert_paragraph_exists(CONTROL_CLIPPED_TEXT)
         )
 
         assert paragraph.clear_clipping() is True
@@ -261,8 +284,11 @@ def test_clear_clipping_via_paragraph_reference():
         (
             PDFAssertions(pdf)
             .assert_paragraph_has_no_clipping(CLIPPED_TEXT)
+            .assert_paragraph_has_clipping(CONTROL_CLIPPED_TEXT)
             .assert_paragraph_exists(CLIPPED_TEXT)
+            .assert_paragraph_exists(CONTROL_CLIPPED_TEXT)
             .assert_textline_exists(CLIPPED_TEXT)
+            .assert_textline_exists(CONTROL_CLIPPED_TEXT)
         )
 
 
@@ -278,12 +304,20 @@ def test_detects_clipping_across_multiple_content_streams():
         line = pdf.page(1).select_text_line_starting_with(MULTI_STREAM_CLIPPED_TEXT)
         assert line is not None
 
-        PDFAssertions(pdf).assert_textline_has_clipping(MULTI_STREAM_CLIPPED_TEXT)
+        (
+            PDFAssertions(pdf)
+            .assert_textline_has_clipping(MULTI_STREAM_CLIPPED_TEXT)
+            .assert_textline_has_clipping(MULTI_STREAM_CONTROL_TEXT)
+            .assert_textline_exists(MULTI_STREAM_CLIPPED_TEXT)
+            .assert_textline_exists(MULTI_STREAM_CONTROL_TEXT)
+        )
 
         assert line.clear_clipping() is True
 
         (
             PDFAssertions(pdf)
             .assert_textline_has_no_clipping(MULTI_STREAM_CLIPPED_TEXT)
+            .assert_textline_has_clipping(MULTI_STREAM_CONTROL_TEXT)
             .assert_textline_exists(MULTI_STREAM_CLIPPED_TEXT)
+            .assert_textline_exists(MULTI_STREAM_CONTROL_TEXT)
         )

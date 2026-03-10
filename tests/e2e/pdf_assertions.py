@@ -961,18 +961,45 @@ class PDFAssertions(object):
         )
         return bool(best["clipped"])
 
-    def _find_text_draw_event(self, text: str, page: int, x: float, y: float):
+    def _find_text_draw_event(
+        self,
+        text: str,
+        page: int,
+        x: float,
+        y: float,
+        target_bbox: Optional[Tuple[float, float, float, float]] = None,
+    ):
         exact_matches = [
             event
             for event in self._extract_page_draw_events(page)["texts"]
             if event.get("text") == text
-            and self._bbox_contains_point(event["bbox"], x, y, tolerance=2.0)
+        ]
+        assert exact_matches, f"No text draw event found for {text!r} on page {page}"
+
+        if target_bbox is not None:
+            bbox_matches = [
+                event
+                for event in exact_matches
+                if self._bbox_intersection_area(target_bbox, event["bbox"]) > 0
+            ]
+            if bbox_matches:
+                return max(
+                    bbox_matches,
+                    key=lambda event: self._bbox_intersection_area(
+                        target_bbox, event["bbox"]
+                    ),
+                )
+
+        point_matches = [
+            event
+            for event in exact_matches
+            if self._bbox_contains_point(event["bbox"], x, y, tolerance=2.0)
         ]
         assert (
-            exact_matches
+            point_matches
         ), f"No text draw event found for {text!r} near ({x}, {y}) on page {page}"
         return min(
-            exact_matches,
+            point_matches,
             key=lambda event: self._bbox_center_distance(event["bbox"], x, y),
         )
 
@@ -986,7 +1013,14 @@ class PDFAssertions(object):
         y = line.position.y()
         assert x is not None and y is not None
 
-        return bool(self._find_text_draw_event(text, page, x, y)["clipped"])
+        bbox = line.position.bounding_rect
+        target_bbox = None
+        if bbox is not None:
+            target_bbox = (bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
+
+        return bool(
+            self._find_text_draw_event(text, page, x, y, target_bbox)["clipped"]
+        )
 
     def _find_paragraph_clipping_state(self, text: str, page: int) -> bool:
         paragraph = self.pdf.page(page).select_paragraph_starting_with(text)
@@ -996,7 +1030,14 @@ class PDFAssertions(object):
         y = paragraph.position.y()
         assert x is not None and y is not None
 
-        return bool(self._find_text_draw_event(text, page, x, y)["clipped"])
+        bbox = paragraph.position.bounding_rect
+        target_bbox = None
+        if bbox is not None:
+            target_bbox = (bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
+
+        return bool(
+            self._find_text_draw_event(text, page, x, y, target_bbox)["clipped"]
+        )
 
     def assert_path_has_clipping(
         self, internal_id: str, page: int = 1

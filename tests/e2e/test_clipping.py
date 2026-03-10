@@ -241,6 +241,31 @@ def test_clear_clipping_via_text_line_reference():
         )
 
 
+def test_clear_clipping_via_paragraph_reference():
+    base_url, token = _require_env_and_fixture(CLIPPING_FIXTURE)[:2]
+
+    with PDFDancer.open(
+        _create_clipped_text_pdf(), token=token, base_url=base_url, timeout=30.0
+    ) as pdf:
+        paragraph = pdf.page(1).select_paragraph_starting_with(CLIPPED_TEXT)
+        assert paragraph is not None
+
+        (
+            PDFAssertions(pdf)
+            .assert_paragraph_has_clipping(CLIPPED_TEXT)
+            .assert_paragraph_exists(CLIPPED_TEXT)
+        )
+
+        assert paragraph.clear_clipping() is True
+
+        (
+            PDFAssertions(pdf)
+            .assert_paragraph_has_no_clipping(CLIPPED_TEXT)
+            .assert_paragraph_exists(CLIPPED_TEXT)
+            .assert_textline_exists(CLIPPED_TEXT)
+        )
+
+
 def test_detects_clipping_across_multiple_content_streams():
     base_url, token = _require_env_and_fixture(CLIPPING_FIXTURE)[:2]
 

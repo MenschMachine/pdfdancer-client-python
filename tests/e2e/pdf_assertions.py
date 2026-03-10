@@ -396,20 +396,48 @@ class PDFAssertions(object):
                 continue
 
             if char == "(":
+                start = index
                 index += 1
                 depth = 1
                 while index < len(content) and depth > 0:
                     if content[index] == "\\":
-                        index += 2
+                        index += 1
+                        if index < len(content):
+                            index += 1
                         continue
                     if content[index] == "(":
                         depth += 1
                     elif content[index] == ")":
                         depth -= 1
                     index += 1
+                tokens.append(content[start:index])
                 continue
 
-            if char in "[]<>{}":
+            if char == "<":
+                if index + 1 < len(content) and content[index + 1] == "<":
+                    tokens.append("<<")
+                    index += 2
+                    continue
+
+                end = index + 1
+                while end < len(content) and content[end] != ">":
+                    end += 1
+                end = min(end + 1, len(content))
+                tokens.append(content[index:end])
+                index = end
+                continue
+
+            if char == ">":
+                if index + 1 < len(content) and content[index + 1] == ">":
+                    tokens.append(">>")
+                    index += 2
+                    continue
+                tokens.append(char)
+                index += 1
+                continue
+
+            if char in "[]{}":
+                tokens.append(char)
                 index += 1
                 continue
 
@@ -422,6 +450,113 @@ class PDFAssertions(object):
             index = end
 
         return tokens
+
+    @staticmethod
+    def _decode_pdf_literal_string(token: str) -> Optional[str]:
+        if len(token) < 2 or token[0] != "(" or token[-1] != ")":
+            return None
+
+        result = []
+        index = 1
+        end = len(token) - 1
+        escapes = {
+            "n": "\n",
+            "r": "\r",
+            "t": "\t",
+            "b": "\b",
+            "f": "\f",
+            "(": "(",
+            ")": ")",
+            "\\": "\\",
+        }
+
+        while index < end:
+            char = token[index]
+            if char != "\\":
+                result.append(char)
+                index += 1
+                continue
+
+            index += 1
+            if index >= end:
+                break
+
+            escaped = token[index]
+            if escaped in ("\n", "\r"):
+                if escaped == "\r" and index + 1 < end and token[index + 1] == "\n":
+                    index += 1
+                index += 1
+                continue
+
+            if escaped in escapes:
+                result.append(escapes[escaped])
+                index += 1
+                continue
+
+            if escaped.isdigit() and escaped < "8":
+                octal_digits = [escaped]
+                index += 1
+                while (
+                    index < end
+                    and len(octal_digits) < 3
+                    and token[index].isdigit()
+                    and token[index] < "8"
+                ):
+                    octal_digits.append(token[index])
+                    index += 1
+                result.append(chr(int("".join(octal_digits), 8)))
+                continue
+
+            result.append(escaped)
+            index += 1
+
+        return "".join(result)
+
+    @staticmethod
+    def _decode_pdf_hex_string(token: str) -> Optional[str]:
+        if (
+            len(token) < 2
+            or token[0] != "<"
+            or token[-1] != ">"
+            or token.startswith("<<")
+        ):
+            return None
+
+        hex_data = re.sub(r"\s+", "", token[1:-1])
+        if not hex_data:
+            return ""
+        if len(hex_data) % 2 == 1:
+            hex_data += "0"
+        try:
+            return bytes.fromhex(hex_data).decode("latin1")
+        except ValueError:
+            return None
+
+    @classmethod
+    def _decode_pdf_text_token(cls, token: str) -> Optional[str]:
+        decoded = cls._decode_pdf_literal_string(token)
+        if decoded is not None:
+            return decoded
+        return cls._decode_pdf_hex_string(token)
+
+    @classmethod
+    def _extract_text_from_operands(cls, operands: List[str], operator: str) -> str:
+        if operator in {"Tj", "'", '"'}:
+            for operand in reversed(operands):
+                decoded = cls._decode_pdf_text_token(operand)
+                if decoded is not None:
+                    return decoded
+            return ""
+
+        if operator == "TJ":
+            parts = []
+            for operand in operands:
+                decoded = cls._decode_pdf_text_token(operand)
+                if decoded is not None:
+                    parts.append(decoded)
+            return "".join(parts)
+
+        return ""
 
     @staticmethod
     def _decode_stream_content(dictionary: str, stream: bytes) -> str:
@@ -687,6 +822,7 @@ class PDFAssertions(object):
                     if token in {"'", '"'}:
                         move_text_to_next_line()
 
+                    drawn_text = self._extract_text_from_operands(operands, token)
                     text_x, text_y = self._apply_matrix(
                         ctm, text_matrix[4], text_matrix[5]
                     )
@@ -701,6 +837,7 @@ class PDFAssertions(object):
                             ),
                             "clipped": has_clip or pending_clip,
                             "paint_op": token,
+                            "text": drawn_text,
                         }
                     )
                     operands = []
@@ -824,6 +961,21 @@ class PDFAssertions(object):
         )
         return bool(best["clipped"])
 
+    def _find_text_draw_event(self, text: str, page: int, x: float, y: float):
+        exact_matches = [
+            event
+            for event in self._extract_page_draw_events(page)["texts"]
+            if event.get("text") == text
+            and self._bbox_contains_point(event["bbox"], x, y, tolerance=2.0)
+        ]
+        assert (
+            exact_matches
+        ), f"No text draw event found for {text!r} near ({x}, {y}) on page {page}"
+        return min(
+            exact_matches,
+            key=lambda event: self._bbox_center_distance(event["bbox"], x, y),
+        )
+
     def _find_textline_clipping_state(self, text: str, page: int) -> bool:
         line = self.pdf.page(page).select_text_line_starting_with(text)
         assert (
@@ -834,16 +986,17 @@ class PDFAssertions(object):
         y = line.position.y()
         assert x is not None and y is not None
 
-        matches = [
-            event
-            for event in self._extract_page_draw_events(page)["texts"]
-            if self._bbox_contains_point(event["bbox"], x, y, tolerance=2.0)
-        ]
-        assert matches, f"No text draw event found near {text!r} at ({x}, {y})"
-        best = min(
-            matches, key=lambda event: self._bbox_center_distance(event["bbox"], x, y)
-        )
-        return bool(best["clipped"])
+        return bool(self._find_text_draw_event(text, page, x, y)["clipped"])
+
+    def _find_paragraph_clipping_state(self, text: str, page: int) -> bool:
+        paragraph = self.pdf.page(page).select_paragraph_starting_with(text)
+        assert paragraph is not None, f"No paragraph starting with {text!r} found"
+
+        x = paragraph.position.x()
+        y = paragraph.position.y()
+        assert x is not None and y is not None
+
+        return bool(self._find_text_draw_event(text, page, x, y)["clipped"])
 
     def assert_path_has_clipping(
         self, internal_id: str, page: int = 1
@@ -877,6 +1030,18 @@ class PDFAssertions(object):
         self, text: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_textline_clipping_state(text, page) is False
+        return self
+
+    def assert_paragraph_has_clipping(
+        self, text: str, page: int = 1
+    ) -> "PDFAssertions":
+        assert self._find_paragraph_clipping_state(text, page) is True
+        return self
+
+    def assert_paragraph_has_no_clipping(
+        self, text: str, page: int = 1
+    ) -> "PDFAssertions":
+        assert self._find_paragraph_clipping_state(text, page) is False
         return self
 
     def assert_path_has_bounds(

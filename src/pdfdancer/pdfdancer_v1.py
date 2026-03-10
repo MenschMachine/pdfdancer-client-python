@@ -134,7 +134,7 @@ DEFAULT_RETRY_BACKOFF_FACTOR = float(
 
 
 def _dict_to_replacements(
-    replacements: Dict[str, Union[str, dict]]
+    replacements: Dict[str, Union[str, dict]],
 ) -> List[TemplateReplacement]:
     """Convert dict-based replacements to TemplateReplacement list."""
     result = []
@@ -2266,9 +2266,7 @@ class PDFDancer:
             raise ValidationException("Object reference cannot be null")
 
         request_data = {"objectRef": object_ref.to_dict()}
-        response = self._make_request(
-            "PUT", "/pdf/clipping/clear", data=request_data
-        )
+        response = self._make_request("PUT", "/pdf/clipping/clear", data=request_data)
         result = response.json()
 
         # Invalidate snapshot caches after mutation
@@ -2543,19 +2541,21 @@ class PDFDancer:
             data["pathIds"] = path_ids
         if region is not None:
             data["region"] = {
-                "x": region.x, "y": region.y,
-                "width": region.width, "height": region.height,
+                "x": region.x,
+                "y": region.y,
+                "width": region.width,
+                "height": region.height,
             }
-        response = self._make_request(
-            "POST", "/pdf/path-group/create", data=data
-        )
+        response = self._make_request("POST", "/pdf/path-group/create", data=data)
         self._invalidate_snapshots()
         return PathGroupInfo.from_dict(response.json())
 
     def _move_path_group(self, page_index, group_id, x, y):
         data = {
-            "pageIndex": page_index, "groupId": group_id,
-            "x": x, "y": y,
+            "pageIndex": page_index,
+            "groupId": group_id,
+            "x": x,
+            "y": y,
         }
         response = self._make_request("PUT", "/pdf/path-group/move", data=data)
         self._invalidate_snapshots()
@@ -2563,13 +2563,12 @@ class PDFDancer:
 
     def _transform_path_group(self, page_index, group_id, transform_type, **kwargs):
         data = {
-            "pageIndex": page_index, "groupId": group_id,
+            "pageIndex": page_index,
+            "groupId": group_id,
             "transformType": transform_type,
         }
         data.update({k: v for k, v in kwargs.items() if v is not None})
-        response = self._make_request(
-            "PUT", "/pdf/path-group/transform", data=data
-        )
+        response = self._make_request("PUT", "/pdf/path-group/transform", data=data)
         self._invalidate_snapshots()
         return response.json()
 
@@ -2589,15 +2588,16 @@ class PDFDancer:
         if width <= 0 or height <= 0:
             raise ValidationException("Width and height must be positive")
         return self._transform_path_group(
-            page_index, group_id, "RESIZE",
-            targetWidth=width, targetHeight=height,
+            page_index,
+            group_id,
+            "RESIZE",
+            targetWidth=width,
+            targetHeight=height,
         )
 
     def _remove_path_group(self, page_index, group_id):
         data = {"pageIndex": page_index, "groupId": group_id}
-        response = self._make_request(
-            "DELETE", "/pdf/path-group/remove", data=data
-        )
+        response = self._make_request("DELETE", "/pdf/path-group/remove", data=data)
         self._invalidate_snapshots()
         return response.json()
 
@@ -2605,9 +2605,7 @@ class PDFDancer:
         from .models import PathGroupInfo
         from .types import PathGroupObject
 
-        response = self._make_request(
-            "GET", f"/pdf/page/{page_index}/path-groups"
-        )
+        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
         return [PathGroupObject(self, page_index, info) for info in infos]
 
@@ -2617,7 +2615,6 @@ class PDFDancer:
 
         Args:
             page_number: 1-based page number where the path group exists
-                (translated to 0-based `pageIndex` for the API call)
             group_id: Path group identifier
 
         Returns:
@@ -2631,7 +2628,6 @@ class PDFDancer:
 
         Args:
             page_number: 1-based page number where the path group exists
-                (translated to 0-based `pageIndex` for the API call)
             group_id: Path group identifier
 
         Returns:
@@ -2650,47 +2646,15 @@ class PDFDancer:
         if group_id is None or not str(group_id).strip():
             raise ValidationException("Group ID cannot be null or empty")
 
-        page_index = page_number - 1
-        request_data = {"pageIndex": page_index, "groupId": group_id}
-        compat_mode = getattr(self, "_clear_path_group_clipping_compat_mode", None)
-        compat_data = {"pageNumber": page_number, "groupId": group_id}
-
-        try:
-            # Path-group endpoints are documented with 0-based pageIndex.
-            response = self._make_request(
-                "PUT",
-                "/pdf/path-group/clipping/clear",
-                data=compat_data if compat_mode == "page_number_field" else request_data,
-            )
-        except HttpClientException as exc:
-            # Compatibility fallback for deployments still expecting pageNumber (1-based).
-            if (
-                compat_mode is None
-                and self._is_path_group_clipping_one_based_validation_error(exc)
-            ):
-                response = self._make_request(
-                    "PUT", "/pdf/path-group/clipping/clear", data=compat_data
-                )
-                self._clear_path_group_clipping_compat_mode = "page_number_field"
-            else:
-                raise
+        request_data = {"pageNumber": page_number, "groupId": group_id}
+        response = self._make_request(
+            "PUT", "/pdf/path-group/clipping/clear", data=request_data
+        )
 
         result = response.json()
         if result:
             self._invalidate_snapshots()
         return bool(result)
-
-    def _is_path_group_clipping_one_based_validation_error(
-        self, error: HttpClientException
-    ) -> bool:
-        response = error.response
-        if response is None:
-            return False
-        if response.status_code not in (400, 422):
-            return False
-
-        message = self._extract_error_message(response).lower()
-        return "page number must be >= 1" in message and "1-based" in message
 
     def new_paragraph(self) -> ParagraphBuilder:
         return ParagraphBuilder(self)

@@ -61,9 +61,8 @@ jobs:
 
       - name: Install SDK at ${{ matrix.tag }}
         run: |
-          cd sdk
           venv/bin/pip install --upgrade pip
-          venv/bin/pip install -e ".[dev]"
+          venv/bin/pip install -e "sdk/.[dev]"
 
       - name: Run e2e tests
         run: |

@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
-from . import FormFieldRef, ObjectRef, ObjectType, Point, Position, TextObjectRef
+from . import FormFieldRef, ObjectRef, ObjectType, PathObjectRef, Point, Position, TextObjectRef
 from .exceptions import ValidationException
 
 if TYPE_CHECKING:
@@ -86,10 +86,43 @@ class PDFObjectBase:
 class PathObject(PDFObjectBase):
     """Represents a vector path object inside a PDF page."""
 
+    def __init__(self, client: "PDFDancer", object_ref):
+        """
+        Initialize a PathObject.
+
+        Args:
+            client: PDFDancer client instance
+            object_ref: ObjectRef or PathObjectRef with path data
+        """
+        super().__init__(
+            client, object_ref.internal_id, object_ref.type, object_ref.position
+        )
+        self._object_ref = object_ref
+
     @property
     def bounding_box(self) -> Optional[BoundingRect]:
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
+
+    def edit(self) -> PathEditSession:
+        """Start a fluent editing session to modify path colors."""
+        return PathEditSession(self._client, self.object_ref())
+
+    def object_ref(self):
+        """Return an ObjectRef for this path."""
+        return self._object_ref
+
+    def get_stroke_color(self) -> Optional["Color"]:
+        """Get the stroke/outline color of the path, or None if not set."""
+        if isinstance(self._object_ref, PathObjectRef):
+            return self._object_ref.get_stroke_color()
+        return None
+
+    def get_fill_color(self) -> Optional["Color"]:
+        """Get the fill color of the path, or None if not set."""
+        if isinstance(self._object_ref, PathObjectRef):
+            return self._object_ref.get_fill_color()
+        return None
 
     def __eq__(self, other):
         if not isinstance(other, PathObject):
@@ -747,4 +780,62 @@ class FormFieldObject(PDFObjectBase):
             and self.position == other.position
             and self.name == other.name
             and self.value == other.value
+        )
+
+
+class PathEditSession:
+    """
+    Fluent editing helper for modifying path stroke and fill colors.
+    """
+
+    def __init__(self, client: "PDFDancer", object_ref):
+        self._client = client
+        self._object_ref = object_ref
+        self._stroke_color = None
+        self._fill_color = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            return False
+        self.apply()
+        return False
+
+    def stroke_color(self, color) -> "PathEditSession":
+        """
+        Set the stroke/outline color.
+
+        Args:
+            color: The stroke color (Color object)
+
+        Returns:
+            Self for method chaining
+        """
+        self._stroke_color = color
+        return self
+
+    def fill_color(self, color) -> "PathEditSession":
+        """
+        Set the fill color.
+
+        Args:
+            color: The fill color (Color object)
+
+        Returns:
+            Self for method chaining
+        """
+        self._fill_color = color
+        return self
+
+    def apply(self):
+        """
+        Apply the color modifications to the path.
+
+        Returns:
+            CommandResult indicating success or failure
+        """
+        return self._client._modify_path(
+            self._object_ref, self._stroke_color, self._fill_color
         )

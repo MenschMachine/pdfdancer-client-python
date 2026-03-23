@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pdfdancer import Color, ObjectType, Position, TextObjectRef
+from pdfdancer import Color, ObjectRef, ObjectType, Position, TextObjectRef
 from pdfdancer.types import (
     FormFieldObject,
     FormObject,
@@ -24,9 +24,10 @@ class TestPDFObjectEquality:
         """PathObject instances with same internal_id and type should be equal."""
         mock_client = Mock()
         position = Position.at_page(1)
+        ref = ObjectRef("id123", position, ObjectType.PATH)
 
-        obj1 = PathObject(mock_client, "id123", ObjectType.PATH, position)
-        obj2 = PathObject(mock_client, "id123", ObjectType.PATH, position)
+        obj1 = PathObject(mock_client, ref)
+        obj2 = PathObject(mock_client, ref)
 
         assert obj1 == obj2
 
@@ -34,9 +35,11 @@ class TestPDFObjectEquality:
         """PathObject instances with different internal_id should not be equal."""
         mock_client = Mock()
         position = Position.at_page(1)
+        ref1 = ObjectRef("id123", position, ObjectType.PATH)
+        ref2 = ObjectRef("id456", position, ObjectType.PATH)
 
-        obj1 = PathObject(mock_client, "id123", ObjectType.PATH, position)
-        obj2 = PathObject(mock_client, "id456", ObjectType.PATH, position)
+        obj1 = PathObject(mock_client, ref1)
+        obj2 = PathObject(mock_client, ref2)
 
         assert obj1 != obj2
 
@@ -46,8 +49,11 @@ class TestPDFObjectEquality:
         position1 = Position.at_page(1)
         position2 = Position.at_page(2)
 
-        obj1 = PathObject(mock_client, "id123", ObjectType.PATH, position1)
-        obj2 = PathObject(mock_client, "id123", ObjectType.PATH, position2)
+        ref1 = ObjectRef("id123", position1, ObjectType.PATH)
+        ref2 = ObjectRef("id123", position2, ObjectType.PATH)
+
+        obj1 = PathObject(mock_client, ref1)
+        obj2 = PathObject(mock_client, ref2)
 
         assert obj1 != obj2
 
@@ -55,8 +61,9 @@ class TestPDFObjectEquality:
         """PathObject should not equal non-PathObject."""
         mock_client = Mock()
         position = Position.at_page(1)
+        path_ref = ObjectRef("id123", position, ObjectType.PATH)
 
-        obj1 = PathObject(mock_client, "id123", ObjectType.PATH, position)
+        obj1 = PathObject(mock_client, path_ref)
         obj2 = ImageObject(mock_client, "id123", ObjectType.IMAGE, position)
 
         assert obj1 != obj2
@@ -296,8 +303,9 @@ class TestPDFObjectEquality:
         """PDFObjectBase subclasses should not equal None."""
         mock_client = Mock()
         position = Position.at_page(1)
+        ref = ObjectRef("id123", position, ObjectType.PATH)
 
-        obj = PathObject(mock_client, "id123", ObjectType.PATH, position)
+        obj = PathObject(mock_client, ref)
 
         assert obj != None
 
@@ -305,7 +313,8 @@ class TestPDFObjectEquality:
         """PDFObjectBase subclasses should not equal strings."""
         mock_client = Mock()
         position = Position.at_page(1)
+        ref = ObjectRef("id123", position, ObjectType.PATH)
 
-        obj = PathObject(mock_client, "id123", ObjectType.PATH, position)
+        obj = PathObject(mock_client, ref)
 
         assert obj != "id123"

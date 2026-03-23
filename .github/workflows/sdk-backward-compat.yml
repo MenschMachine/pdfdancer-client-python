@@ -1,0 +1,85 @@
+name: SDK Backward Compatibility Tests
+
+on:
+  repository_dispatch:
+    types: [api-preview-deployed]
+
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API base URL to test against'
+        required: true
+        type: string
+      sdk_token:
+        description: 'API token for testing'
+        required: true
+        type: string
+        default: '42'
+
+jobs:
+  get-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - name: Fetch tags
+        id: tags
+        run: |
+          TAGS=$(git ls-remote --tags https://github.com/MenschMachine/pdfdancer-client-python.git \
+            | grep -v '\^{}' \
+            | awk -F'/' '{print $NF}' \
+            | grep '^v' \
+            | sort -V \
+            | tail -3 \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "Last 3 SDK tags: $TAGS"
+
+  test-compat:
+    needs: get-tags
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.get-tags.outputs.tags) }}
+
+    steps:
+      - name: Checkout SDK at ${{ matrix.tag }}
+        uses: actions/checkout@v4
+        with:
+          repository: MenschMachine/pdfdancer-client-python
+          ref: ${{ matrix.tag }}
+          path: sdk
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create virtual environment
+        run: python -m venv venv
+
+      - name: Install SDK at ${{ matrix.tag }}
+        run: |
+          cd sdk
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install -e ".[dev]"
+
+      - name: Run e2e tests
+        run: |
+          PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
+          PDFDANCER_API_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
+          venv/bin/python -m pytest tests/e2e/ -v --maxfail=3 -x
+        env:
+          PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.tag }}
+          path: |
+            .pytest_cache/
+            tests/e2e/**/*.png
+            tests/e2e/**/*.pdf
+          retention-days: 7

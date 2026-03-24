@@ -70,6 +70,8 @@ jobs:
           PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
           PDFDANCER_API_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
           venv/bin/python -m pytest -v -x -k "not test_redact_multiple_paths"
+          ls -la 
+          ls -la sdk/*
         env:
           PYTHONWARNINGS: "ignore:Unverified HTTPS request"
 
@@ -80,6 +82,4 @@ jobs:
           name: test-results-${{ matrix.tag }}
           path: |
             sdk/.pytest_cache/
-            sdk/tests/e2e/**/*.png
-            sdk/tests/e2e/**/*.pdf
           retention-days: 7

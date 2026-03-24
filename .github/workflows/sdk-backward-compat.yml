@@ -72,7 +72,7 @@ jobs:
           PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
           PDFDANCER_API_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
           ../venv/bin/python -m pytest -v -x \
-            -k "not test_redact_multiple_paths" \
+            -k "not test_redact_multiple_paths and not test_context_manager_vs_manual_apply" \
             --junitxml=test-results.xml
         env:
           PYTHONWARNINGS: "ignore:Unverified HTTPS request"

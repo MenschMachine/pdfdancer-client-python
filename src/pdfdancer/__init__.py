@@ -57,7 +57,7 @@ from .paragraph_builder import ParagraphBuilder
 from .path_builder import BezierBuilder, LineBuilder, PathBuilder
 from .text_line_builder import TextLineBuilder
 
-__version__ = "0.3.12"
+__version__ = "0.3.13"
 __all__ = [
     "PDFDancer",
     "ParagraphBuilder",

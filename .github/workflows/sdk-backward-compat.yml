@@ -63,15 +63,16 @@ jobs:
       - name: Install SDK at ${{ matrix.tag }}
         run: |
           venv/bin/pip install --upgrade pip
-          venv/bin/pip install -e "sdk/.[dev]"
+          venv/bin/pip install -e "./sdk[dev]"
 
       - name: Run e2e tests
+        working-directory: sdk
         run: |
           PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
           PDFDANCER_API_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
-          venv/bin/python -m pytest -v -x -k "not test_redact_multiple_paths"
-          ls -la 
-          ls -la sdk/*
+          ../venv/bin/python -m pytest -v -x \
+            -k "not test_redact_multiple_paths" \
+            --junitxml=test-results.xml
         env:
           PYTHONWARNINGS: "ignore:Unverified HTTPS request"
 
@@ -81,5 +82,6 @@ jobs:
         with:
           name: test-results-${{ matrix.tag }}
           path: |
+            sdk/test-results.xml
             sdk/.pytest_cache/
           retention-days: 7

@@ -1895,3 +1895,85 @@ class ImageTransformRequest:
             result["fillColor"] = self.fill_color
 
         return result
+
+
+@dataclass
+class ModifyPathRequest:
+    """Request to modify path stroke and fill colors.
+
+    Parameters:
+    - object_ref: Reference to the path to modify.
+    - stroke_color: New stroke color (optional - null means don't change).
+    - fill_color: New fill color (optional - null means don't change).
+
+    Example:
+    ```python
+    req = ModifyPathRequest(object_ref=path_ref, stroke_color=Color(255, 0, 0), fill_color=None)
+    payload = req.to_dict()
+    ```
+    """
+
+    object_ref: ObjectRef
+    stroke_color: Optional[Color] = None
+    fill_color: Optional[Color] = None
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        result: Dict[str, Any] = {
+            "ref": self.object_ref.to_dict(),
+        }
+
+        if self.stroke_color is not None:
+            result["strokeColor"] = {
+                "red": self.stroke_color.r,
+                "green": self.stroke_color.g,
+                "blue": self.stroke_color.b,
+                "alpha": self.stroke_color.a,
+            }
+
+        if self.fill_color is not None:
+            result["fillColor"] = {
+                "red": self.fill_color.r,
+                "green": self.fill_color.g,
+                "blue": self.fill_color.b,
+                "alpha": self.fill_color.a,
+            }
+
+        return result
+
+
+class PathObjectRef(ObjectRef):
+    """
+    Reference to a path object with stroke and fill color information.
+
+    Parameters (typically provided by the server):
+    - internal_id: Identifier of the path object.
+    - position: Position of the path.
+    - object_type: Should be ObjectType.PATH.
+    - stroke_color: Stroke/outline color of the path (optional).
+    - fill_color: Fill color of the path (optional).
+
+    Usage:
+    - Returned by find/snapshot APIs when querying paths.
+    - Pass to ModifyPathRequest to update path colors.
+    """
+
+    def __init__(
+        self,
+        internal_id: str,
+        position: Position,
+        object_type: ObjectType,
+        stroke_color: Optional[Color] = None,
+        fill_color: Optional[Color] = None,
+    ):
+        super().__init__(internal_id, position, object_type)
+        self.stroke_color = stroke_color
+        self.fill_color = fill_color
+
+    def get_stroke_color(self) -> Optional[Color]:
+        """Get the stroke/outline color of the path."""
+        return self.stroke_color
+
+    def get_fill_color(self) -> Optional[Color]:
+        """Get the fill color of the path."""
+        return self.fill_color

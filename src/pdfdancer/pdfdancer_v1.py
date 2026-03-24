@@ -47,6 +47,7 @@ from .models import (
     FontType,
     FormFieldRef,
     Image,
+    ModifyPathRequest,
     ModifyRequest,
     ModifyTextRequest,
     MoveRequest,
@@ -58,6 +59,7 @@ from .models import (
     PageSize,
     PageSnapshot,
     Paragraph,
+    PathObjectRef,
     Position,
     PositionMode,
     RedactRequest,
@@ -2755,6 +2757,38 @@ class PDFDancer:
         self._invalidate_snapshots()
         return result
 
+    def _modify_path(
+        self,
+        object_ref: ObjectRef,
+        stroke_color: Optional[Color],
+        fill_color: Optional[Color],
+    ) -> CommandResult:
+        """
+        Modifies the stroke and fill colors of a path object.
+
+        Args:
+            object_ref: Reference to the path to modify.
+            stroke_color: New stroke color (None means don't change).
+            fill_color: New fill color (None means don't change).
+
+        Returns:
+            CommandResult indicating success or failure.
+        """
+        if object_ref is None:
+            raise ValidationException("Object reference cannot be null")
+
+        request_data = ModifyPathRequest(
+            object_ref=object_ref,
+            stroke_color=stroke_color,
+            fill_color=fill_color,
+        ).to_dict()
+        response = self._make_request("PUT", "/pdf/modify/path", data=request_data)
+        result = CommandResult.from_dict(response.json())
+
+        # Invalidate snapshot caches after mutation
+        self._invalidate_snapshots()
+        return result
+
     # Font Operations
 
     def find_fonts(self, font_name: str, font_size: int) -> List[Font]:
@@ -3159,6 +3193,43 @@ class PDFDancer:
             value=obj_data["value"] if "value" in obj_data else None,
         )
 
+    def _parse_path_object_ref(self, obj_data: dict) -> PathObjectRef:
+        """Parse JSON object data into PathObjectRef instance with color information."""
+        position_data = obj_data.get("position", {})
+        position = self._parse_position(position_data) if position_data else None
+
+        object_type = ObjectType(obj_data["type"])
+
+        # Parse stroke color if present
+        stroke_color = None
+        stroke_color_data = obj_data.get("strokeColor")
+        if isinstance(stroke_color_data, dict):
+            red = stroke_color_data.get("red")
+            green = stroke_color_data.get("green")
+            blue = stroke_color_data.get("blue")
+            alpha = stroke_color_data.get("alpha", 255)
+            if all(isinstance(v, int) for v in [red, green, blue]):
+                stroke_color = Color(red, green, blue, alpha)
+
+        # Parse fill color if present
+        fill_color = None
+        fill_color_data = obj_data.get("fillColor")
+        if isinstance(fill_color_data, dict):
+            red = fill_color_data.get("red")
+            green = fill_color_data.get("green")
+            blue = fill_color_data.get("blue")
+            alpha = fill_color_data.get("alpha", 255)
+            if all(isinstance(v, int) for v in [red, green, blue]):
+                fill_color = Color(red, green, blue, alpha)
+
+        return PathObjectRef(
+            internal_id=obj_data["internalId"] if "internalId" in obj_data else None,
+            position=position,
+            object_type=object_type,
+            stroke_color=stroke_color,
+            fill_color=fill_color,
+        )
+
     @staticmethod
     def _parse_position(pos_data: dict) -> Position:
         """Parse JSON position data into Position instance."""
@@ -3473,6 +3544,9 @@ class PDFDancer:
                 ):
                     # Parse as FormFieldRef to capture name and value
                     elements.append(self._parse_form_field_ref(elem_data))
+                elif elem_type == ObjectType.PATH:
+                    # Parse as PathObjectRef to capture stroke/fill colors
+                    elements.append(self._parse_path_object_ref(elem_data))
                 else:
                     # Parse as basic ObjectRef
                     elements.append(self._parse_object_ref(elem_data))
@@ -3526,9 +3600,7 @@ class PDFDancer:
             self._client.close()
 
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
-        return [
-            PathObject(self, ref.internal_id, ref.type, ref.position) for ref in refs
-        ]
+        return [PathObject(self, ref) for ref in refs]
 
     def _to_paragraph_objects(self, refs: List[TextObjectRef]) -> List[ParagraphObject]:
         return [ParagraphObject(self, ref) for ref in refs]

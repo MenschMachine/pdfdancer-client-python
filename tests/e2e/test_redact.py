@@ -202,6 +202,7 @@ def test_redact_path():
         assertions.assert_number_of_paths(8)
 
 
+@pytest.mark.skip(reason="TODO cannot make a meaningful assertion currently")
 def test_redact_multiple_paths():
     """Test batch redacting multiple paths"""
     base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")

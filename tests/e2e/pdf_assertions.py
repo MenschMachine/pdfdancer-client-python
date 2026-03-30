@@ -1,4 +1,3 @@
-import os
 import re
 import tempfile
 import zlib
@@ -17,7 +16,7 @@ class PDFAssertions(object):
         base_url = pdf_dancer._base_url
         # Create a temporary file
         with tempfile.NamedTemporaryFile(
-            delete=False, suffix=".pdf", mode="w+t"
+                delete=False, suffix=".pdf", mode="w+t"
         ) as temp_file:
             pdf_dancer.save(temp_file.name)
             print(f"Saving PDF file to {temp_file.name}")
@@ -42,14 +41,14 @@ class PDFAssertions(object):
         assert len(paragraphs) == 1, f"Expected 1 paragraph but got {len(paragraphs)}"
         reference = paragraphs[0].object_ref()
         assert (
-            font_name == reference.get_font_name()
+                font_name == reference.get_font_name()
         ), f"Expected {reference.get_font_name()} to match {font_name}"
         assert font_size == reference.get_font_size()
 
         return self
 
     def assert_paragraph_is_at(
-        self, text, x, y, page=1, epsilon=2
+            self, text, x, y, page=1, epsilon=2
     ):  # adjust for baseline vs bounding box differences
         paragraphs = self.pdf.page(page).select_paragraphs_matching(f".*{text}.*")
         assert len(paragraphs) == 1, f"Expected 1 paragraph but got {len(paragraphs)}"
@@ -63,6 +62,8 @@ class PDFAssertions(object):
         ), f"{y} != {reference.get_position().y()}"
 
         paragraph_by_position = self.pdf.page(page).select_paragraphs_at(x, y)
+        if len(paragraph_by_position) == 0:
+            raise AssertionError("No such paragraph found")
         assert paragraphs[0] == paragraph_by_position[0]
         return self
 
@@ -73,7 +74,7 @@ class PDFAssertions(object):
         assert len(paragraphs) == 1, f"Expected 1 paragraph but got {len(paragraphs)}"
         reference = paragraphs[0].object_ref()
         assert (
-            font_name in reference.get_font_name()
+                font_name in reference.get_font_name()
         ), f"Expected {reference.get_font_name()} to match {font_name}"
         assert font_size == reference.get_font_size()
         return self
@@ -87,33 +88,33 @@ class PDFAssertions(object):
         return self
 
     def assert_textline_has_font(
-        self, text: str, font_name: str, font_size: int, page=1
+            self, text: str, font_name: str, font_size: int, page=1
     ):
         lines = self.pdf.page(page).select_text_lines_starting_with(text)
         assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
         reference = lines[0].object_ref()
         assert (
-            font_name == reference.get_font_name()
+                font_name == reference.get_font_name()
         ), f"Expected {font_name} but got {reference.get_font_name()}"
         assert (
-            font_size == reference.get_font_size()
+                font_size == reference.get_font_size()
         ), f"{font_size} != {reference.get_font_size()}"
         return self
 
     def assert_textline_has_font_matching(
-        self, text, font_name: str, font_size: int, page=1
+            self, text, font_name: str, font_size: int, page=1
     ):
         lines = self.pdf.page(page).select_text_lines_starting_with(text)
         assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
         reference = lines[0].object_ref()
         assert (
-            font_name in reference.get_font_name()
+                font_name in reference.get_font_name()
         ), f"Expected {reference.get_font_name()} to match {font_name}"
         assert font_size == reference.get_font_size()
         return self
 
     def assert_textline_is_at(
-        self, text: str, x: float, y: float, page=1, epsilon=1e-6
+            self, text: str, x: float, y: float, page=1, epsilon=1e-6
     ):
         lines = self.pdf.page(page).select_text_lines_starting_with(text)
         assert len(lines) == 1
@@ -142,13 +143,13 @@ class PDFAssertions(object):
     def assert_paragraph_exists(self, text, page=1):
         paragraphs = self.pdf.page(page).select_paragraphs_starting_with(text)
         assert (
-            len(paragraphs) > 0
+                len(paragraphs) > 0
         ), f"No paragraphs starting with {text} found on page {page}"
         return self
 
     def assert_number_of_pages(self, page_count: int):
         assert (
-            len(self.pdf.pages()) == page_count
+                len(self.pdf.pages()) == page_count
         ), f"Expected {page_count} pages, but got {len(self.pdf.pages())}"
         return self
 
@@ -157,8 +158,8 @@ class PDFAssertions(object):
 
     @staticmethod
     def _matrix_multiply(
-        left: Tuple[float, float, float, float, float, float],
-        right: Tuple[float, float, float, float, float, float],
+            left: Tuple[float, float, float, float, float, float],
+            right: Tuple[float, float, float, float, float, float],
     ) -> Tuple[float, float, float, float, float, float]:
         a1, b1, c1, d1, e1, f1 = left
         a2, b2, c2, d2, e2, f2 = right
@@ -173,9 +174,9 @@ class PDFAssertions(object):
 
     @staticmethod
     def _apply_matrix(
-        matrix: Tuple[float, float, float, float, float, float],
-        x: float,
-        y: float,
+            matrix: Tuple[float, float, float, float, float, float],
+            x: float,
+            y: float,
     ) -> Tuple[float, float]:
         a, b, c, d, e, f = matrix
         return a * x + c * y + e, b * x + d * y + f
@@ -186,20 +187,20 @@ class PDFAssertions(object):
 
     @staticmethod
     def _bbox_contains_point(
-        bbox: Tuple[float, float, float, float],
-        x: float,
-        y: float,
-        tolerance: float = 0.5,
+            bbox: Tuple[float, float, float, float],
+            x: float,
+            y: float,
+            tolerance: float = 0.5,
     ) -> bool:
         return (
-            bbox[0] - tolerance <= x <= bbox[2] + tolerance
-            and bbox[1] - tolerance <= y <= bbox[3] + tolerance
+                bbox[0] - tolerance <= x <= bbox[2] + tolerance
+                and bbox[1] - tolerance <= y <= bbox[3] + tolerance
         )
 
     @staticmethod
     def _bbox_intersection_area(
-        a: Tuple[float, float, float, float],
-        b: Tuple[float, float, float, float],
+            a: Tuple[float, float, float, float],
+            b: Tuple[float, float, float, float],
     ) -> float:
         left = max(a[0], b[0])
         bottom = max(a[1], b[1])
@@ -211,7 +212,7 @@ class PDFAssertions(object):
 
     @staticmethod
     def _bbox_center_distance(
-        bbox: Tuple[float, float, float, float], x: float, y: float
+            bbox: Tuple[float, float, float, float], x: float, y: float
     ) -> float:
         center_x = (bbox[0] + bbox[2]) / 2.0
         center_y = (bbox[1] + bbox[3]) / 2.0
@@ -261,7 +262,7 @@ class PDFAssertions(object):
 
     @classmethod
     def _resolve_length_from_raw_pdf(
-        cls, raw_pdf: str, object_id: int
+            cls, raw_pdf: str, object_id: int
     ) -> Optional[int]:
         pattern = re.compile(
             rf"(^|[\r\n]){object_id}\s+\d+\s+obj\b([\s\S]*?)endobj", re.MULTILINE
@@ -273,10 +274,10 @@ class PDFAssertions(object):
 
     @classmethod
     def _extract_stream_length(
-        cls,
-        dictionary: str,
-        parsed_objects: Dict[int, Dict[str, object]],
-        raw_pdf: str,
+            cls,
+            dictionary: str,
+            parsed_objects: Dict[int, Dict[str, object]],
+            raw_pdf: str,
     ) -> Optional[int]:
         length_ref_match = re.search(r"/Length\s+(\d+)\s+\d+\s+R\b", dictionary)
         if length_ref_match:
@@ -367,7 +368,7 @@ class PDFAssertions(object):
 
     @staticmethod
     def _parse_number_operands(
-        operands: List[str], count: int
+            operands: List[str], count: int
     ) -> Optional[List[float]]:
         if len(operands) < count:
             return None
@@ -443,7 +444,7 @@ class PDFAssertions(object):
 
             end = index
             while end < len(content) and (
-                not content[end].isspace() and content[end] not in "[]<>(){}"
+                    not content[end].isspace() and content[end] not in "[]<>(){}"
             ):
                 end += 1
             tokens.append(content[index:end])
@@ -497,10 +498,10 @@ class PDFAssertions(object):
                 octal_digits = [escaped]
                 index += 1
                 while (
-                    index < end
-                    and len(octal_digits) < 3
-                    and token[index].isdigit()
-                    and token[index] < "8"
+                        index < end
+                        and len(octal_digits) < 3
+                        and token[index].isdigit()
+                        and token[index] < "8"
                 ):
                     octal_digits.append(token[index])
                     index += 1
@@ -515,10 +516,10 @@ class PDFAssertions(object):
     @staticmethod
     def _decode_pdf_hex_string(token: str) -> Optional[str]:
         if (
-            len(token) < 2
-            or token[0] != "<"
-            or token[-1] != ">"
-            or token.startswith("<<")
+                len(token) < 2
+                or token[0] != "<"
+                or token[-1] != ">"
+                or token.startswith("<<")
         ):
             return None
 
@@ -572,7 +573,7 @@ class PDFAssertions(object):
 
     @classmethod
     def _extract_page_object_ids_in_order(
-        cls, objects: Dict[int, Dict[str, object]]
+            cls, objects: Dict[int, Dict[str, object]]
     ) -> List[int]:
         catalog = next(
             (
@@ -596,9 +597,9 @@ class PDFAssertions(object):
                     obj
                     for obj in objects.values()
                     if re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
-                    and not re.search(
-                        r"/Parent\s+\d+\s+\d+\s+R", str(obj["dictionary"])
-                    )
+                       and not re.search(
+                    r"/Parent\s+\d+\s+\d+\s+R", str(obj["dictionary"])
+                )
                 ),
                 None,
             )
@@ -621,7 +622,7 @@ class PDFAssertions(object):
 
             dictionary = str(obj["dictionary"])
             if re.search(r"/Type\s*/Page\b", dictionary) and not re.search(
-                r"/Type\s*/Pages\b", dictionary
+                    r"/Type\s*/Pages\b", dictionary
             ):
                 ordered.append(object_id)
                 return
@@ -636,14 +637,14 @@ class PDFAssertions(object):
         return ordered
 
     def _extract_page_content_object_ids(
-        self, objects: Dict[int, Dict[str, object]], page: int
+            self, objects: Dict[int, Dict[str, object]], page: int
     ) -> List[int]:
         ordered_page_object_ids = self._extract_page_object_ids_in_order(objects)
         fallback_page_object_ids = [
             int(obj["object_id"])
             for obj in sorted(objects.values(), key=lambda item: int(item["object_id"]))
             if re.search(r"/Type\s*/Page\b", str(obj["dictionary"]))
-            and not re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
+               and not re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
         ]
         page_object_ids = ordered_page_object_ids or fallback_page_object_ids
         stream_object_ids = [
@@ -669,7 +670,7 @@ class PDFAssertions(object):
         return referenced or stream_object_ids
 
     def _extract_page_draw_events(
-        self, page: int
+            self, page: int
     ) -> Dict[str, List[Dict[str, object]]]:
         if page in self._draw_events_cache:
             return self._draw_events_cache[page]
@@ -927,7 +928,7 @@ class PDFAssertions(object):
             (path for path in paths if path.internal_id == internal_id), None
         )
         assert (
-            path_ref is not None
+                path_ref is not None
         ), f"Path with ID {internal_id} not found on page {page}"
 
         x = path_ref.position.x()
@@ -962,12 +963,12 @@ class PDFAssertions(object):
         return bool(best["clipped"])
 
     def _find_text_draw_event(
-        self,
-        text: str,
-        page: int,
-        x: float,
-        y: float,
-        target_bbox: Optional[Tuple[float, float, float, float]] = None,
+            self,
+            text: str,
+            page: int,
+            x: float,
+            y: float,
+            target_bbox: Optional[Tuple[float, float, float, float]] = None,
     ):
         exact_matches = [
             event
@@ -1006,7 +1007,7 @@ class PDFAssertions(object):
     def _find_textline_clipping_state(self, text: str, page: int) -> bool:
         line = self.pdf.page(page).select_text_line_starting_with(text)
         assert (
-            line is not None
+                line is not None
         ), f"No text line starting with {text!r} found on page {page}"
 
         x = line.position.x()
@@ -1040,25 +1041,25 @@ class PDFAssertions(object):
         )
 
     def assert_path_has_clipping(
-        self, internal_id: str, page: int = 1
+            self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_path_clipping_state(internal_id, page) is True
         return self
 
     def assert_path_has_no_clipping(
-        self, internal_id: str, page: int = 1
+            self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_path_clipping_state(internal_id, page) is False
         return self
 
     def assert_image_has_clipping(
-        self, internal_id: str, page: int = 1
+            self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_image_clipping_state(internal_id, page) is True
         return self
 
     def assert_image_has_no_clipping(
-        self, internal_id: str, page: int = 1
+            self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_image_clipping_state(internal_id, page) is False
         return self
@@ -1068,30 +1069,30 @@ class PDFAssertions(object):
         return self
 
     def assert_textline_has_no_clipping(
-        self, text: str, page: int = 1
+            self, text: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_textline_clipping_state(text, page) is False
         return self
 
     def assert_paragraph_has_clipping(
-        self, text: str, page: int = 1
+            self, text: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_paragraph_clipping_state(text, page) is True
         return self
 
     def assert_paragraph_has_no_clipping(
-        self, text: str, page: int = 1
+            self, text: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_paragraph_clipping_state(text, page) is False
         return self
 
     def assert_path_has_bounds(
-        self,
-        internal_id: str,
-        expected_width: float,
-        expected_height: float,
-        page=1,
-        epsilon: float = 1.0,
+            self,
+            internal_id: str,
+            expected_width: float,
+            expected_height: float,
+            page=1,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         paths = self.pdf.page(page).select_paths()
         ref = None
@@ -1112,13 +1113,13 @@ class PDFAssertions(object):
         return self
 
     def assert_path_is_at(
-        self, internal_id: str, x: float, y: float, page=1, epsilon=1e-6
+            self, internal_id: str, x: float, y: float, page=1, epsilon=1e-6
     ):
         paths = self.pdf.page(page).select_paths_at(x, y)
         assert len(paths) == 1
         reference = paths[0].object_ref()
         assert (
-            reference.internal_id == internal_id
+                reference.internal_id == internal_id
         ), f"{internal_id} != {reference.internal_id}"
         assert reference.get_position().x() == pytest.approx(
             x, rel=epsilon, abs=epsilon
@@ -1137,14 +1138,14 @@ class PDFAssertions(object):
     def assert_number_of_paths(self, path_count: int, page=1):
         paths = self.pdf.page(page).select_paths()
         assert (
-            len(paths) == path_count
+                len(paths) == path_count
         ), f"Expected {path_count} paths, but got {len(paths)}"
         return self
 
     def assert_number_of_images(self, image_count, page=1):
         images = self.pdf.page(page).select_images()
         assert (
-            len(images) == image_count
+                len(images) == image_count
         ), f"Expected {image_count} image but got {len(images)}"
         return self
 
@@ -1152,29 +1153,29 @@ class PDFAssertions(object):
         images = self.pdf.page(page).select_images_at(x, y)
         all_images = self.pdf.page(page).select_images()
         assert (
-            len(images) == 1
+                len(images) == 1
         ), f"Expected 1 image but got {len(images)}, total images: {len(all_images)}, first pos: {all_images[0].position}"
         return self
 
     def assert_no_image_at(self, x: float, y: float, page=1) -> "PDFAssertions":
         images = self.pdf.page(page).select_images_at(x, y)
         assert (
-            len(images) == 0
+                len(images) == 0
         ), f"Expected 0 image at {x}/{y} but got {len(images)}, {images[0].internal_id}"
         return self
 
     def assert_image_with_id_at(
-        self, internal_id: str, x: float, y: float, page=1
+            self, internal_id: str, x: float, y: float, page=1
     ) -> "PDFAssertions":
         images = self.pdf.page(page).select_images_at(x, y)
         assert len(images) == 1, f"Expected 1 image but got {len(images)}"
         assert (
-            images[0].internal_id == internal_id
+                images[0].internal_id == internal_id
         ), f"{internal_id} != {images[0].internal_id}"
         return self
 
     def assert_total_number_of_elements(
-        self, nr_of_elements, page_number=None
+            self, nr_of_elements, page_number=None
     ) -> "PDFAssertions":
         total = 0
         if page_number is None:
@@ -1183,7 +1184,7 @@ class PDFAssertions(object):
         else:
             total = len(self.pdf.page(page_number).select_elements())
         assert (
-            total == nr_of_elements
+                total == nr_of_elements
         ), f"Total number of elements differ, actual {total} != expected {nr_of_elements}"
         return self
 
@@ -1192,11 +1193,11 @@ class PDFAssertions(object):
         return self
 
     def assert_page_dimension(
-        self,
-        width: float,
-        height: float,
-        orientation: Optional[Orientation] = None,
-        page_number=1,
+            self,
+            width: float,
+            height: float,
+            orientation: Optional[Orientation] = None,
+            page_number=1,
     ) -> "PDFAssertions":
         page = self.pdf.page(page_number)
         assert width == page.size.width, f"{width} != {page.size.width}"
@@ -1209,12 +1210,12 @@ class PDFAssertions(object):
                 except ValueError:
                     pass
             assert (
-                orientation == actual_orientation
+                    orientation == actual_orientation
             ), f"{orientation} != {actual_orientation}"
         return self
 
     def assert_number_of_formxobjects(
-        self, nr_of_formxobjects, page_number=1
+            self, nr_of_formxobjects, page_number=1
     ) -> "PDFAssertions":
         assert nr_of_formxobjects == len(
             self.pdf.page(page_number).select_forms()
@@ -1222,7 +1223,7 @@ class PDFAssertions(object):
         return self
 
     def assert_number_of_form_fields(
-        self, nr_of_form_fields, page_number=1
+            self, nr_of_form_fields, page_number=1
     ) -> "PDFAssertions":
         assert nr_of_form_fields == len(
             self.pdf.page(page_number).select_form_fields()
@@ -1233,35 +1234,35 @@ class PDFAssertions(object):
         form_fields = self.pdf.page(page).select_form_fields_at(x, y, 1)
         all_form_fields = self.pdf.page(page).select_form_fields()
         assert (
-            len(form_fields) == 1
+                len(form_fields) == 1
         ), f"Expected 1 form field but got {len(form_fields)}, total form_fields: {len(all_form_fields)}, first pos: {all_form_fields[0].position}"
         return self
 
     def assert_form_field_not_at(self, x: float, y: float, page=1) -> "PDFAssertions":
         form_fields = self.pdf.page(page).select_form_fields_at(x, y, 1)
         assert (
-            len(form_fields) == 0
+                len(form_fields) == 0
         ), f"Expected 0 form fields at {x}/{y} but got {len(form_fields)}, {form_fields[0].internal_id}"
         return self
 
     def assert_form_field_exists(
-        self, field_name: str, page_number=1
+            self, field_name: str, page_number=1
     ) -> "PDFAssertions":
         form_fields = self.pdf.page(page_number).select_form_fields_by_name(field_name)
         assert (
-            len(form_fields) == 1
+                len(form_fields) == 1
         ), f"Expected 1 form field but got {len(form_fields)}"
         return self
 
     def assert_form_field_has_value(
-        self, field_name: str, field_value: str, page_number=1
+            self, field_name: str, field_value: str, page_number=1
     ) -> "PDFAssertions":
         form_fields = self.pdf.page(page_number).select_form_fields_by_name(field_name)
         assert (
-            len(form_fields) == 1
+                len(form_fields) == 1
         ), f"Expected 1 form field but got {len(form_fields)}"
         assert (
-            form_fields[0].value == field_value
+                form_fields[0].value == field_value
         ), f"{form_fields[0].value} != {field_value}"
         return self
 
@@ -1270,45 +1271,45 @@ class PDFAssertions(object):
     # ========================================
 
     def assert_path_exists_at(
-        self, x: float, y: float, page=1, tolerance: float = 5.0
+            self, x: float, y: float, page=1, tolerance: float = 5.0
     ) -> "PDFAssertions":
         """Assert that at least one path exists at the specified coordinates."""
         paths = self.pdf.page(page).select_paths_at(x, y, tolerance)
         assert (
-            len(paths) > 0
+                len(paths) > 0
         ), f"Expected at least 1 path at ({x}, {y}) on page {page}, but found none"
         return self
 
     def assert_path_count_at(
-        self, count: int, x: float, y: float, page=1, tolerance: float = 5.0
+            self, count: int, x: float, y: float, page=1, tolerance: float = 5.0
     ) -> "PDFAssertions":
         """Assert exact number of paths at the specified coordinates."""
         paths = self.pdf.page(page).select_paths_at(x, y, tolerance)
         assert (
-            len(paths) == count
+                len(paths) == count
         ), f"Expected {count} paths at ({x}, {y}) but got {len(paths)}"
         return self
 
     def assert_path_has_id(
-        self, internal_id: str, x: float, y: float, page=1, tolerance: float = 5.0
+            self, internal_id: str, x: float, y: float, page=1, tolerance: float = 5.0
     ) -> "PDFAssertions":
         """Assert that a path with specific ID exists at the coordinates."""
         paths = self.pdf.page(page).select_paths_at(x, y, tolerance)
         path_ids = [p.internal_id for p in paths]
         assert (
-            internal_id in path_ids
+                internal_id in path_ids
         ), f"Expected path {internal_id} at ({x}, {y}), but found: {path_ids}"
         return self
 
     def assert_path_bounding_box(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        page=1,
-        tolerance: float = 5.0,
-        epsilon: float = 1.0,
+            self,
+            x: float,
+            y: float,
+            width: float,
+            height: float,
+            page=1,
+            tolerance: float = 5.0,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         """Assert that a path at the coordinates has the specified bounding box."""
         paths = self.pdf.page(page).select_paths_at(x, y, tolerance)
@@ -1339,7 +1340,7 @@ class PDFAssertions(object):
         return paths[0]
 
     def assert_path_segment_count(
-        self, expected_count: int, x: float, y: float, page=1, tolerance: float = 5.0
+            self, expected_count: int, x: float, y: float, page=1, tolerance: float = 5.0
     ) -> "PDFAssertions":
         """Assert the number of segments in a path at the specified coordinates.
 
@@ -1356,14 +1357,14 @@ class PDFAssertions(object):
         if hasattr(path, "path_segments") and path.path_segments is not None:
             actual_count = len(path.path_segments)
             assert (
-                actual_count == expected_count
+                    actual_count == expected_count
             ), f"Expected {expected_count} segments but got {actual_count}"
         else:
             pytest.skip("Path segment inspection requires full path data from API")
         return self
 
     def assert_line_segment_points(
-        self, segment: Line, p0: Point, p1: Point, epsilon: float = 0.1
+            self, segment: Line, p0: Point, p1: Point, epsilon: float = 0.1
     ) -> "PDFAssertions":
         """Assert that a Line segment has the expected start and end points."""
         assert segment.get_p0() is not None, "Line segment p0 is None"
@@ -1385,13 +1386,13 @@ class PDFAssertions(object):
         return self
 
     def assert_bezier_segment_points(
-        self,
-        segment: Bezier,
-        p0: Point,
-        p1: Point,
-        p2: Point,
-        p3: Point,
-        epsilon: float = 0.1,
+            self,
+            segment: Bezier,
+            p0: Point,
+            p1: Point,
+            p2: Point,
+            p3: Point,
+            epsilon: float = 0.1,
     ) -> "PDFAssertions":
         """Assert that a Bezier segment has the expected four control points."""
         assert segment.get_p0() is not None, "Bezier segment p0 is None"
@@ -1414,27 +1415,27 @@ class PDFAssertions(object):
         return self
 
     def assert_segment_stroke_color(
-        self, segment: PathSegment, color: Color
+            self, segment: PathSegment, color: Color
     ) -> "PDFAssertions":
         """Assert that a path segment has the expected stroke color."""
         stroke_color = segment.get_stroke_color()
         assert stroke_color is not None, "Segment has no stroke color"
         assert (
-            stroke_color.r == color.r
+                stroke_color.r == color.r
         ), f"Stroke color R {stroke_color.r} != {color.r}"
         assert (
-            stroke_color.g == color.g
+                stroke_color.g == color.g
         ), f"Stroke color G {stroke_color.g} != {color.g}"
         assert (
-            stroke_color.b == color.b
+                stroke_color.b == color.b
         ), f"Stroke color B {stroke_color.b} != {color.b}"
         assert (
-            stroke_color.a == color.a
+                stroke_color.a == color.a
         ), f"Stroke color A {stroke_color.a} != {color.a}"
         return self
 
     def assert_segment_fill_color(
-        self, segment: PathSegment, color: Color
+            self, segment: PathSegment, color: Color
     ) -> "PDFAssertions":
         """Assert that a path segment has the expected fill color."""
         fill_color = segment.get_fill_color()
@@ -1446,7 +1447,7 @@ class PDFAssertions(object):
         return self
 
     def assert_segment_stroke_width(
-        self, segment: PathSegment, width: float, epsilon: float = 0.1
+            self, segment: PathSegment, width: float, epsilon: float = 0.1
     ) -> "PDFAssertions":
         """Assert that a path segment has the expected stroke width."""
         stroke_width = segment.get_stroke_width()
@@ -1457,11 +1458,11 @@ class PDFAssertions(object):
         return self
 
     def assert_segment_has_dash_pattern(
-        self,
-        segment: PathSegment,
-        dash_array: List[float],
-        dash_phase: float = 0.0,
-        epsilon: float = 0.1,
+            self,
+            segment: PathSegment,
+            dash_array: List[float],
+            dash_phase: float = 0.0,
+            epsilon: float = 0.1,
     ) -> "PDFAssertions":
         """Assert that a path segment has the expected dash pattern."""
         actual_array = segment.get_dash_array()
@@ -1486,12 +1487,12 @@ class PDFAssertions(object):
         """Assert that a path segment has no dash pattern (solid line)."""
         dash_array = segment.get_dash_array()
         assert (
-            dash_array is None or len(dash_array) == 0
+                dash_array is None or len(dash_array) == 0
         ), f"Expected solid line but found dash pattern: {dash_array}"
         return self
 
     def assert_segment_type(
-        self, segment: PathSegment, expected_type: type
+            self, segment: PathSegment, expected_type: type
     ) -> "PDFAssertions":
         """Assert that a segment is of a specific type (Line or Bezier)."""
         assert isinstance(
@@ -1500,7 +1501,7 @@ class PDFAssertions(object):
         return self
 
     def assert_path_has_even_odd_fill(
-        self, x: float, y: float, expected: bool, page=1, tolerance: float = 5.0
+            self, x: float, y: float, expected: bool, page=1, tolerance: float = 5.0
     ) -> "PDFAssertions":
         """Assert that a path has the expected even-odd fill rule setting."""
         paths = self.pdf.page(page).select_paths_at(x, y, tolerance)
@@ -1509,7 +1510,7 @@ class PDFAssertions(object):
         path = paths[0]
         if hasattr(path, "even_odd_fill") and path.even_odd_fill is not None:
             assert (
-                path.even_odd_fill == expected
+                    path.even_odd_fill == expected
             ), f"Expected even_odd_fill={expected} but got {path.even_odd_fill}"
         else:
             pytest.skip(
@@ -1565,12 +1566,12 @@ class PDFAssertions(object):
         return images[0]
 
     def assert_image_size(
-        self,
-        internal_id: str,
-        width: float,
-        height: float,
-        page: int = None,
-        epsilon: float = 1.0,
+            self,
+            internal_id: str,
+            width: float,
+            height: float,
+            page: int = None,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         """Assert that an image has the expected size (from bounding rect).
 
@@ -1594,14 +1595,14 @@ class PDFAssertions(object):
         return self
 
     def assert_image_size_at(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        page: int = 1,
-        tolerance: float = 5.0,
-        epsilon: float = 1.0,
+            self,
+            x: float,
+            y: float,
+            width: float,
+            height: float,
+            page: int = 1,
+            tolerance: float = 5.0,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         """Assert that an image at the coordinates has the expected size.
 
@@ -1627,11 +1628,11 @@ class PDFAssertions(object):
         return self
 
     def assert_image_aspect_ratio(
-        self,
-        internal_id: str,
-        expected_ratio: float,
-        page: int = None,
-        epsilon: float = 0.05,
+            self,
+            internal_id: str,
+            expected_ratio: float,
+            page: int = None,
+            epsilon: float = 0.05,
     ) -> "PDFAssertions":
         """Assert that an image has the expected aspect ratio (width/height).
 
@@ -1654,13 +1655,13 @@ class PDFAssertions(object):
         return self
 
     def assert_image_aspect_ratio_at(
-        self,
-        x: float,
-        y: float,
-        expected_ratio: float,
-        page: int = 1,
-        tolerance: float = 5.0,
-        epsilon: float = 0.05,
+            self,
+            x: float,
+            y: float,
+            expected_ratio: float,
+            page: int = 1,
+            tolerance: float = 5.0,
+            epsilon: float = 0.05,
     ) -> "PDFAssertions":
         """Assert that an image at coordinates has the expected aspect ratio.
 
@@ -1685,11 +1686,11 @@ class PDFAssertions(object):
         return self
 
     def assert_image_width_changed(
-        self,
-        internal_id: str,
-        original_width: float,
-        page: int = None,
-        epsilon: float = 1.0,
+            self,
+            internal_id: str,
+            original_width: float,
+            page: int = None,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         """Assert that an image's width has changed from the original.
 
@@ -1704,16 +1705,16 @@ class PDFAssertions(object):
 
         assert bbox is not None, f"Image {internal_id} has no bounding rect"
         assert (
-            abs(bbox.width - original_width) > epsilon
+                abs(bbox.width - original_width) > epsilon
         ), f"Image width {bbox.width} has not changed significantly from original {original_width}"
         return self
 
     def assert_image_height_changed(
-        self,
-        internal_id: str,
-        original_height: float,
-        page: int = None,
-        epsilon: float = 1.0,
+            self,
+            internal_id: str,
+            original_height: float,
+            page: int = None,
+            epsilon: float = 1.0,
     ) -> "PDFAssertions":
         """Assert that an image's height has changed from the original.
 
@@ -1728,18 +1729,18 @@ class PDFAssertions(object):
 
         assert bbox is not None, f"Image {internal_id} has no bounding rect"
         assert (
-            abs(bbox.height - original_height) > epsilon
+                abs(bbox.height - original_height) > epsilon
         ), f"Image height {bbox.height} has not changed significantly from original {original_height}"
         return self
 
     def assert_image_scaled_by_factor(
-        self,
-        internal_id: str,
-        original_width: float,
-        original_height: float,
-        scale_factor: float,
-        page: int = None,
-        epsilon: float = 2.0,
+            self,
+            internal_id: str,
+            original_width: float,
+            original_height: float,
+            scale_factor: float,
+            page: int = None,
+            epsilon: float = 2.0,
     ) -> "PDFAssertions":
         """Assert that an image has been scaled by the expected factor.
 

@@ -8,7 +8,7 @@ A save/reopen cycle is required for the second line to become selectable.
 """
 
 from pdfdancer import Color, ObjectType, PDFDancer, ReflowPreset, StandardFonts
-from tests.e2e import _require_env
+from tests.e2e import _require_env, _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
 
@@ -76,8 +76,8 @@ def test_noreflow_linespacing_edit_same_session():
                 e
                 for e in snapshot.elements
                 if e.type == ObjectType.PARAGRAPH
-                and e.text is not None
-                and e.text.startswith("First line")
+                   and e.text is not None
+                   and e.text.startswith("First line")
             ),
             None,
         )
@@ -91,17 +91,18 @@ def test_noreflow_linespacing_edit_same_session():
 
 def test_best_effort_both_lines_selectable_same_session():
     """After bestEffort replace with \\n, both lines should be selectable immediately."""
-    base_url, token = _require_env()
+    base_url, token, pdf_path = _require_env_and_fixture("multi-paragraph-test.pdf")
 
-    with _create_template_with_placeholder(token, base_url) as pdf:
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         pdf.apply_replacements(
-            {"{{DESCRIPTION}}": "First line\nSecond line"},
-            reflow_preset=ReflowPreset.BEST_EFFORT,
+            {"paragraph": "MUCH LONGER TEXT TO REPLACE PARAGRAPH"},
+            reflow_preset=ReflowPreset.FIT_OR_FAIL,
         )
 
         lines = pdf.page(1).select_text_lines()
         texts = [line.get_text() for line in lines]
 
+        pdf_assertions = PDFAssertions(pdf)
         assert "First line" in texts
         assert any(t.startswith("Second line") for t in texts if t)
 

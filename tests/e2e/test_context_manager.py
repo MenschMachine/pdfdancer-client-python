@@ -169,7 +169,7 @@ def test_context_manager_edit_move_only():
             .assert_paragraph_is_at(
                 "This is regular Sans text showing alignment and styles.",
                 150,
-                300,
+                316,  # see corresponding ts test, paragraph was recalculated
                 1,
                 epsilon=0.22,
             )
@@ -216,6 +216,8 @@ def test_context_manager_edit_multiple_paragraphs():
             editor.replace("Modified First")
             editor.font("Helvetica", 14)
 
+        # need to re-read paragraphs
+        paragraphs = pdf.page(1).select_paragraphs()
         # Edit second paragraph
         with paragraphs[1].edit() as editor:
             editor.replace("Modified Second")

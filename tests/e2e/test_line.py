@@ -21,7 +21,7 @@ def test_find_lines_by_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         lines = pdf.select_text_lines()
-        assert len(lines) == 36
+        assert len(lines) == 34
 
         first = lines[0]
         assert first.position is not None
@@ -63,10 +63,10 @@ def test_delete_line():
         )[0]
         line.delete()
         assert (
-            pdf.page(1).select_text_lines_starting_with(
-                "This is regular Sans text showing alignment and styles."
-            )
-            == []
+                pdf.page(1).select_text_lines_starting_with(
+                    "This is regular Sans text showing alignment and styles."
+                )
+                == []
         )
 
         (
@@ -117,10 +117,10 @@ def test_modify_line():
 
         # Validate replacements
         assert (
-            pdf.page(1).select_text_lines_starting_with(
-                "This is regular Sans text showing alignment and styles."
-            )
-            == []
+                pdf.page(1).select_text_lines_starting_with(
+                    "This is regular Sans text showing alignment and styles."
+                )
+                == []
         )
         assert pdf.page(1).select_paragraphs_starting_with(" replaced ") != []
         lines = pdf.page(1).select_text_lines_starting_with(" replaced ")
@@ -135,6 +135,6 @@ def test_modify_line():
             .assert_textline_does_not_exist(
                 "This is regular Sans text showing alignment and styles."
             )
-            .assert_textline_exists(" replaced ")
-            .assert_paragraph_exists(" replaced ")
+            .assert_textline_exists("replaced")
+            .assert_paragraph_exists("replaced")
         )

@@ -55,9 +55,11 @@ from .types import PathGroupObject
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphBuilder
 from .path_builder import BezierBuilder, LineBuilder, PathBuilder
+from ._runtime_version import resolve_package_version
 from .text_line_builder import TextLineBuilder
 
-__version__ = "0.3.13"
+__version__ = resolve_package_version()
+
 __all__ = [
     "PDFDancer",
     "ParagraphBuilder",

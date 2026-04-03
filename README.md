@@ -328,20 +328,16 @@ python -m build
 python -m twine check dist/*
 ```
 
-Artifacts will be created in the `dist/` directory.
+Artifacts will be created in the `dist/` directory. Package versions are derived from Git tags via `setuptools-scm`.
 
 #### Publishing to PyPI
 
 Releases are published automatically to PyPI when a `v*` tag is pushed to GitHub (via GitHub Actions with Trusted Publishers).
 
 ```bash
-# Set version, commit, and push tag — GitHub Actions handles the rest
-python release.py tag --version 1.1.0
-
-# Or manually:
-# 1. Update version in pyproject.toml and src/pdfdancer/__init__.py
-# 2. Commit
-# 3. git tag v1.1.0 && git push origin HEAD && git push origin v1.1.0
+# Create and push a release tag — GitHub Actions handles the rest
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 #### Code Quality
@@ -380,7 +376,6 @@ pdfdancer-client-python/
 ├── docs/                    # Documentation
 ├── dist/                    # Build artifacts (created after packaging)
 ├── pyproject.toml           # Project metadata and dependencies
-├── release.py               # Helper for publishing releases
 └── README.md                # This file
 ```
 

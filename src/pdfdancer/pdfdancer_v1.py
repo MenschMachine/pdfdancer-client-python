@@ -14,7 +14,6 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
-from importlib.metadata import version as get_package_version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Mapping, Optional, Union
 
@@ -74,6 +73,7 @@ from .models import (
 )
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphPageBuilder
+from ._runtime_version import resolve_package_version
 from .types import (
     FormFieldObject,
     FormObject,
@@ -100,12 +100,8 @@ def _load_env():
 
 
 # Client identifier header for all HTTP requests
-# Always reads from installed package metadata (stays in sync with pyproject.toml)
-try:
-    CLIENT_HEADER_VALUE = f"python/{get_package_version('pdfdancer-client-python')}"
-except Exception:
-    # Fallback in case package metadata is not available
-    CLIENT_HEADER_VALUE = "python/unknown"
+# Prefer the SCM-generated version module; fall back to installed metadata.
+CLIENT_HEADER_VALUE = f"python/{resolve_package_version(default='unknown')}"
 
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)

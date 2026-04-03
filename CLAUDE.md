@@ -17,8 +17,7 @@ that:
 ### Development
 
 - `python -m venv venv` - Create virtual environment
-- `venv/bin/pip install -e .` - Install in development mode
-- `venv/bin/pip install -r requirements-dev.txt` - Install dev dependencies
+- `venv/bin/pip install -e ".[dev]"` - Install the package and dev dependencies in editable mode
 
 ### Testing
 
@@ -30,7 +29,8 @@ that:
 
 - `venv/bin/python -m build` - Build distribution packages
 - `venv/bin/python -m twine check dist/*` - Validate packages
-- `venv/bin/python -m twine upload dist/*` - Publish to PyPI
+- Release via tag push: `git tag v1.2.3 && git push origin v1.2.3`
+- GitHub Actions handles lint, tests, build, and PyPI publish from `v*` tags
 
 ## Architecture
 
@@ -178,6 +178,7 @@ page.delete()
 - **Python 3.10+ compatibility** (Python 3.9 has SSL issues with large file uploads)
 - **Uses `requests` library** for all HTTP communication
 - **No code generation** - pure manual implementation
+- **Versioning is SCM-driven** - package versions come from Git tags via `setuptools-scm`
 - **Virtual environment auto-setup** via parent Makefile
 - **No code formatter configured** - follow existing style
 - **Comprehensive tests** - 123 tests covering all functionality

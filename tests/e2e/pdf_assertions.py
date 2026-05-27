@@ -153,6 +153,11 @@ class PDFAssertions(object):
         ), f"No paragraphs starting with {text} found on page {page}"
         return self
 
+    def assert_paragraph_does_not_exist(self, text, page=1):
+        paragraphs = self.pdf.page(page).select_paragraphs_starting_with(text)
+        assert len(paragraphs) == 0, f"Expected no paragraphs starting with {text} on page {page}"
+        return self
+
     def assert_matching_paragraph_exists(self, pattern, page=1):
         paragraphs = self.pdf.page(page).select_paragraphs_matching(pattern)
         assert (

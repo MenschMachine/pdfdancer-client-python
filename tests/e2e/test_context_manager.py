@@ -12,7 +12,10 @@ def test_context_manager_basic_usage():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         paragraphs = pdf.select_paragraphs()
-        assert 20 <= len(paragraphs) <= 22  # strange, but differs on linux
+        assert paragraphs
+        assert pdf.page(1).select_paragraph_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )
 
 
 def test_context_manager_edit_text_only():

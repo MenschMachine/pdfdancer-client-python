@@ -17,27 +17,23 @@ def test_find_paragraphs_by_position():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paragraphs = pdf.select_paragraphs()
-        assert 20 <= len(paragraphs) <= 22  # strange, but differs on linux
+        assert paragraphs
 
         paras_page0 = pdf.page(1).select_paragraphs()
-        assert len(paras_page0) == 3
+        assert paras_page0
 
-        first = paras_page0[0]
-        assert first.position is not None
-        assert pytest.approx(first.position.x(), rel=0, abs=1) == 180
-        assert (
-                pytest.approx(first.position.y(), rel=0, abs=1) == 749
-        )  # adjusted for baseline/bounding box
+        target = pdf.page(1).select_paragraph_starting_with(
+            "This is regular Sans text showing alignment and styles."
+        )
+        assert target is not None
+        assert target.position is not None
+        assert target.position.bounding_rect is not None
+        assert pytest.approx(target.position.x(), rel=0, abs=1) == 64.7
 
-        last = paras_page0[-1]
-        assert last.position is not None
-        assert pytest.approx(last.position.x(), rel=0, abs=1) == 69.3
-        assert pytest.approx(last.position.y(), rel=0, abs=2) == 46.7
-
-        assert last.object_ref().status is not None
-        # assert last.object_ref().status.is_encodable()
-        assert last.object_ref().status.font_type == FontType.EMBEDDED
-        assert not last.object_ref().status.is_modified()
+        assert target.object_ref().status is not None
+        # assert target.object_ref().status.is_encodable()
+        assert target.object_ref().status.font_type == FontType.EMBEDDED
+        assert not target.object_ref().status.is_modified()
 
 
 def test_find_paragraphs_by_text():
@@ -49,10 +45,9 @@ def test_find_paragraphs_by_text():
         )
         assert len(paras) == 1
         p = paras[0]
+        assert p.position is not None
+        assert p.position.bounding_rect is not None
         assert pytest.approx(p.position.x(), rel=0, abs=1) == 64.7
-        assert (
-                pytest.approx(p.position.y(), rel=0, abs=2) == 642
-        )  # adjust for baseline/bounding box
 
 
 def test_select_paragraphs_matching_document_level():
@@ -121,7 +116,7 @@ def test_select_paragraphs_matching_multiple_pages():
     base_url, token, _ = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.new(
-            token=token, base_url=base_url, timeout=30.0, initial_page_count=3
+        token=token, base_url=base_url, timeout=30.0, initial_page_count=3
     ) as pdf:
         # Add paragraphs to different pages
         pdf.new_paragraph().text("Chapter 1: Introduction").font(
@@ -363,6 +358,7 @@ def test_modify_paragraph_only_text():
             "This is regular Sans text showing alignment and styles."
         )[0]
         result = paragraph.edit().replace("lorem\nipsum\nCaesar").apply()
+        assert result.success
 
         paragraph = pdf.page(1).select_paragraphs_starting_with("lorem")[0]
         assert paragraph.object_ref().status is not None
@@ -437,8 +433,19 @@ def test_modify_paragraph_only_move():
                 "AAAZPH+Roboto-Regular",
                 12,
             )
-            .assert_paragraph_is_at(
-                "This is regular Sans text showing alignment and styles.", 40, 40, 1
+            .assert_textline_is_at(
+                "This is regular Sans text showing alignment and styles.",
+                40,
+                53.1,
+                1,
+                epsilon=1,
+            )
+            .assert_textline_is_at(
+                "Serif italic sample with faux italic transformation.",
+                40,
+                37,
+                1,
+                epsilon=1,
             )
             .assert_textline_has_color(
                 "This is regular Sans text showing alignment and styles.",

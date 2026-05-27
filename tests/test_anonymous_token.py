@@ -29,13 +29,18 @@ class TestAnonymousTokenFallback:
     @pytest.fixture
     def clear_env_token(self):
         """Temporarily clear PDFDANCER_TOKEN and PDFDANCER_API_TOKEN from environment."""
+        import pdfdancer.pdfdancer_v1 as pdfdancer_v1
+
         original_token = os.environ.get("PDFDANCER_TOKEN")
         original_api_token = os.environ.get("PDFDANCER_API_TOKEN")
+        original_env_loaded = pdfdancer_v1._env_loaded
         if "PDFDANCER_TOKEN" in os.environ:
             del os.environ["PDFDANCER_TOKEN"]
         if "PDFDANCER_API_TOKEN" in os.environ:
             del os.environ["PDFDANCER_API_TOKEN"]
+        pdfdancer_v1._env_loaded = True
         yield
+        pdfdancer_v1._env_loaded = original_env_loaded
         if original_token is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token
         if original_api_token is not None:
@@ -60,7 +65,9 @@ class TestAnonymousTokenFallback:
 
     def test_resolve_token_uses_api_token_env_var(self):
         """Test that _resolve_token uses PDFDANCER_API_TOKEN from environment."""
-        with patch.dict(os.environ, {"PDFDANCER_API_TOKEN": "api-token-789"}, clear=True):
+        with patch.dict(
+            os.environ, {"PDFDANCER_API_TOKEN": "api-token-789"}, clear=True
+        ):
             result = PDFDancer._resolve_token(None)
             assert result == "api-token-789"
 
@@ -100,7 +107,7 @@ class TestAnonymousTokenFallback:
         assert token == "anon-token-789"
         mock_httpx_client.post.assert_called_once()
         call_args = mock_httpx_client.post.call_args
-        assert "/keys/anon" in call_args[0][0]
+        assert call_args[0][0] == "http://localhost:8080/v2/keys/anon"
         assert "X-Fingerprint" in call_args[1]["headers"]
 
     def test_obtain_anonymous_token_http_error(self, mock_httpx_client):
@@ -206,17 +213,48 @@ class TestAnonymousTokenFallback:
         # Test various combinations of base URL and path
         assert (
             PDFDancer._cleanup_url_path("http://localhost:8080", "/keys/anon")
-            == "http://localhost:8080/keys/anon"
+            == "http://localhost:8080/v2/keys/anon"
         )
         assert (
             PDFDancer._cleanup_url_path("http://localhost:8080/", "/keys/anon")
-            == "http://localhost:8080/keys/anon"
+            == "http://localhost:8080/v2/keys/anon"
         )
         assert (
             PDFDancer._cleanup_url_path("http://localhost:8080", "keys/anon")
-            == "http://localhost:8080/keys/anon"
+            == "http://localhost:8080/v2/keys/anon"
         )
         assert (
             PDFDancer._cleanup_url_path("http://localhost:8080/", "keys/anon")
-            == "http://localhost:8080/keys/anon"
+            == "http://localhost:8080/v2/keys/anon"
         )
+        assert (
+            PDFDancer._cleanup_url_path("http://localhost:8080/v2", "/keys/anon")
+            == "http://localhost:8080/v2/keys/anon"
+        )
+        assert (
+            PDFDancer._cleanup_url_path("http://localhost:8080", "/v2/keys/anon")
+            == "http://localhost:8080/v2/keys/anon"
+        )
+
+    def test_make_request_uses_v2_path_without_api_version_header(self):
+        """Test that API versioning is path-based, not header-based."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.content = b"{}"
+
+        pdf = object.__new__(PDFDancer)
+        pdf._session_id = "test-session-id"
+        pdf._base_url = "http://localhost:8080"
+        pdf._read_timeout = 30.0
+        pdf._max_retries = 0
+        pdf._retry_backoff_factor = 1.0
+        pdf._client = MagicMock()
+        pdf._client.request.return_value = mock_response
+
+        pdf._make_request("GET", "/pdf/document/snapshot")
+
+        call_args = pdf._client.request.call_args
+        assert (
+            call_args.kwargs["url"] == "http://localhost:8080/v2/pdf/document/snapshot"
+        )
+        assert "X-API-VERSION" not in call_args.kwargs["headers"]

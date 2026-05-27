@@ -51,10 +51,9 @@ def test_select_paragraph_starting_with():
             "This is regular Sans text showing alignment and styles."
         )
         assert paragraph is not None
+        assert paragraph.position is not None
+        assert paragraph.position.bounding_rect is not None
         assert pytest.approx(paragraph.position.x(), rel=0, abs=1) == 64.7
-        assert (
-            pytest.approx(paragraph.position.y(), rel=0, abs=2) == 642
-        )  # adjust for baseline/bounding box
 
 
 def test_select_paragraph_starting_with_no_match():

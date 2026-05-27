@@ -374,6 +374,10 @@ class TestImageOpacity:
 
 
 class TestImageCrop:
+    def _large_showcase_image(self, pdf):
+        images = pdf.page(3).select_images()
+        return max(images, key=lambda image: image.position.bounding_rect.width)
+
     def test_crop_image_reduces_size(self):
         """Test that cropping reduces image dimensions."""
         base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
@@ -381,8 +385,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._large_showcase_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_width = bbox.width
@@ -408,8 +411,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._large_showcase_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_width = bbox.width
@@ -428,8 +430,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._large_showcase_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_height = bbox.height

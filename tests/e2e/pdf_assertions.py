@@ -117,16 +117,22 @@ class PDFAssertions(object):
             self, text: str, x: float, y: float, page=1, epsilon=1e-6
     ):
         lines = self.pdf.page(page).select_text_lines_starting_with(text)
-        assert len(lines) == 1
+        assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
         reference = lines[0].object_ref()
         assert reference.get_position().x() == pytest.approx(
-            x, rel=epsilon, abs=epsilon
+            x, rel=0, abs=epsilon
         ), f"{x} != {reference.get_position().x()}"
         assert reference.get_position().y() == pytest.approx(
-            y, rel=epsilon, abs=epsilon
+            y, rel=0, abs=epsilon
         ), f"{y} != {reference.get_position().y()}"
 
-        by_position = self.pdf.page(page).select_text_lines_at(x, y)
+        by_position = [
+            line
+            for line in self.pdf.page(page).select_text_lines_at(x, y, epsilon)
+            if line.object_ref().get_text()
+            and line.object_ref().get_text().startswith(text)
+        ]
+        assert len(by_position) == 1, f"No text line starting with {text!r} found at ({x}, {y})"
         assert lines[0] == by_position[0]
         return self
 
@@ -145,6 +151,13 @@ class PDFAssertions(object):
         assert (
                 len(paragraphs) > 0
         ), f"No paragraphs starting with {text} found on page {page}"
+        return self
+
+    def assert_matching_paragraph_exists(self, pattern, page=1):
+        paragraphs = self.pdf.page(page).select_paragraphs_matching(pattern)
+        assert (
+                len(paragraphs) > 0
+        ), f"No paragraphs matching '{pattern}' found on page {page}"
         return self
 
     def assert_number_of_pages(self, page_count: int):

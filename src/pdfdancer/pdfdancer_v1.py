@@ -102,6 +102,7 @@ def _load_env():
 # Client identifier header for all HTTP requests
 # Prefer the SCM-generated version module; fall back to installed metadata.
 CLIENT_HEADER_VALUE = f"python/{resolve_package_version(default='unknown')}"
+API_PATH_PREFIX = "/v2"
 
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)
@@ -754,9 +755,7 @@ class PageClient:
 
     def get_path_groups(self):
         """List all path groups on this page."""
-
-        page_index = self.page_number - 1
-        return self.root._list_path_groups(page_index)
+        return self.root._list_path_groups(self.page_number)
 
     def select_elements(self):
         """
@@ -861,7 +860,7 @@ class PDFDancer:
     @classmethod
     def _obtain_anonymous_token(cls, base_url: str, timeout: float = 30.0) -> str:
         """
-        Obtain an anonymous token from the /keys/anon endpoint.
+        Obtain an anonymous token from the /v2/keys/anon endpoint.
 
         Args:
             base_url: Base URL of the PDFDancer API server
@@ -1238,18 +1237,24 @@ class PDFDancer:
     @staticmethod
     def _cleanup_url_path(base_url: str, path: str) -> str:
         """
-        Combine base_url and path, ensuring no double slashes.
+        Combine base_url and API path, ensuring no double slashes.
 
         Args:
             base_url: Base URL (may or may not have trailing slash)
             path: Path segment (may or may not have leading slash)
 
         Returns:
-            Combined URL with no double slashes
+            Combined URL with the v2 API prefix and no double slashes
         """
         base = base_url.rstrip("/")
         path = path.lstrip("/")
-        return f"{base}/{path}"
+
+        if base.endswith(API_PATH_PREFIX) or path.startswith(
+            API_PATH_PREFIX.strip("/") + "/"
+        ):
+            return f"{base}/{path}"
+
+        return f"{base}{API_PATH_PREFIX}/{path}"
 
     def _create_session(self) -> str:
         """
@@ -1609,7 +1614,6 @@ class PDFDancer:
             "Content-Type": "application/json",
             "X-Generated-At": _generate_timestamp(),
             "X-Fingerprint": Fingerprint.generate(),
-            "X-API-VERSION": "1",
         }
 
         last_error: Optional[Exception] = None
@@ -2595,12 +2599,13 @@ class PDFDancer:
         self._invalidate_snapshots()
         return response.json()
 
-    def _list_path_groups(self, page_index):
+    def _list_path_groups(self, page_number):
         from .models import PathGroupInfo
         from .types import PathGroupObject
 
-        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
+        response = self._make_request("GET", f"/pdf/page/{page_number}/path-groups")
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
+        page_index = page_number - 1
         return [PathGroupObject(self, page_index, info) for info in infos]
 
     def clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:

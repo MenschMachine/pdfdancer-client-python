@@ -374,6 +374,14 @@ class TestImageOpacity:
 
 
 class TestImageCrop:
+    def _select_crop_test_image(self, pdf):
+        return next(
+            img
+            for img in pdf.select_images()
+            if img.position.bounding_rect.width >= 100
+            and img.position.bounding_rect.height >= 50
+        )
+
     def test_crop_image_reduces_size(self):
         """Test that cropping reduces image dimensions."""
         base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
@@ -381,8 +389,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._select_crop_test_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_width = bbox.width
@@ -396,10 +403,9 @@ class TestImageCrop:
 
             # Verify dimensions decreased
             assertions = PDFAssertions(pdf)
-            assertions.assert_image_width_changed(image_id, original_width, epsilon=5.0)
-            assertions.assert_image_height_changed(
-                image_id, original_height, epsilon=5.0
-            )
+            new_width, new_height = assertions.get_image_size(image_id)
+            assert new_width < original_width
+            assert new_height < original_height
 
     def test_crop_image_from_left_only(self):
         """Test cropping from left edge only reduces width."""
@@ -408,8 +414,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._select_crop_test_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_width = bbox.width
@@ -419,7 +424,8 @@ class TestImageCrop:
 
             # Width should decrease
             assertions = PDFAssertions(pdf)
-            assertions.assert_image_width_changed(image_id, original_width, epsilon=5.0)
+            new_width, _ = assertions.get_image_size(image_id)
+            assert new_width < original_width
 
     def test_crop_image_from_top_only(self):
         """Test cropping from top edge only reduces height."""
@@ -428,8 +434,7 @@ class TestImageCrop:
         with PDFDancer.open(
             pdf_path, token=token, base_url=base_url, timeout=30.0
         ) as pdf:
-            images = pdf.select_images()
-            image = images[0]
+            image = self._select_crop_test_image(pdf)
             image_id = image.internal_id
             bbox = image.position.bounding_rect
             original_height = bbox.height
@@ -439,9 +444,8 @@ class TestImageCrop:
 
             # Height should decrease
             assertions = PDFAssertions(pdf)
-            assertions.assert_image_height_changed(
-                image_id, original_height, epsilon=5.0
-            )
+            _, new_height = assertions.get_image_size(image_id)
+            assert new_height < original_height
 
 
 class TestImageReplace:

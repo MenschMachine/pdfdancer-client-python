@@ -29,13 +29,21 @@ class TestAnonymousTokenFallback:
     @pytest.fixture
     def clear_env_token(self):
         """Temporarily clear PDFDANCER_TOKEN and PDFDANCER_API_TOKEN from environment."""
+        from pdfdancer import pdfdancer_v1
+
         original_token = os.environ.get("PDFDANCER_TOKEN")
         original_api_token = os.environ.get("PDFDANCER_API_TOKEN")
-        if "PDFDANCER_TOKEN" in os.environ:
-            del os.environ["PDFDANCER_TOKEN"]
-        if "PDFDANCER_API_TOKEN" in os.environ:
-            del os.environ["PDFDANCER_API_TOKEN"]
-        yield
+        original_env_loaded = pdfdancer_v1._env_loaded
+
+        with patch("pdfdancer.pdfdancer_v1.load_dotenv"):
+            pdfdancer_v1._env_loaded = False
+            if "PDFDANCER_TOKEN" in os.environ:
+                del os.environ["PDFDANCER_TOKEN"]
+            if "PDFDANCER_API_TOKEN" in os.environ:
+                del os.environ["PDFDANCER_API_TOKEN"]
+            yield
+
+        pdfdancer_v1._env_loaded = original_env_loaded
         if original_token is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token
         if original_api_token is not None:
@@ -60,7 +68,9 @@ class TestAnonymousTokenFallback:
 
     def test_resolve_token_uses_api_token_env_var(self):
         """Test that _resolve_token uses PDFDANCER_API_TOKEN from environment."""
-        with patch.dict(os.environ, {"PDFDANCER_API_TOKEN": "api-token-789"}, clear=True):
+        with patch.dict(
+            os.environ, {"PDFDANCER_API_TOKEN": "api-token-789"}, clear=True
+        ):
             result = PDFDancer._resolve_token(None)
             assert result == "api-token-789"
 
@@ -130,6 +140,26 @@ class TestAnonymousTokenFallback:
 
         assert "Failed to obtain anonymous token" in str(exc_info.value)
         assert "Connection failed" in str(exc_info.value)
+
+    @patch("pdfdancer.pdfdancer_v1.time.sleep")
+    def test_obtain_anonymous_token_retries_transient_network_error(
+        self, mock_sleep, mock_httpx_client
+    ):
+        """Test that transient anonymous token network errors are retried."""
+        import httpx
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"token": "anon-token-after-retry"}
+        mock_httpx_client.post.side_effect = [
+            httpx.ConnectError("Connection refused"),
+            mock_response,
+        ]
+
+        token = PDFDancer._obtain_anonymous_token("http://localhost:8080")
+
+        assert token == "anon-token-after-retry"
+        assert mock_httpx_client.post.call_count == 2
+        mock_sleep.assert_called_once_with(1.0)
 
     def test_obtain_anonymous_token_invalid_response(self, mock_httpx_client):
         """Test that invalid response format is properly handled."""

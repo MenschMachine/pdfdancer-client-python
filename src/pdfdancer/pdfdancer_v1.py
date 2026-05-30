@@ -10,10 +10,12 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+import math
 import os
 import sys
 import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Mapping, Optional, Union
 
@@ -287,15 +289,17 @@ def _is_retryable_error(error: Exception) -> bool:
     # - PoolTimeout (connection pool exhausted)
     error_msg = str(error).lower()
 
-    if isinstance(error, httpx.RemoteProtocolError):
-        return True
-    if isinstance(error, httpx.ConnectError):
-        return True
-    if isinstance(error, httpx.ReadTimeout):
-        return True
-    if isinstance(error, httpx.PoolTimeout):
-        return True
-    if isinstance(error, httpx.WriteTimeout):
+    if isinstance(
+        error,
+        (
+            httpx.RemoteProtocolError,
+            httpx.ConnectError,
+            httpx.ConnectTimeout,
+            httpx.ReadTimeout,
+            httpx.PoolTimeout,
+            httpx.WriteTimeout,
+        ),
+    ):
         return True
 
     # Check for specific error messages that indicate transient issues
@@ -325,12 +329,18 @@ def _get_retry_after_delay(response: httpx.Response) -> Optional[int]:
         return None
 
     try:
-        # Retry-After can be either a number of seconds or an HTTP date
-        # Try parsing as integer first (seconds)
-        return int(retry_after)
+        delay_seconds = int(retry_after)
+        return delay_seconds if delay_seconds >= 0 else None
     except ValueError:
-        # If not a number, it might be an HTTP date - ignore for now
-        # Most rate limiting APIs use seconds
+        pass
+
+    try:
+        retry_at = parsedate_to_datetime(retry_after)
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        delay = (retry_at - datetime.now(timezone.utc)).total_seconds()
+        return max(0, math.ceil(delay))
+    except (TypeError, ValueError, OverflowError):
         return None
 
 
@@ -953,6 +963,17 @@ class PDFDancer:
                     ) from None
                 except httpx.RequestError as e:
                     last_error = e
+                    if _is_retryable_error(e) and attempt < max_retries:
+                        delay = retry_backoff_factor * (2**attempt)
+                        if DEBUG:
+                            print(
+                                f"{time.time()}|POST /keys/anon - Retryable error: {str(e)}, "
+                                f"retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                            )
+                        time.sleep(delay)
+                        attempt += 1
+                        continue
+
                     raise HttpClientException(
                         f"Failed to obtain anonymous token: {str(e)}",
                         response=None,

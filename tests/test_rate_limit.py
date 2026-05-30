@@ -2,6 +2,8 @@
 Tests for 429 rate limit handling
 """
 
+from datetime import datetime, timedelta, timezone
+from email.utils import format_datetime
 from unittest.mock import Mock, patch
 
 import httpx
@@ -45,6 +47,28 @@ class TestRateLimitHandling:
 
         delay = _get_retry_after_delay(mock_response)
         assert delay is None
+
+    def test_rate_limit_with_negative_retry_after(self):
+        """Test that negative Retry-After values are ignored."""
+        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.headers = {"Retry-After": "-1"}
+
+        delay = _get_retry_after_delay(mock_response)
+        assert delay is None
+
+    def test_rate_limit_with_http_date_retry_after(self):
+        """Test that HTTP-date Retry-After values are converted to seconds."""
+        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+
+        retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.headers = {"Retry-After": format_datetime(retry_at)}
+
+        delay = _get_retry_after_delay(mock_response)
+        assert delay is not None
+        assert 0 <= delay <= 30
 
     @patch("pdfdancer.pdfdancer_v1.httpx.Client")
     def test_rate_limit_exception_raised_after_retries_exhausted(

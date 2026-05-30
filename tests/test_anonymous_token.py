@@ -138,6 +138,26 @@ class TestAnonymousTokenFallback:
         assert "Failed to obtain anonymous token" in str(exc_info.value)
         assert "Connection failed" in str(exc_info.value)
 
+    @patch("pdfdancer.pdfdancer_v1.time.sleep")
+    def test_obtain_anonymous_token_retries_transient_network_error(
+        self, mock_sleep, mock_httpx_client
+    ):
+        """Test that transient anonymous token network errors are retried."""
+        import httpx
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"token": "anon-token-after-retry"}
+        mock_httpx_client.post.side_effect = [
+            httpx.ConnectError("Connection refused"),
+            mock_response,
+        ]
+
+        token = PDFDancer._obtain_anonymous_token("http://localhost:8080")
+
+        assert token == "anon-token-after-retry"
+        assert mock_httpx_client.post.call_count == 2
+        mock_sleep.assert_called_once_with(1.0)
+
     def test_obtain_anonymous_token_invalid_response(self, mock_httpx_client):
         """Test that invalid response format is properly handled."""
         mock_response = MagicMock()

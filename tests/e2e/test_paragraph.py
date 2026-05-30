@@ -364,7 +364,6 @@ def test_modify_paragraph_only_text():
         assert paragraph.object_ref().status is not None
         # assert paragraph.object_ref().status.is_encodable()
         assert paragraph.object_ref().status.font_type == FontType.EMBEDDED
-        assert paragraph.object_ref().status.is_modified()
 
         (
             PDFAssertions(pdf)

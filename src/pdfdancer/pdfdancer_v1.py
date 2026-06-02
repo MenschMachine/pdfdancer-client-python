@@ -17,7 +17,7 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Callable, Dict, List, Mapping, Optional, Union
 
 import httpx
 from dotenv import find_dotenv, load_dotenv
@@ -115,22 +115,23 @@ DEFAULT_TOLERANCE = 0.01
 
 # Retry configuration for transient network errors
 # These settings control automatic retry behavior when encountering transient network errors
-# like "Server disconnected without sending a response", connection timeouts, etc.
-# HTTP status errors (4xx, 5xx) are NOT retried as they are application-level errors.
+# and transient server response statuses.
 #
 # PDFDANCER_MAX_RETRIES: Maximum number of retry attempts (default: 3)
-#   Example: With max_retries=3, the client will make up to 4 total attempts (1 initial + 3 retries)
+#   Example: With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
 #
-# PDFDANCER_RETRY_BACKOFF_FACTOR: Base multiplier for exponential backoff delays (default: 1.0)
-#   The actual delay for each retry is calculated as: backoff_factor * (2 ** attempt)
+# PDFDANCER_RETRY_BACKOFF_FACTOR: Multiplier for exponential backoff delays (default: 2.0)
+#   The actual delay for each retry is calculated as: initial_delay * (backoff_factor ** retry_count)
 #   Examples:
-#     - backoff_factor=1.0: delays are 1s, 2s, 4s, 8s, ...
-#     - backoff_factor=2.0: delays are 2s, 4s, 8s, 16s, ...
-#     - backoff_factor=0.5: delays are 0.5s, 1s, 2s, 4s, ...
+#     - retry_backoff_factor=2.0: delays are 1s, 2s, 4s, 8s, ...
+#     - retry_backoff_factor=3.0: delays are 1s, 3s, 9s, ...
 DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
     os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
 )
+DEFAULT_RETRY_INITIAL_DELAY = 1.0
+DEFAULT_RETRY_MAX_DELAY = 5.0
+DEFAULT_RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504, 520}
 
 
 def _dict_to_replacements(
@@ -342,6 +343,124 @@ def _get_retry_after_delay(response: httpx.Response) -> Optional[int]:
         return max(0, math.ceil(delay))
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def _calculate_retry_delay(
+    response: Optional[httpx.Response],
+    attempt: int,
+    retry_backoff_factor: float,
+    max_delay_seconds: float = DEFAULT_RETRY_MAX_DELAY,
+) -> float:
+    """
+    Calculate retry delay for a given attempt.
+
+    Args:
+        response: HTTP response when retrying on status code, otherwise None
+        attempt: Zero-based retry attempt index (0 for first retry)
+        retry_backoff_factor: Backoff multiplier
+        max_delay_seconds: Maximum retry delay
+
+    Returns:
+        Delay in seconds, respecting max delay and Retry-After when available.
+    """
+    if response is not None and response.status_code == 429:
+        retry_after = _get_retry_after_delay(response)
+        if retry_after is not None:
+            return float(min(max_delay_seconds, retry_after))
+    delay = DEFAULT_RETRY_INITIAL_DELAY * (retry_backoff_factor ** attempt)
+    return float(min(max_delay_seconds, delay))
+
+
+def _execute_request_with_retries(
+    request_callable: Callable[[], httpx.Response],
+    operation: str,
+    max_attempts: int,
+    retry_backoff_factor: float,
+    retryable_status_codes: Optional[set[int]] = None,
+    pre_request_hook: Optional[Callable[[int], None]] = None,
+) -> httpx.Response:
+    """
+    Execute a request callable with retry handling for transient statuses and request errors.
+
+    Args:
+        request_callable: Zero-arg callable returning an httpx.Response.
+        operation: Human-readable operation name for retry logging.
+        max_attempts: Maximum number of total attempts.
+        retry_backoff_factor: Retry backoff multiplier.
+        retryable_status_codes: Status codes that should trigger retries.
+        pre_request_hook: Optional callback invoked before each request attempt.
+
+    Returns:
+        The last response returned by the request callable.
+
+    Raises:
+        httpx.RequestError: When a non-retriable request error occurs.
+    """
+    attempts = max(1, max_attempts)
+    retry_statuses = (
+        retryable_status_codes if retryable_status_codes is not None else DEFAULT_RETRYABLE_STATUS_CODES
+    )
+    attempt = 0
+    last_response = None
+
+    while attempt < attempts:
+        try:
+            if pre_request_hook:
+                pre_request_hook(attempt)
+
+            response = request_callable()
+            last_response = response
+
+            if (
+                response.status_code in retry_statuses
+                and attempt < attempts - 1
+            ):
+                delay = _calculate_retry_delay(
+                    response=response,
+                    attempt=attempt,
+                    retry_backoff_factor=retry_backoff_factor,
+                )
+                if response.status_code == 429:
+                    print(
+                        f"Rate limit (429) on {operation} - retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{attempts})",
+                        file=sys.stderr,
+                    )
+                elif DEBUG:
+                    print(
+                        f"{time.time()}|{operation} - Retryable HTTP {response.status_code}, "
+                        f"retrying in {delay}s (attempt {attempt + 1}/{attempts})"
+                    )
+
+                if delay > 0:
+                    time.sleep(delay)
+                attempt += 1
+                continue
+
+            return response
+
+        except httpx.RequestError as e:
+            if _is_retryable_error(e) and attempt < attempts - 1:
+                delay = _calculate_retry_delay(
+                    response=None,
+                    attempt=attempt,
+                    retry_backoff_factor=retry_backoff_factor,
+                )
+                if DEBUG:
+                    print(
+                        f"{time.time()}|{operation} - Retryable error: {str(e)}, "
+                        f"retrying in {delay}s (attempt {attempt + 1}/{attempts})"
+                    )
+                if delay > 0:
+                    time.sleep(delay)
+                attempt += 1
+                continue
+            raise
+
+    if last_response is None:
+        raise RuntimeError(f"Request exhausted retries without a response for operation: {operation}")
+
+    return last_response
 
 
 class PageClient:
@@ -833,10 +952,10 @@ class PDFDancer:
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
-            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
-                Delay calculation: backoff_factor * (2 ** attempt_number).
-                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
+                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
+                Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
+                Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
 
         Returns:
             A ready-to-use `PDFDancer` client instance.
@@ -886,112 +1005,61 @@ class PDFDancer:
         """
         # Create temporary client without authentication
         temp_client = httpx.Client(http2=True, verify=not DISABLE_SSL_VERIFY)
-        max_retries = 3
-        retry_backoff_factor = 1.0
+        max_retries = DEFAULT_MAX_RETRIES
+        retry_backoff_factor = DEFAULT_RETRY_BACKOFF_FACTOR
 
         try:
-            last_error: Optional[Exception] = None
-            attempt = 0
-
-            while attempt <= max_retries:
-                try:
-                    headers = {
-                        "X-Fingerprint": Fingerprint.generate(),
-                        "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
-                    }
-
-                    response = temp_client.post(
-                        cls._cleanup_url_path(base_url, "/keys/anon"),
-                        headers=headers,
-                        timeout=timeout if timeout > 0 else None,
-                    )
-
-                    response.raise_for_status()
-                    token_data = response.json()
-
-                    # Extract token from response (matches Java AnonTokenResponse structure)
-                    if isinstance(token_data, dict) and "token" in token_data:
-                        return token_data["token"]
-                    else:
-                        raise HttpClientException(
-                            "Invalid anonymous token response format"
-                        )
-
-                except httpx.HTTPStatusError as e:
-                    # Handle 429 (rate limit) with retry
-                    if e.response.status_code == 429 and attempt < max_retries:
-                        retry_after = _get_retry_after_delay(e.response)
-                        if retry_after is not None:
-                            delay = retry_after
-                        else:
-                            # Use exponential backoff if no Retry-After header
-                            delay = retry_backoff_factor * (2**attempt)
-
-                        # Always log 429 to stderr for visibility
-                        print(
-                            f"Rate limit (429) on POST /keys/anon - retrying in {delay}s "
-                            f"(attempt {attempt + 1}/{max_retries})",
-                            file=sys.stderr,
-                        )
-                        if DEBUG:
-                            print(
-                                f"{time.time()}|POST /keys/anon - Rate limit exceeded (429), "
-                                f"retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
-                            )
-                        time.sleep(delay)
-                        attempt += 1
-                        continue
-
-                    # Raise RateLimitException for 429 after exhausting retries
-                    if e.response.status_code == 429:
-                        retry_after = _get_retry_after_delay(e.response)
-                        print(
-                            "Rate limit (429) on POST /keys/anon - max retries exhausted",
-                            file=sys.stderr,
-                        )
-                        raise RateLimitException(
-                            "Rate limit exceeded when obtaining anonymous token",
-                            retry_after=retry_after,
-                            response=e.response,
-                        ) from None
-
-                    # Other HTTP status errors
-                    raise HttpClientException(
-                        f"Failed to obtain anonymous token: HTTP {e.response.status_code}",
-                        response=e.response,
-                        cause=e,
-                    ) from None
-                except httpx.RequestError as e:
-                    last_error = e
-                    if _is_retryable_error(e) and attempt < max_retries:
-                        delay = retry_backoff_factor * (2**attempt)
-                        if DEBUG:
-                            print(
-                                f"{time.time()}|POST /keys/anon - Retryable error: {str(e)}, "
-                                f"retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
-                            )
-                        time.sleep(delay)
-                        attempt += 1
-                        continue
-
-                    raise HttpClientException(
-                        f"Failed to obtain anonymous token: {str(e)}",
-                        response=None,
-                        cause=e,
-                    ) from None
-
-            # Should not reach here, but handle just in case
-            if last_error:
-                raise HttpClientException(
-                    f"Failed to obtain anonymous token after {max_retries + 1} attempts: {str(last_error)}",
-                    response=None,
-                    cause=last_error,
-                ) from None
-            else:
-                raise HttpClientException(
-                    f"Failed to obtain anonymous token after {max_retries + 1} attempts",
-                    response=None,
+            def request_token() -> httpx.Response:
+                headers = {
+                    "X-Fingerprint": Fingerprint.generate(),
+                    "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                }
+                return temp_client.post(
+                    cls._cleanup_url_path(base_url, "/keys/anon"),
+                    headers=headers,
+                    timeout=timeout if timeout > 0 else None,
                 )
+
+            response = _execute_request_with_retries(
+                request_callable=request_token,
+                operation="POST /keys/anon",
+                max_attempts=max_retries,
+                retry_backoff_factor=retry_backoff_factor,
+            )
+
+            response.raise_for_status()
+            token_data = response.json()
+
+            # Extract token from response (matches Java AnonTokenResponse structure)
+            if isinstance(token_data, dict) and "token" in token_data:
+                return token_data["token"]
+
+            raise HttpClientException("Invalid anonymous token response format")
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                retry_after = _get_retry_after_delay(e.response)
+                print(
+                    "Rate limit (429) on POST /keys/anon - max retries exhausted",
+                    file=sys.stderr,
+                )
+                raise RateLimitException(
+                    "Rate limit exceeded when obtaining anonymous token",
+                    retry_after=retry_after,
+                    response=e.response,
+                ) from None
+
+            raise HttpClientException(
+                f"Failed to obtain anonymous token: HTTP {e.response.status_code}",
+                response=e.response,
+                cause=e,
+            ) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(
+                f"Failed to obtain anonymous token: {str(e)}",
+                response=None,
+                cause=e,
+            ) from None
         finally:
             temp_client.close()
 
@@ -1047,10 +1115,10 @@ class PDFDancer:
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
-            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
-                Delay calculation: backoff_factor * (2 ** attempt_number).
-                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
+                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
+                Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
+                Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
 
         Returns:
             A ready-to-use `PDFDancer` client instance with a blank PDF.
@@ -1121,10 +1189,10 @@ class PDFDancer:
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
-            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 1.0).
-                Delay calculation: backoff_factor * (2 ** attempt_number).
-                Examples: 1.0 → delays of 1s, 2s, 4s; 2.0 → delays of 2s, 4s, 8s.
+                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+            retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
+                Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
+                Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
 
         Raises:
             ValidationException: If token is empty or PDF data is invalid
@@ -1278,163 +1346,109 @@ class PDFDancer:
         """
         import uuid
 
-        last_error: Optional[Exception] = None
-        attempt = 0
+        # Build multipart body manually to avoid base64 encoding and enable compression
+        # httpx by default may add Content-Transfer-Encoding: base64 which the server rejects
+        boundary = uuid.uuid4().hex
 
-        while attempt <= self._max_retries:
-            try:
-                # Build multipart body manually to avoid base64 encoding and enable compression
-                # httpx by default may add Content-Transfer-Encoding: base64 which the server rejects
-                boundary = uuid.uuid4().hex
+        # Build multipart body with binary (not base64) encoding
+        body_parts = []
+        body_parts.append(f"--{boundary}\r\n".encode("utf-8"))
+        body_parts.append(
+            b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n'
+        )
+        body_parts.append(b"Content-Type: application/pdf\r\n")
+        body_parts.append(b"\r\n")  # End of headers, no Content-Transfer-Encoding
+        body_parts.append(self._pdf_bytes)
+        body_parts.append(b"\r\n")
+        body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
 
-                # Build multipart body with binary (not base64) encoding
-                body_parts = []
-                body_parts.append(f"--{boundary}\r\n".encode("utf-8"))
-                body_parts.append(
-                    b'Content-Disposition: form-data; name="pdf"; filename="document.pdf"\r\n'
+        uncompressed_body = b"".join(body_parts)
+        compressed_body = gzip.compress(uncompressed_body)
+
+        original_size = len(uncompressed_body)
+        compressed_size = len(compressed_body)
+        compression_ratio = (
+            (1 - compressed_size / original_size) * 100
+            if original_size > 0
+            else 0
+        )
+
+        def log_create_attempt(attempt: int) -> None:
+            if DEBUG:
+                retry_info = (
+                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
                 )
-                body_parts.append(b"Content-Type: application/pdf\r\n")
-                body_parts.append(
-                    b"\r\n"
-                )  # End of headers, no Content-Transfer-Encoding
-                body_parts.append(self._pdf_bytes)
-                body_parts.append(b"\r\n")
-                body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
-
-                uncompressed_body = b"".join(body_parts)
-
-                # Compress entire request body using gzip
-                compressed_body = gzip.compress(uncompressed_body)
-
-                original_size = len(uncompressed_body)
-                compressed_size = len(compressed_body)
-                compression_ratio = (
-                    (1 - compressed_size / original_size) * 100
-                    if original_size > 0
-                    else 0
-                )
-
-                if DEBUG:
-                    retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
-                        if attempt > 0
-                        else ""
-                    )
-                    print(
-                        f"{time.time()}|POST /session/create{retry_info} - original size: {original_size} bytes, "
-                        f"compressed size: {compressed_size} bytes, "
-                        f"compression: {compression_ratio:.1f}%"
-                    )
-
-                headers = {
-                    "X-Generated-At": _generate_timestamp(),
-                    "Content-Type": f"multipart/form-data; boundary={boundary}",
-                    "Content-Encoding": "gzip",
-                }
-
-                response = self._client.post(
-                    self._cleanup_url_path(self._base_url, "/session/create"),
-                    content=compressed_body,
-                    headers=headers,
-                    timeout=self._read_timeout if self._read_timeout > 0 else None,
+                print(
+                    f"{time.time()}|POST /session/create{retry_info} - original size: {original_size} bytes, "
+                    f"compressed size: {compressed_size} bytes, "
+                    f"compression: {compression_ratio:.1f}%"
                 )
 
-                response_size = len(response.content)
-                if DEBUG:
-                    print(
-                        f"{time.time()}|POST /session/create - response size: {response_size} bytes"
-                    )
+        def request_session() -> httpx.Response:
+            headers = {
+                "X-Generated-At": _generate_timestamp(),
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Content-Encoding": "gzip",
+            }
 
-                _log_generated_at_header(response, "POST", "/session/create")
-                self._handle_authentication_error(response)
-                response.raise_for_status()
-                session_id = response.text.strip()
-
-                if not session_id:
-                    raise SessionException("Server returned empty session ID")
-
-                return session_id
-
-            except httpx.HTTPStatusError as e:
-                # Handle 429 (rate limit) with retry
-                if e.response.status_code == 429 and attempt < self._max_retries:
-                    retry_after = _get_retry_after_delay(e.response)
-                    if retry_after is not None:
-                        delay = retry_after
-                    else:
-                        # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2**attempt)
-
-                    # Always log 429 to stderr for visibility
-                    print(
-                        f"Rate limit (429) on POST /session/create - retrying in {delay}s "
-                        f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr,
-                    )
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|POST /session/create - Rate limit exceeded (429), "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-
-                # Other HTTP status errors are not retried (these are application-level errors)
-                self._handle_authentication_error(e.response)
-                error_message = self._extract_error_message(e.response)
-
-                # Raise RateLimitException for 429 after exhausting retries
-                if e.response.status_code == 429:
-                    retry_after = _get_retry_after_delay(e.response)
-                    print(
-                        "Rate limit (429) on POST /session/create - max retries exhausted",
-                        file=sys.stderr,
-                    )
-                    raise RateLimitException(
-                        f"Rate limit exceeded: {error_message}",
-                        retry_after=retry_after,
-                        response=e.response,
-                    ) from None
-
-                raise HttpClientException(
-                    f"Failed to create session: {error_message}",
-                    response=e.response,
-                    cause=e,
-                ) from None
-            except httpx.RequestError as e:
-                last_error = e
-
-                # Check if this is a retryable error
-                if _is_retryable_error(e) and attempt < self._max_retries:
-                    # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2**attempt)
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|POST /session/create - Retryable error: {str(e)}, "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-                else:
-                    # Non-retryable error or exhausted retries
-                    raise HttpClientException(
-                        f"Failed to create session: {str(e)}", response=None, cause=e
-                    ) from None
-
-        # Should not reach here, but handle just in case
-        if last_error:
-            raise HttpClientException(
-                f"Failed to create session after {self._max_retries + 1} attempts: {str(last_error)}",
-                response=None,
-                cause=last_error,
-            ) from None
-        else:
-            raise HttpClientException(
-                f"Failed to create session after {self._max_retries + 1} attempts",
-                response=None,
+            return self._client.post(
+                self._cleanup_url_path(self._base_url, "/session/create"),
+                content=compressed_body,
+                headers=headers,
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
             )
+
+        try:
+            response = _execute_request_with_retries(
+                request_callable=request_session,
+                operation="POST /session/create",
+                max_attempts=self._max_retries,
+                retry_backoff_factor=self._retry_backoff_factor,
+                pre_request_hook=log_create_attempt,
+            )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(
+                    f"{time.time()}|POST /session/create - response size: {response_size} bytes"
+                )
+
+            _log_generated_at_header(response, "POST", "/session/create")
+            self._handle_authentication_error(response)
+            response.raise_for_status()
+            session_id = response.text.strip()
+
+            if not session_id:
+                raise SessionException("Server returned empty session ID")
+
+            return session_id
+
+        except httpx.HTTPStatusError as e:
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
+
+            # Raise RateLimitException for 429 after retry attempts are exhausted
+            if e.response.status_code == 429:
+                retry_after = _get_retry_after_delay(e.response)
+                print(
+                    "Rate limit (429) on POST /session/create - max retries exhausted",
+                    file=sys.stderr,
+                )
+                raise RateLimitException(
+                    f"Rate limit exceeded: {error_message}",
+                    retry_after=retry_after,
+                    response=e.response,
+                ) from None
+
+            raise HttpClientException(
+                f"Failed to create session: {error_message}",
+                response=e.response,
+                cause=e,
+            ) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(
+                f"Failed to create session: {str(e)}", response=None, cause=e
+            ) from None
 
     def _create_blank_pdf_session(
         self,
@@ -1486,134 +1500,83 @@ class PDFDancer:
             raise ValidationException(
                 f"Initial page count must be at least 1, got {initial_page_count}"
             )
-        request_data["initialPageCount"] = initial_page_count
+        request_body = json.dumps(request_data)
+        request_size = len(request_body.encode("utf-8"))
 
-        last_error: Optional[Exception] = None
-        attempt = 0
-
-        while attempt <= self._max_retries:
-            try:
-                request_body = json.dumps(request_data)
-                request_size = len(request_body.encode("utf-8"))
-                if DEBUG:
-                    retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
-                        if attempt > 0
-                        else ""
-                    )
-                    print(
-                        f"{time.time()}|POST /session/new{retry_info} - request size: {request_size} bytes"
-                    )
-
-                headers = {
-                    "Content-Type": "application/json",
-                    "X-Generated-At": _generate_timestamp(),
-                }
-                response = self._client.post(
-                    self._cleanup_url_path(self._base_url, "/session/new"),
-                    json=request_data,
-                    headers=headers,
-                    timeout=self._read_timeout if self._read_timeout > 0 else None,
+        def log_blank_pdf_attempt(attempt: int) -> None:
+            if DEBUG:
+                retry_info = (
+                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
+                )
+                print(
+                    f"{time.time()}|POST /session/new{retry_info} - request size: {request_size} bytes"
                 )
 
-                response_size = len(response.content)
-                if DEBUG:
-                    print(
-                        f"{time.time()}|POST /session/new - response size: {response_size} bytes"
-                    )
-
-                _log_generated_at_header(response, "POST", "/session/new")
-                self._handle_authentication_error(response)
-                response.raise_for_status()
-                session_id = response.text.strip()
-
-                if not session_id:
-                    raise SessionException("Server returned empty session ID")
-
-                return session_id
-
-            except httpx.HTTPStatusError as e:
-                # Handle 429 (rate limit) with retry
-                if e.response.status_code == 429 and attempt < self._max_retries:
-                    retry_after = _get_retry_after_delay(e.response)
-                    if retry_after is not None:
-                        delay = retry_after
-                    else:
-                        # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2**attempt)
-
-                    # Always log 429 to stderr for visibility
-                    print(
-                        f"Rate limit (429) on POST /session/new - retrying in {delay}s "
-                        f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr,
-                    )
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|POST /session/new - Rate limit exceeded (429), "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-
-                # Other HTTP status errors are not retried (these are application-level errors)
-                self._handle_authentication_error(e.response)
-                error_message = self._extract_error_message(e.response)
-
-                # Raise RateLimitException for 429 after exhausting retries
-                if e.response.status_code == 429:
-                    retry_after = _get_retry_after_delay(e.response)
-                    print(
-                        "Rate limit (429) on POST /session/new - max retries exhausted",
-                        file=sys.stderr,
-                    )
-                    raise RateLimitException(
-                        f"Rate limit exceeded: {error_message}",
-                        retry_after=retry_after,
-                        response=e.response,
-                    ) from None
-
-                raise HttpClientException(
-                    f"Failed to create blank PDF session: {error_message}",
-                    response=e.response,
-                    cause=e,
-                ) from None
-            except httpx.RequestError as e:
-                last_error = e
-
-                # Check if this is a retryable error
-                if _is_retryable_error(e) and attempt < self._max_retries:
-                    # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2**attempt)
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|POST /session/new - Retryable error: {str(e)}, "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-                else:
-                    # Non-retryable error or exhausted retries
-                    raise HttpClientException(
-                        f"Failed to create blank PDF session: {str(e)}",
-                        response=None,
-                        cause=e,
-                    ) from None
-
-        # Should not reach here, but handle just in case
-        if last_error:
-            raise HttpClientException(
-                f"Failed to create blank PDF session after {self._max_retries + 1} attempts: {str(last_error)}",
-                response=None,
-                cause=last_error,
-            ) from None
-        else:
-            raise HttpClientException(
-                f"Failed to create blank PDF session after {self._max_retries + 1} attempts",
-                response=None,
+        def request_blank_pdf() -> httpx.Response:
+            headers = {
+                "Content-Type": "application/json",
+                "X-Generated-At": _generate_timestamp(),
+            }
+            return self._client.post(
+                self._cleanup_url_path(self._base_url, "/session/new"),
+                json=request_data,
+                headers=headers,
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
             )
+
+        try:
+            response = _execute_request_with_retries(
+                request_callable=request_blank_pdf,
+                operation="POST /session/new",
+                max_attempts=self._max_retries,
+                retry_backoff_factor=self._retry_backoff_factor,
+                pre_request_hook=log_blank_pdf_attempt,
+            )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(
+                    f"{time.time()}|POST /session/new - response size: {response_size} bytes"
+                )
+
+            _log_generated_at_header(response, "POST", "/session/new")
+            self._handle_authentication_error(response)
+            response.raise_for_status()
+            session_id = response.text.strip()
+
+            if not session_id:
+                raise SessionException("Server returned empty session ID")
+
+            return session_id
+
+        except httpx.HTTPStatusError as e:
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
+
+            # Raise RateLimitException for 429 after retry attempts are exhausted
+            if e.response.status_code == 429:
+                retry_after = _get_retry_after_delay(e.response)
+                print(
+                    "Rate limit (429) on POST /session/new - max retries exhausted",
+                    file=sys.stderr,
+                )
+                raise RateLimitException(
+                    f"Rate limit exceeded: {error_message}",
+                    retry_after=retry_after,
+                    response=e.response,
+                ) from None
+
+            raise HttpClientException(
+                f"Failed to create blank PDF session: {error_message}",
+                response=e.response,
+                cause=e,
+            ) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(
+                f"Failed to create blank PDF session: {str(e)}",
+                response=None,
+                cause=e,
+            ) from None
 
     def _make_request(
         self,
@@ -1633,139 +1596,89 @@ class PDFDancer:
             "X-API-VERSION": "1",
         }
 
-        last_error: Optional[Exception] = None
-        attempt = 0
+        request_body = json.dumps(data) if data is not None else None
+        request_size = len(request_body.encode("utf-8")) if request_body is not None else 0
 
-        while attempt <= self._max_retries:
-            try:
-                request_size = 0
-                if data is not None:
-                    request_body = json.dumps(data)
-                    request_size = len(request_body.encode("utf-8"))
-                if DEBUG:
-                    retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
-                        if attempt > 0
-                        else ""
-                    )
-                    print(
-                        f"{time.time()}|{method} {path}{retry_info} - request size: {request_size} bytes"
-                    )
-
-                response = self._client.request(
-                    method=method,
-                    url=self._cleanup_url_path(self._base_url, path),
-                    json=data,
-                    params=params,
-                    headers=headers,
-                    timeout=self._read_timeout if self._read_timeout > 0 else None,
+        def log_attempt(attempt: int) -> None:
+            if DEBUG:
+                retry_info = (
+                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
+                )
+                print(
+                    f"{time.time()}|{method} {path}{retry_info} - request size: {request_size} bytes"
                 )
 
-                response_size = len(response.content)
-                if DEBUG:
-                    print(
-                        f"{time.time()}|{method} {path} - response size: {response_size} bytes"
-                    )
-
-                _log_generated_at_header(response, method, path)
-
-                # Handle 404 errors
-                if response.status_code == 404:
-                    try:
-                        error_data = response.json()
-                        if error_data.get("error") == "FontNotFoundException":
-                            raise FontNotFoundException(
-                                error_data.get("message", "Font not found")
-                            )
-                        if error_data.get("error") == "SessionNotFoundException":
-                            raise SessionNotFoundException(
-                                error_data.get("message", "Session not found")
-                            )
-                    except (json.JSONDecodeError, KeyError):
-                        pass
-
-                self._handle_authentication_error(response)
-                response.raise_for_status()
-                return response
-
-            except httpx.HTTPStatusError as e:
-                # Handle 429 (rate limit) with retry
-                if e.response.status_code == 429 and attempt < self._max_retries:
-                    retry_after = _get_retry_after_delay(e.response)
-                    if retry_after is not None:
-                        delay = retry_after
-                    else:
-                        # Use exponential backoff if no Retry-After header
-                        delay = self._retry_backoff_factor * (2**attempt)
-
-                    # Always log 429 to stderr for visibility
-                    print(
-                        f"Rate limit (429) on {method} {path} - retrying in {delay}s "
-                        f"(attempt {attempt + 1}/{self._max_retries})",
-                        file=sys.stderr,
-                    )
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|{method} {path} - Rate limit exceeded (429), "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-
-                # Other HTTP status errors are not retried (these are application-level errors)
-                self._handle_authentication_error(e.response)
-                error_message = self._extract_error_message(e.response)
-
-                # Raise RateLimitException for 429 after exhausting retries
-                if e.response.status_code == 429:
-                    retry_after = _get_retry_after_delay(e.response)
-                    print(
-                        f"Rate limit (429) on {method} {path} - max retries exhausted",
-                        file=sys.stderr,
-                    )
-                    raise RateLimitException(
-                        f"Rate limit exceeded: {error_message}",
-                        retry_after=retry_after,
-                        response=e.response,
-                    ) from None
-
-                raise HttpClientException(
-                    f"API request failed: {error_message}", response=e.response, cause=e
-                ) from None
-            except httpx.RequestError as e:
-                last_error = e
-
-                # Check if this is a retryable error
-                if _is_retryable_error(e) and attempt < self._max_retries:
-                    # Calculate exponential backoff delay
-                    delay = self._retry_backoff_factor * (2**attempt)
-                    if DEBUG:
-                        print(
-                            f"{time.time()}|{method} {path} - Retryable error: {str(e)}, "
-                            f"retrying in {delay}s (attempt {attempt + 1}/{self._max_retries})"
-                        )
-                    time.sleep(delay)
-                    attempt += 1
-                    continue
-                else:
-                    # Non-retryable error or exhausted retries
-                    raise HttpClientException(
-                        f"API request failed: {str(e)}", response=None, cause=e
-                    ) from None
-
-        # Should not reach here, but handle just in case
-        if last_error:
-            raise HttpClientException(
-                f"API request failed after {self._max_retries + 1} attempts: {str(last_error)}",
-                response=None,
-                cause=last_error,
-            ) from None
-        else:
-            raise HttpClientException(
-                f"API request failed after {self._max_retries + 1} attempts",
-                response=None,
+        def request_api() -> httpx.Response:
+            return self._client.request(
+                method=method,
+                url=self._cleanup_url_path(self._base_url, path),
+                json=data,
+                params=params,
+                headers=headers,
+                timeout=self._read_timeout if self._read_timeout > 0 else None,
             )
+
+        try:
+            response = _execute_request_with_retries(
+                request_callable=request_api,
+                operation=f"{method} {path}",
+                max_attempts=self._max_retries,
+                retry_backoff_factor=self._retry_backoff_factor,
+                pre_request_hook=log_attempt,
+            )
+
+            response_size = len(response.content)
+            if DEBUG:
+                print(
+                    f"{time.time()}|{method} {path} - response size: {response_size} bytes"
+                )
+
+            _log_generated_at_header(response, method, path)
+
+            # Handle 404 errors
+            if response.status_code == 404:
+                try:
+                    error_data = response.json()
+                    if error_data.get("error") == "FontNotFoundException":
+                        raise FontNotFoundException(
+                            error_data.get("message", "Font not found")
+                        )
+                    if error_data.get("error") == "SessionNotFoundException":
+                        raise SessionNotFoundException(
+                            error_data.get("message", "Session not found")
+                        )
+                except (json.JSONDecodeError, KeyError):
+                    pass
+
+            self._handle_authentication_error(response)
+            response.raise_for_status()
+            return response
+
+        except httpx.HTTPStatusError as e:
+            # Other HTTP status errors are not retried (these are application-level errors)
+            self._handle_authentication_error(e.response)
+            error_message = self._extract_error_message(e.response)
+
+            # Raise RateLimitException for 429 after retry attempts are exhausted
+            if e.response.status_code == 429:
+                retry_after = _get_retry_after_delay(e.response)
+                print(
+                    f"Rate limit (429) on {method} {path} - max retries exhausted",
+                    file=sys.stderr,
+                )
+                raise RateLimitException(
+                    f"Rate limit exceeded: {error_message}",
+                    retry_after=retry_after,
+                    response=e.response,
+                ) from None
+
+            raise HttpClientException(
+                f"API request failed: {error_message}", response=e.response, cause=e
+            ) from None
+        except httpx.RequestError as e:
+            raise HttpClientException(
+                f"API request failed: {str(e)}", response=None, cause=e
+            ) from None
 
     def _find(
         self,
@@ -2896,11 +2809,31 @@ class PDFDancer:
                 "X-Session-Id": self._session_id,
                 "X-Generated-At": _generate_timestamp(),
             }
-            response = self._client.post(
-                self._cleanup_url_path(self._base_url, "/font/register"),
-                files=files,
-                headers=headers,
-                timeout=30,
+            def log_font_register_attempt(attempt: int) -> None:
+                if DEBUG:
+                    retry_info = (
+                        f" (attempt {attempt + 1}/{self._max_retries})"
+                        if attempt > 0
+                        else ""
+                    )
+                    print(
+                        f"{time.time()}|POST /font/register{retry_info} - request size: {request_size} bytes"
+                    )
+
+            def request_font_register() -> httpx.Response:
+                return self._client.post(
+                    self._cleanup_url_path(self._base_url, "/font/register"),
+                    files=files,
+                    headers=headers,
+                    timeout=30,
+                )
+
+            response = _execute_request_with_retries(
+                request_callable=request_font_register,
+                operation="POST /font/register",
+                max_attempts=self._max_retries,
+                retry_backoff_factor=self._retry_backoff_factor,
+                pre_request_hook=log_font_register_attempt,
             )
 
             response_size = len(response.content)

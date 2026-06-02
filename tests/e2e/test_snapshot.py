@@ -139,12 +139,11 @@ def test_page_snapshot_contains_all_element_types():
         text_line_count = sum(
             1 for e in snapshot.elements if e.type == ObjectType.TEXT_LINE
         )
-        image_count = sum(1 for e in snapshot.elements if e.type == ObjectType.IMAGE)
 
         # Verify we have at least some text elements
-        assert (
-            paragraph_count > 0 or text_line_count > 0
-        ), "Page should have at least some text elements"
+        assert paragraph_count > 0 or text_line_count > 0, (
+            "Page should have at least some text elements"
+        )
 
         # Verify all elements have required fields
         for element in snapshot.elements:

@@ -6,6 +6,7 @@ Provides a clean, Pythonic interface for PDF operations that closely
 mirrors the Java client structure and functionality.
 """
 
+from ._runtime_version import resolve_package_version
 from .exceptions import (
     FontNotFoundException,
     HttpClientException,
@@ -51,12 +52,11 @@ from .models import (
     TextObjectRef,
     TextStatus,
 )
-from .types import PathGroupObject
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphBuilder
 from .path_builder import BezierBuilder, LineBuilder, PathBuilder
-from ._runtime_version import resolve_package_version
 from .text_line_builder import TextLineBuilder
+from .types import PathGroupObject
 
 __version__ = resolve_package_version()
 

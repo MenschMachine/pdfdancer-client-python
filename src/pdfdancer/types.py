@@ -4,7 +4,15 @@ import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
-from . import FormFieldRef, ObjectRef, ObjectType, PathObjectRef, Point, Position, TextObjectRef
+from . import (
+    FormFieldRef,
+    ObjectRef,
+    ObjectType,
+    PathObjectRef,
+    Point,
+    Position,
+    TextObjectRef,
+)
 from .exceptions import ValidationException
 
 if TYPE_CHECKING:

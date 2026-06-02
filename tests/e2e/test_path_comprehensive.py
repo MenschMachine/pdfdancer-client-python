@@ -49,7 +49,7 @@ class TestPathBasicOperations:
                 assert (
                     path.position is not None
                 ), f"Path {path.internal_id} should have position"
-                assert path.internal_id is not None, f"Path should have internal_id"
+                assert path.internal_id is not None, "Path should have internal_id"
 
             # Use PDFAssertions to verify path count
             assertions = PDFAssertions(pdf)

@@ -4,8 +4,6 @@ Tests for __eq__ implementations on PDFObjectBase subclasses.
 
 from unittest.mock import Mock
 
-import pytest
-
 from pdfdancer import Color, ObjectRef, ObjectType, Position, TextObjectRef
 from pdfdancer.types import (
     FormFieldObject,
@@ -307,7 +305,7 @@ class TestPDFObjectEquality:
 
         obj = PathObject(mock_client, ref)
 
-        assert obj != None
+        assert obj is not None
 
     def test_equality_with_string(self):
         """PDFObjectBase subclasses should not equal strings."""

@@ -2,8 +2,6 @@
 Tests for Path, Line, Bezier, and PathSegment models.
 """
 
-import pytest
-
 from pdfdancer import Bezier, Color, Line, Path, PathSegment, Point, Position
 
 

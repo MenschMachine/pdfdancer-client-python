@@ -597,9 +597,9 @@ class PDFAssertions(object):
                     obj
                     for obj in objects.values()
                     if re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
-                       and not re.search(
-                    r"/Parent\s+\d+\s+\d+\s+R", str(obj["dictionary"])
-                )
+                    and not re.search(
+                        r"/Parent\s+\d+\s+\d+\s+R", str(obj["dictionary"])
+                    )
                 ),
                 None,
             )
@@ -644,7 +644,7 @@ class PDFAssertions(object):
             int(obj["object_id"])
             for obj in sorted(objects.values(), key=lambda item: int(item["object_id"]))
             if re.search(r"/Type\s*/Page\b", str(obj["dictionary"]))
-               and not re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
+            and not re.search(r"/Type\s*/Pages\b", str(obj["dictionary"]))
         ]
         page_object_ids = ordered_page_object_ids or fallback_page_object_ids
         stream_object_ids = [
@@ -1646,7 +1646,7 @@ class PDFAssertions(object):
         bbox = image.position.bounding_rect
 
         assert bbox is not None, f"Image {internal_id} has no bounding rect"
-        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+        assert bbox.height > 0, "Image height is 0, cannot compute aspect ratio"
 
         actual_ratio = bbox.width / bbox.height
         assert actual_ratio == pytest.approx(
@@ -1677,7 +1677,7 @@ class PDFAssertions(object):
         bbox = image.position.bounding_rect
 
         assert bbox is not None, f"Image at ({x}, {y}) has no bounding rect"
-        assert bbox.height > 0, f"Image height is 0, cannot compute aspect ratio"
+        assert bbox.height > 0, "Image height is 0, cannot compute aspect ratio"
 
         actual_ratio = bbox.width / bbox.height
         assert actual_ratio == pytest.approx(

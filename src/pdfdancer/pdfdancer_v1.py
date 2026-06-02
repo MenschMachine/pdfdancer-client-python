@@ -127,8 +127,8 @@ DEFAULT_TOLERANCE = 0.01
 # These settings control automatic retry behavior when encountering transient network errors
 # and transient server response statuses.
 #
-# PDFDANCER_MAX_RETRIES: Maximum number of retry attempts (default: 3)
-#   Example: With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+# PDFDANCER_MAX_RETRIES: Maximum number of retry attempts after the initial request (default: 3)
+#   Example: With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
 #
 # PDFDANCER_RETRY_BACKOFF_FACTOR: Multiplier for exponential backoff delays (default: 2.0)
 #   The actual delay for each retry is calculated as: initial_delay * (backoff_factor ** retry_count)
@@ -404,6 +404,8 @@ def _execute_request_with_retries(
         The last response returned by the request callable.
 
     Raises:
+        httpx.HTTPStatusError: When a retryable HTTP status error exhausts attempts,
+            or when a non-retryable HTTP status error is raised by the request callable.
         httpx.RequestError: When a non-retriable request error occurs.
     """
     attempts = max(1, max_attempts)
@@ -447,6 +449,33 @@ def _execute_request_with_retries(
                 continue
 
             return response
+
+        except httpx.HTTPStatusError as e:
+            response = e.response
+            last_response = response
+            if response.status_code in retry_statuses and attempt < attempts - 1:
+                delay = _calculate_retry_delay(
+                    response=response,
+                    attempt=attempt,
+                    retry_backoff_factor=retry_backoff_factor,
+                )
+                if response.status_code == 429:
+                    print(
+                        f"Rate limit (429) on {operation} - retrying in {delay}s "
+                        f"(attempt {attempt + 1}/{attempts})",
+                        file=sys.stderr,
+                    )
+                elif DEBUG:
+                    print(
+                        f"{time.time()}|{operation} - Retryable HTTP {response.status_code}, "
+                        f"retrying in {delay}s (attempt {attempt + 1}/{attempts})"
+                    )
+
+                if delay > 0:
+                    time.sleep(delay)
+                attempt += 1
+                continue
+            raise
 
         except httpx.RequestError as e:
             if _is_retryable_error(e) and attempt < attempts - 1:
@@ -963,7 +992,7 @@ class PDFDancer:
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1035,7 +1064,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_token,
                 operation="POST /keys/anon",
-                max_attempts=max_retries,
+                max_attempts=max_retries + 1,
                 retry_backoff_factor=retry_backoff_factor,
             )
 
@@ -1127,7 +1156,7 @@ class PDFDancer:
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1201,7 +1230,7 @@ class PDFDancer:
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
             max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 3 total attempts (1 initial + 2 retries).
+                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1386,7 +1415,7 @@ class PDFDancer:
         def log_create_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
                     if attempt > 0
                     else ""
                 )
@@ -1414,7 +1443,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_session,
                 operation="POST /session/create",
-                max_attempts=self._max_retries,
+                max_attempts=self._max_retries + 1,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_create_attempt,
             )
@@ -1512,13 +1541,14 @@ class PDFDancer:
             raise ValidationException(
                 f"Initial page count must be at least 1, got {initial_page_count}"
             )
+        request_data["initialPageCount"] = initial_page_count
         request_body = json.dumps(request_data)
         request_size = len(request_body.encode("utf-8"))
 
         def log_blank_pdf_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
                     if attempt > 0
                     else ""
                 )
@@ -1542,7 +1572,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_blank_pdf,
                 operation="POST /session/new",
-                max_attempts=self._max_retries,
+                max_attempts=self._max_retries + 1,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_blank_pdf_attempt,
             )
@@ -1618,7 +1648,7 @@ class PDFDancer:
         def log_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
                     if attempt > 0
                     else ""
                 )
@@ -1640,7 +1670,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_api,
                 operation=f"{method} {path}",
-                max_attempts=self._max_retries,
+                max_attempts=self._max_retries + 1,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_attempt,
             )
@@ -2831,7 +2861,7 @@ class PDFDancer:
             def log_font_register_attempt(attempt: int) -> None:
                 if DEBUG:
                     retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries})"
+                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
                         if attempt > 0
                         else ""
                     )
@@ -2850,7 +2880,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_font_register,
                 operation="POST /font/register",
-                max_attempts=self._max_retries,
+                max_attempts=self._max_retries + 1,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_font_register_attempt,
             )

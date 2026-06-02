@@ -362,7 +362,7 @@ def test_modify_paragraph_only_text():
         paragraph = pdf.page(1).select_paragraphs_starting_with(
             "This is regular Sans text showing alignment and styles."
         )[0]
-        result = paragraph.edit().replace("lorem\nipsum\nCaesar").apply()
+        paragraph.edit().replace("lorem\nipsum\nCaesar").apply()
 
         paragraph = pdf.page(1).select_paragraphs_starting_with("lorem")[0]
         assert paragraph.object_ref().status is not None

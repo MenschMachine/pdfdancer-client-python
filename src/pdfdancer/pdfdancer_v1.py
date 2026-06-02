@@ -17,12 +17,23 @@ import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Callable, Dict, List, Mapping, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Union,
+)
 
 import httpx
 from dotenv import find_dotenv, load_dotenv
 
 from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
+from ._runtime_version import resolve_package_version
 from .exceptions import (
     FontNotFoundException,
     HttpClientException,
@@ -75,7 +86,6 @@ from .models import (
 )
 from .page_builder import PageBuilder
 from .paragraph_builder import ParagraphPageBuilder
-from ._runtime_version import resolve_package_version
 from .types import (
     FormFieldObject,
     FormObject,
@@ -368,7 +378,7 @@ def _calculate_retry_delay(
         retry_after = _get_retry_after_delay(response)
         if retry_after is not None:
             return float(min(max_delay_seconds, retry_after))
-    delay = DEFAULT_RETRY_INITIAL_DELAY * (retry_backoff_factor ** attempt)
+    delay = DEFAULT_RETRY_INITIAL_DELAY * (retry_backoff_factor**attempt)
     return float(min(max_delay_seconds, delay))
 
 
@@ -399,7 +409,9 @@ def _execute_request_with_retries(
     """
     attempts = max(1, max_attempts)
     retry_statuses = (
-        retryable_status_codes if retryable_status_codes is not None else DEFAULT_RETRYABLE_STATUS_CODES
+        retryable_status_codes
+        if retryable_status_codes is not None
+        else DEFAULT_RETRYABLE_STATUS_CODES
     )
     attempt = 0
     last_response = None
@@ -412,10 +424,7 @@ def _execute_request_with_retries(
             response = request_callable()
             last_response = response
 
-            if (
-                response.status_code in retry_statuses
-                and attempt < attempts - 1
-            ):
+            if response.status_code in retry_statuses and attempt < attempts - 1:
                 delay = _calculate_retry_delay(
                     response=response,
                     attempt=attempt,
@@ -459,7 +468,9 @@ def _execute_request_with_retries(
             raise
 
     if last_response is None:
-        raise RuntimeError(f"Request exhausted retries without a response for operation: {operation}")
+        raise RuntimeError(
+            f"Request exhausted retries without a response for operation: {operation}"
+        )
 
     return last_response
 
@@ -1008,6 +1019,7 @@ class PDFDancer:
         retry_backoff_factor = DEFAULT_RETRY_BACKOFF_FACTOR
 
         try:
+
             def request_token() -> httpx.Response:
                 headers = {
                     "X-Fingerprint": Fingerprint.generate(),
@@ -1373,15 +1385,15 @@ class PDFDancer:
         original_size = len(uncompressed_body)
         compressed_size = len(compressed_body)
         compression_ratio = (
-            (1 - compressed_size / original_size) * 100
-            if original_size > 0
-            else 0
+            (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
         )
 
         def log_create_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
+                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    if attempt > 0
+                    else ""
                 )
                 print(
                     f"{time.time()}|POST /session/create{retry_info} - original size: {original_size} bytes, "
@@ -1511,7 +1523,9 @@ class PDFDancer:
         def log_blank_pdf_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
+                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    if attempt > 0
+                    else ""
                 )
                 print(
                     f"{time.time()}|POST /session/new{retry_info} - request size: {request_size} bytes"
@@ -1601,12 +1615,16 @@ class PDFDancer:
         }
 
         request_body = json.dumps(data) if data is not None else None
-        request_size = len(request_body.encode("utf-8")) if request_body is not None else 0
+        request_size = (
+            len(request_body.encode("utf-8")) if request_body is not None else 0
+        )
 
         def log_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})" if attempt > 0 else ""
+                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    if attempt > 0
+                    else ""
                 )
                 print(
                     f"{time.time()}|{method} {path}{retry_info} - request size: {request_size} bytes"
@@ -2814,6 +2832,7 @@ class PDFDancer:
                 "X-Session-Id": self._session_id,
                 "X-Generated-At": _generate_timestamp(),
             }
+
             def log_font_register_attempt(attempt: int) -> None:
                 if DEBUG:
                     retry_info = (

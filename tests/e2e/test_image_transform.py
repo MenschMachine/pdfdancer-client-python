@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from pdfdancer import Color, Image, ImageFlipDirection, ObjectType, ValidationException
+from pdfdancer import Color, Image, ImageFlipDirection, ValidationException
 from pdfdancer.pdfdancer_v1 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -458,7 +458,6 @@ class TestImageReplace:
             assert original_count > 0
 
             image = images[0]
-            image_id = image.internal_id
             page_num = image.position.page_number
 
             # Load a replacement image

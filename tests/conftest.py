@@ -18,7 +18,7 @@ def configure_logging():
 def pytest_runtest_protocol(item, nextitem):
     start = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
     print(f"[{start}] START {item.nodeid}")
-    outcome = yield
+    _ = yield
     end = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
     print(f"[{end}] END {item.nodeid}")
 

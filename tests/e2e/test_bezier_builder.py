@@ -3,7 +3,7 @@ End-to-end tests for BezierBuilder.
 Tests building bezier curves from scratch and verifying the resulting PDF.
 """
 
-from pdfdancer import Color, Orientation, PageSize, PDFDancer, Point
+from pdfdancer import Color, Orientation, PageSize, PDFDancer
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions
 

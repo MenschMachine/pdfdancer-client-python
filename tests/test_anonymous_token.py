@@ -256,8 +256,8 @@ class TestAnonymousTokenFallback:
             == "http://localhost:8080/v2/keys/anon"
         )
 
-    def test_make_request_uses_v2_path_without_api_version_header(self):
-        """Test that API versioning is path-based, not header-based."""
+    def test_make_request_uses_v2_path_and_explicit_api_version_header(self):
+        """Test that v2 is selected by both the path and version header."""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.content = b"{}"
@@ -266,7 +266,7 @@ class TestAnonymousTokenFallback:
         pdf._session_id = "test-session-id"
         pdf._base_url = "http://localhost:8080"
         pdf._read_timeout = 30.0
-        pdf._max_retries = 0
+        pdf._max_attempts = 1
         pdf._retry_backoff_factor = 1.0
         pdf._client = MagicMock()
         pdf._client.request.return_value = mock_response
@@ -277,4 +277,4 @@ class TestAnonymousTokenFallback:
         assert (
             call_args.kwargs["url"] == "http://localhost:8080/v2/pdf/document/snapshot"
         )
-        assert "X-API-VERSION" not in call_args.kwargs["headers"]
+        assert call_args.kwargs["headers"]["X-API-VERSION"] == "2"

@@ -9,7 +9,6 @@ def test_get_all_elements():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         elements = pdf.select_elements()
         assert elements
-        assert any(e.object_type == ObjectType.PARAGRAPH for e in elements)
         assert any(e.object_type == ObjectType.TEXT_LINE for e in elements)
         assert any(e.object_type == ObjectType.IMAGE for e in elements)
 
@@ -61,8 +60,8 @@ def test_move_page():
         assert pdf.move_page(1, 7)
 
         (
-            PDFAssertions(pdf).assert_paragraph_exists(
-                "This is regular Sans text showing alignment and styles.", 7
+            PDFAssertions(pdf).assert_pdf_text_contains(
+                "This is regular Sans text showing alignment and styles.", page=7
             )
         )
 
@@ -118,13 +117,13 @@ def test_add_page_with_builder_letter_landscape():
         assert len(pdf.pages()) == 8
 
 
-def test_add_page_with_builder_at_index():
+def test_add_page_with_builder_at_page():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         assert len(pdf.pages()) == 7
 
-        page_ref = pdf.new_page().at_index(5).a5().landscape().add()
+        page_ref = pdf.new_page().at_page(6).a5().landscape().add()
 
         assert page_ref.position.page_number == 6
         assert len(pdf.pages()) == 8
@@ -158,7 +157,7 @@ def test_add_page_with_builder_all_options():
 
         page_ref = (
             pdf.new_page()
-            .at_index(3)
+            .at_page(4)
             .page_size(PageSize.A3)
             .orientation(Orientation.LANDSCAPE)
             .add()

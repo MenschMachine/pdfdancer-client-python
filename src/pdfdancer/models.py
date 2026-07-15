@@ -191,19 +191,24 @@ class StandardFonts(Enum):
 class ObjectType(Enum):
     """Server object type discriminator used in refs, requests, and snapshots."""
 
-    FORM_FIELD = "FORM_FIELD"
-    IMAGE = "IMAGE"
-    FORM_X_OBJECT = "FORM_X_OBJECT"
-    PATH = "PATH"
-    PARAGRAPH = "PARAGRAPH"
-    TEXT_LINE = "TEXT_LINE"
+    PDF = "PDF"
     PAGE = "PAGE"
+    TEXT_ELEMENT = "TEXT_ELEMENT"
+    IMAGE = "IMAGE"
+    PATH = "PATH"
+    LINE = "LINE"
+    RECTANGLE = "RECTANGLE"
+    BEZIER = "BEZIER"
+    CLIPPING = "CLIPPING"
+    FORM_X_OBJECT = "FORM_X_OBJECT"
+    FORM_FIELD = "FORM_FIELD"
+    WORD = "WORD"
+    TEXT_LINE = "TEXT_LINE"
     TEXT_FIELD = "TEXT_FIELD"
-    CHECK_BOX = "CHECK_BOX"
     RADIO_BUTTON = "RADIO_BUTTON"
     BUTTON = "BUTTON"
     DROPDOWN = "DROPDOWN"
-    TEXT_ELEMENT = "TEXT_ELEMENT"
+    CHECKBOX = "CHECKBOX"
 
 
 class PositionMode(Enum):
@@ -374,7 +379,7 @@ class ObjectRef:
     Usage:
     - Instances are typically returned in snapshots or find results.
     - Pass an `ObjectRef` to request objects such as `MoveRequest`, `DeleteRequest`,
-      `ModifyRequest`, or `ModifyTextRequest`.
+      `DeleteRequest`, `MoveRequest`, or `ModifyRequest`.
 
     Example:
     ```python
@@ -406,15 +411,10 @@ class ObjectRef:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        # Normalize type back to API format (API uses "CHECKBOX" not "CHECK_BOX")
-        type_value = self.type.value
-        if type_value == "CHECK_BOX":
-            type_value = "CHECKBOX"
-
         return {
             "internalId": self.internal_id,
             "position": FindRequest._position_to_dict(self.position),
-            "type": type_value,
+            "type": self.type.value,
         }
 
 
@@ -684,107 +684,6 @@ class Image:
         self.position = position
 
 
-@dataclass
-class TextLine:
-    """
-    One line of text to add to a page.
-
-    Parameters:
-    - position: Anchor position where the first line begins.
-    - text: the text
-      provide separate entries for multiple lines.
-    - font: Font to use for all text elements unless overridden later.
-    - color: Text color.
-
-    """
-
-    position: Optional[Position] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    line_spacing: float = 1.2
-    text: str = ""
-
-    def get_position(self) -> Optional[Position]:
-        """Returns the position of this paragraph."""
-        return self.position
-
-    def set_position(self, position: Position) -> None:
-        """Sets the position of this paragraph."""
-        self.position = position
-
-
-@dataclass
-class Paragraph:
-    """
-    Multi-line text paragraph to add to a page.
-
-    Parameters:
-    - position: Anchor position where the first line begins.
-    - text_lines: List of strings, one per line. Use `\n` within a string only if desired; normally
-      provide separate entries for multiple lines.
-    - font: Font to use for all text elements unless overridden later.
-    - color: Text color.
-    - line_spacing: Distance multiplier between lines. Server expects a list, handled for you by `AddRequest`.
-
-    Example:
-    ```python
-    from pdfdancer.models import Paragraph, Position, Font, Color, StandardFonts, AddRequest
-
-    para = Paragraph(
-        position=Position.at_page_coordinates(0, 72, 700),
-        text_lines=["Hello", "PDFDancer!"],
-        font=Font(StandardFonts.HELVETICA.value, 12),
-        color=Color(50, 50, 50),
-        line_spacing=1.4,
-    )
-    payload = AddRequest(para).to_dict()
-    ```
-    """
-
-    position: Optional[Position] = None
-    text_lines: Optional[List[TextLine]] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    line_spacing: float = 1.2
-    line_spacings: Optional[List[float]] = None
-
-    def get_position(self) -> Optional[Position]:
-        """Returns the position of this paragraph."""
-        return self.position
-
-    def set_position(self, position: Position) -> None:
-        """Sets the position of this paragraph."""
-        self.position = position
-
-    def clear_lines(self) -> None:
-        """Removes all text lines from this paragraph."""
-        self.text_lines = []
-
-    def add_line(self, text_line: TextLine) -> None:
-        """Appends a text line to this paragraph."""
-        if self.text_lines is None:
-            self.text_lines = []
-        self.text_lines.append(text_line)
-
-    def get_lines(self) -> List[TextLine]:
-        """Returns the list of text lines, defaulting to an empty list."""
-        if self.text_lines is None:
-            self.text_lines = []
-        return self.text_lines
-
-    def set_lines(self, lines: List[TextLine]) -> None:
-        """Replaces the current text lines with the provided list."""
-        self.text_lines = list(lines)
-
-    def set_line_spacings(self, spacings: Optional[List[float]]) -> None:
-        """Sets the per-line spacing factors for this paragraph."""
-        self.line_spacings = list(spacings) if spacings else None
-
-    def get_line_spacings(self) -> Optional[List[float]]:
-        """Returns the per-line spacing factors if present."""
-        return list(self.line_spacings) if self.line_spacings else None
-
-
 # Request classes for API communication
 @dataclass
 class FindRequest:
@@ -894,55 +793,6 @@ class MoveRequest:
 
 
 @dataclass
-class RedactTarget:
-    """A single redaction target identifying an object by its internal ID."""
-
-    id: str
-    replacement: str
-
-    def to_dict(self) -> dict:
-        return {"id": self.id, "replacement": self.replacement}
-
-
-@dataclass
-class RedactRequest:
-    """Request for redacting content from a PDF document."""
-
-    targets: List["RedactTarget"]
-    default_replacement: str
-    placeholder_color: "Color"
-
-    def to_dict(self) -> dict:
-        return {
-            "targets": [t.to_dict() for t in self.targets],
-            "defaultReplacement": self.default_replacement,
-            "placeholderColor": {
-                "r": self.placeholder_color.r,
-                "g": self.placeholder_color.g,
-                "b": self.placeholder_color.b,
-                "a": self.placeholder_color.a,
-            },
-        }
-
-
-@dataclass
-class RedactResponse:
-    """Response from a redaction operation."""
-
-    count: int
-    success: bool
-    warnings: List[str]
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "RedactResponse":
-        return cls(
-            count=data.get("count", 0),
-            success=data.get("success", False),
-            warnings=data.get("warnings", []),
-        )
-
-
-@dataclass
 class PageMoveRequest:
     """Request to reorder pages.
 
@@ -1012,21 +862,14 @@ class AddRequest:
     """Request to add a new object to the document.
 
     Parameters:
-    - pdf_object: The object to add (e.g. `Image`, `Paragraph`, or `Path`).
-
-    Usage:
-    ```python
-    para = Paragraph(position=Position.at_page_coordinates(0, 72, 700), text_lines=["Hello"])
-    req = AddRequest(para)
-    payload = req.to_dict()  # ready to send to the server API
-    ```
+    - pdf_object: The object to add (`Image` or `Path`).
 
     Notes:
     - Serialization details (like base64 for image `data`, or per-segment position for paths)
       are handled for you in `to_dict()`.
     """
 
-    pdf_object: Any  # Can be Image, Paragraph, etc.
+    pdf_object: Any
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization matching server API.
@@ -1084,120 +927,6 @@ class AddRequest:
                 "size": size,
                 "data": data_b64,
             }
-        elif isinstance(obj, Paragraph):
-
-            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
-                if font:
-                    return {"name": font.name, "size": font.size}
-                return None
-
-            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
-                if color:
-                    return {
-                        "red": color.r,
-                        "green": color.g,
-                        "blue": color.b,
-                        "alpha": color.a,
-                    }
-                return None
-
-            lines_payload = []
-            if obj.text_lines:
-                for line in obj.text_lines:
-                    if isinstance(line, TextLine):
-                        line_text = line.text
-                        line_font = line.font or obj.font
-                        line_color = line.color or obj.color
-                        line_position = line.position or obj.position
-                    else:
-                        line_text = str(line)
-                        line_font = obj.font
-                        line_color = obj.color
-                        line_position = obj.position
-
-                    text_element = {
-                        "text": line_text,
-                        "font": _font_to_dict(line_font),
-                        "color": _color_to_dict(line_color),
-                        "position": (
-                            FindRequest._position_to_dict(line_position)
-                            if line_position
-                            else None
-                        ),
-                    }
-                    text_line = {"textElements": [text_element]}
-                    if line_color:
-                        text_line["color"] = _color_to_dict(line_color)
-                    if line_position:
-                        text_line["position"] = FindRequest._position_to_dict(
-                            line_position
-                        )
-                    lines_payload.append(text_line)
-
-            line_spacings = None
-            if getattr(obj, "line_spacings", None):
-                line_spacings = list(obj.line_spacings)
-            elif getattr(obj, "line_spacing", None) is not None:
-                line_spacings = [obj.line_spacing]
-
-            return {
-                "type": "PARAGRAPH",
-                "position": (
-                    FindRequest._position_to_dict(obj.position)
-                    if obj.position
-                    else None
-                ),
-                "lines": lines_payload if lines_payload else None,
-                "lineSpacings": line_spacings,
-                "font": _font_to_dict(obj.font),
-            }
-        elif isinstance(obj, TextLine):
-
-            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
-                if font:
-                    return {"name": font.name, "size": font.size}
-                return None
-
-            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
-                if color:
-                    return {
-                        "red": color.r,
-                        "green": color.g,
-                        "blue": color.b,
-                        "alpha": color.a,
-                    }
-                return None
-
-            # Build textElement with only non-null fields
-            text_element = {
-                "text": obj.text,
-            }
-
-            if obj.font:
-                text_element["font"] = _font_to_dict(obj.font)
-            if obj.color:
-                text_element["color"] = _color_to_dict(obj.color)
-            if obj.position:
-                text_element["position"] = FindRequest._position_to_dict(obj.position)
-
-            # TEXT_LINE structure matches paragraph line format (textElements only)
-            result = {
-                "type": "TEXT_LINE",
-                "position": (
-                    FindRequest._position_to_dict(obj.position)
-                    if obj.position
-                    else None
-                ),
-                "textElements": [text_element],
-            }
-
-            # Only include top-level font/color if they are not None
-            if obj.font:
-                result["font"] = _font_to_dict(obj.font)
-            if obj.color:
-                result["color"] = _color_to_dict(obj.color)
-
-            return result
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 
@@ -1263,14 +992,7 @@ class ModifyRequest:
 
     Parameters:
     - object_ref: The existing object to replace.
-    - new_object: The replacement object (e.g. `Paragraph`, `Image`, or `Path`).
-
-    Example:
-    ```python
-    new_para = Paragraph(position=old.position, text_lines=["Updated text"])
-    req = ModifyRequest(object_ref=old, new_object=new_para)
-    payload = req.to_dict()
-    ```
+    - new_object: The replacement object (`Image` or `Path`).
     """
 
     object_ref: ObjectRef
@@ -1283,30 +1005,6 @@ class ModifyRequest:
             "ref": self.object_ref.to_dict(),
             "newObject": AddRequest(None)._object_to_dict(self.new_object),
         }
-
-
-@dataclass
-class ModifyTextRequest:
-    """Request to change the text content of a text object.
-
-    Parameters:
-    - object_ref: The text object to modify (e.g. a `TextObjectRef`).
-    - new_text: Replacement text content.
-
-    Example:
-    ```python
-    req = ModifyTextRequest(object_ref=text_ref, new_text="Hello world")
-    payload = req.to_dict()
-    ```
-    """
-
-    object_ref: ObjectRef
-    new_text: str
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        # Use ObjectRef.to_dict() to ensure proper type normalization
-        return {"ref": self.object_ref.to_dict(), "newTextLine": self.new_text}
 
 
 @dataclass
@@ -1342,7 +1040,7 @@ class FormFieldRef(ObjectRef):
     Parameters (usually provided by the server):
     - internal_id: Identifier of the form field object.
     - position: Position of the field.
-    - type: One of `ObjectType.TEXT_FIELD`, `ObjectType.CHECK_BOX`, etc.
+    - type: One of `ObjectType.TEXT_FIELD`, `ObjectType.CHECKBOX`, etc.
     - name: Field name (as defined inside the PDF).
     - value: Current field value (string representation).
 
@@ -1438,7 +1136,7 @@ class TextObjectRef(ObjectRef):
     Usage:
     - Instances are returned by find/snapshot APIs. You generally should not instantiate
       them manually, but you may read their properties or pass their `ObjectRef`-like
-      identity to modification requests (e.g., `ModifyTextRequest`).
+      identity to generic object operations.
     """
 
     def __init__(
@@ -1680,113 +1378,6 @@ class ImageFlipDirection(Enum):
     HORIZONTAL = "HORIZONTAL"
     VERTICAL = "VERTICAL"
     BOTH = "BOTH"
-
-
-class ReflowPreset(Enum):
-    """Reflow preset for template replacement operations.
-
-    Controls how text reflow is handled when replacement text differs in length
-    from the original placeholder.
-
-    Values:
-    - BEST_EFFORT: Attempt to reflow text, but proceed even if it doesn't fit perfectly.
-    - FIT_OR_FAIL: Reflow must succeed or the operation fails.
-    - NONE: No reflow - replacement text is placed as-is.
-    """
-
-    BEST_EFFORT = "BEST_EFFORT"
-    FIT_OR_FAIL = "FIT_OR_FAIL"
-    NONE = "NONE"
-
-
-@dataclass
-class TemplateReplacement:
-    """A single template placeholder replacement.
-
-    Parameters:
-    - placeholder: The exact text to find and replace in the PDF.
-    - text: The text to replace the placeholder with. None for image replacements.
-    - font: Optional font for the replacement text.
-    - color: Optional color for the replacement text.
-    - image: Optional Image to replace the placeholder with. When set, text should be None.
-    """
-
-    placeholder: str
-    text: Optional[str] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    image: Optional[Image] = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        import base64
-
-        result: Dict[str, Any] = {
-            "placeholder": self.placeholder,
-            "text": self.text,
-        }
-        if self.font:
-            result["font"] = {"name": self.font.name, "size": self.font.size}
-        if self.color:
-            result["color"] = {
-                "red": self.color.r,
-                "green": self.color.g,
-                "blue": self.color.b,
-                "alpha": self.color.a,
-            }
-        if self.image:
-            image_dict: Dict[str, Any] = {}
-            if self.image.data:
-                image_dict["data"] = base64.b64encode(self.image.data).decode("utf-8")
-            if self.image.format:
-                image_dict["format"] = self.image.format
-            if self.image.width is not None or self.image.height is not None:
-                size: Dict[str, float] = {}
-                if self.image.width is not None:
-                    size["width"] = self.image.width
-                if self.image.height is not None:
-                    size["height"] = self.image.height
-                image_dict["size"] = size
-            result["image"] = image_dict
-        return result
-
-
-@dataclass
-class TemplateReplaceRequest:
-    """Request for batch template placeholder replacements.
-
-    Parameters:
-    - replacements: List of TemplateReplacement objects.
-    - page_index: Optional 0-based page index. If None, applies to all pages.
-    - reflow_preset: Optional ReflowPreset for text reflow behavior.
-
-    Example:
-    ```python
-    request = TemplateReplaceRequest(
-        replacements=[
-            TemplateReplacement("{{NAME}}", "John Doe"),
-            TemplateReplacement("{{DATE}}", "2025-01-15"),
-        ],
-        page_index=0,  # First page (0-based)
-        reflow_preset=ReflowPreset.BEST_EFFORT,
-    )
-    ```
-    """
-
-    replacements: List[TemplateReplacement]
-    page_index: Optional[int] = None
-    reflow_preset: Optional[ReflowPreset] = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        result: Dict[str, Any] = {
-            "replacements": [r.to_dict() for r in self.replacements],
-        }
-        if self.page_index is not None:
-            result["pageIndex"] = self.page_index
-        if self.reflow_preset is not None:
-            result["reflowPreset"] = self.reflow_preset.value
-        return result
 
 
 @dataclass

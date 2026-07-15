@@ -9,8 +9,8 @@ from pdfdancer import ObjectType, PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 
-def test_page_snapshot_matches_select_paragraphs():
-    """Test that page snapshot paragraph data matches select_paragraphs() results."""
+def test_page_snapshot_matches_select_text_lines():
+    """Test that snapshot TEXT_LINE data matches the Python-only selector."""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
@@ -18,24 +18,20 @@ def test_page_snapshot_matches_select_paragraphs():
 
         # Get data via snapshot
         snapshot = pdf.get_page_snapshot(1)
-        snapshot_paragraphs = [
-            e for e in snapshot.elements if e.type == ObjectType.PARAGRAPH
+        snapshot_text_lines = [
+            e for e in snapshot.elements if e.type == ObjectType.TEXT_LINE
         ]
 
         # Get data via select method
-        selected_paragraphs = page.select_paragraphs()
+        selected_text_lines = page.select_text_lines()
 
         # Compare
-        assert len(selected_paragraphs) == len(
-            snapshot_paragraphs
-        ), "Snapshot should return same paragraph count as select_paragraphs()"
+        assert len(selected_text_lines) == len(snapshot_text_lines)
 
-        snapshot_ids = {e.internal_id for e in snapshot_paragraphs}
-        selected_ids = {p.internal_id for p in selected_paragraphs}
+        snapshot_ids = {e.internal_id for e in snapshot_text_lines}
+        selected_ids = {line.internal_id for line in selected_text_lines}
 
-        assert (
-            selected_ids == snapshot_ids
-        ), "Snapshot and select_paragraphs() should return identical paragraph IDs"
+        assert selected_ids == snapshot_ids
 
 
 def test_page_snapshot_matches_select_images():
@@ -105,7 +101,7 @@ def test_page_snapshot_matches_select_form_fields():
             in (
                 ObjectType.FORM_FIELD,
                 ObjectType.TEXT_FIELD,
-                ObjectType.CHECK_BOX,
+                ObjectType.CHECKBOX,
                 ObjectType.RADIO_BUTTON,
             )
         ]
@@ -133,17 +129,12 @@ def test_page_snapshot_contains_all_element_types():
         snapshot = pdf.get_page_snapshot(1)
 
         # Count elements by type
-        paragraph_count = sum(
-            1 for e in snapshot.elements if e.type == ObjectType.PARAGRAPH
-        )
         text_line_count = sum(
             1 for e in snapshot.elements if e.type == ObjectType.TEXT_LINE
         )
 
         # Verify we have at least some text elements
-        assert paragraph_count > 0 or text_line_count > 0, (
-            "Page should have at least some text elements"
-        )
+        assert text_line_count > 0, "Page should expose TEXT_LINE elements"
 
         # Verify all elements have required fields
         for element in snapshot.elements:
@@ -181,27 +172,23 @@ def test_type_filter_matches_select_method():
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        # Get snapshot with PARAGRAPH filter
-        paragraph_snapshot = pdf.get_page_snapshot(1, "PARAGRAPH")
+        text_line_snapshot = pdf.get_page_snapshot(1, "TEXT_LINE")
 
-        # Get paragraphs via select method
-        selected_paragraphs = pdf.page(1).select_paragraphs()
+        selected_text_lines = pdf.page(1).select_text_lines()
 
-        assert len(selected_paragraphs) == len(
-            paragraph_snapshot.elements
-        ), "Filtered snapshot should match select_paragraphs() count"
+        assert len(selected_text_lines) == len(text_line_snapshot.elements)
 
-        # All elements should be paragraphs
+        # All elements should be text lines.
         assert all(
-            e.type == ObjectType.PARAGRAPH for e in paragraph_snapshot.elements
-        ), "Filtered snapshot should only contain PARAGRAPH types"
+            e.type == ObjectType.TEXT_LINE for e in text_line_snapshot.elements
+        ), "Filtered snapshot should only contain TEXT_LINE types"
 
-        snapshot_ids = {e.internal_id for e in paragraph_snapshot.elements}
-        selected_ids = {p.internal_id for p in selected_paragraphs}
+        snapshot_ids = {e.internal_id for e in text_line_snapshot.elements}
+        selected_ids = {line.internal_id for line in selected_text_lines}
 
         assert (
             selected_ids == snapshot_ids
-        ), "Filtered snapshot and select_paragraphs() should return identical IDs"
+        ), "Filtered snapshot and select_text_lines() should return identical IDs"
 
 
 def test_multiple_type_filters_combined():
@@ -210,11 +197,11 @@ def test_multiple_type_filters_combined():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         # Get snapshot with multiple type filter
-        multi_snapshot = pdf.get_page_snapshot(1, "PARAGRAPH,TEXT_LINE")
+        multi_snapshot = pdf.get_page_snapshot(1, "TEXT_LINE,IMAGE")
 
         # Verify only specified types are present
         assert all(
-            e.type in (ObjectType.PARAGRAPH, ObjectType.TEXT_LINE)
+            e.type in (ObjectType.TEXT_LINE, ObjectType.IMAGE)
             for e in multi_snapshot.elements
         ), "Multi-type filter should only contain specified types"
 
@@ -223,7 +210,7 @@ def test_multiple_type_filters_combined():
         expected_count = sum(
             1
             for e in full_snapshot.elements
-            if e.type in (ObjectType.PARAGRAPH, ObjectType.TEXT_LINE)
+            if e.type in (ObjectType.TEXT_LINE, ObjectType.IMAGE)
         )
 
         assert expected_count == len(
@@ -238,9 +225,6 @@ def test_total_element_count_matches_expected():
     with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
         all_elements = pdf.select_elements()
         assert all_elements, "Showcase.pdf should expose selectable elements"
-        assert any(
-            e.object_type == ObjectType.PARAGRAPH for e in all_elements
-        ), "Showcase.pdf should expose paragraphs"
         assert any(
             e.object_type == ObjectType.TEXT_LINE for e in all_elements
         ), "Showcase.pdf should expose text lines"

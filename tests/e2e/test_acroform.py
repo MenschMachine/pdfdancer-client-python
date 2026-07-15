@@ -11,7 +11,7 @@ def test_find_form_fields():
         form_fields = pdf.select_form_fields()
         assert len(form_fields) == 10
         assert form_fields[0].object_type == ObjectType.TEXT_FIELD
-        assert form_fields[4].object_type == ObjectType.CHECK_BOX
+        assert form_fields[4].object_type == ObjectType.CHECKBOX
         assert form_fields[6].object_type == ObjectType.RADIO_BUTTON
 
         # Verify not all fields at origin

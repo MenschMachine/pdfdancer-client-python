@@ -11,18 +11,11 @@ from pdfdancer import (
     Image,
     ObjectRef,
     ObjectType,
-    Paragraph,
     Position,
     PositionMode,
     ShapeType,
 )
-from pdfdancer.models import TemplateReplacement
-
-# Import Point class for tests
-from pathlib import Path
-
 from pdfdancer.models import Point
-from pdfdancer.pdfdancer_v1 import _dict_to_replacements
 
 
 class TestPosition:
@@ -102,11 +95,11 @@ class TestObjectRef:
     def test_constructor_sets_properties(self):
         """Test ObjectRef constructor sets all properties."""
         position = Position.at_page(1)
-        obj_ref = ObjectRef("obj-123", position, ObjectType.PARAGRAPH)
+        obj_ref = ObjectRef("obj-123", position, ObjectType.TEXT_LINE)
 
         assert obj_ref.internal_id == "obj-123"
         assert obj_ref.position == position
-        assert obj_ref.type == ObjectType.PARAGRAPH
+        assert obj_ref.type == ObjectType.TEXT_LINE
 
     def test_getter_methods(self):
         """Test getter methods match Java patterns."""
@@ -206,47 +199,6 @@ class TestImage:
         assert image.get_position() == position
 
 
-class TestParagraph:
-    """Test Paragraph class functionality."""
-
-    def test_default_constructor(self):
-        """Test Paragraph default constructor."""
-        paragraph = Paragraph()
-
-        assert paragraph.position is None
-        assert paragraph.text_lines is None
-        assert paragraph.font is None
-        assert paragraph.color is None
-        assert paragraph.line_spacing == 1.2  # Default value
-
-    def test_get_set_position(self):
-        """Test Paragraph position getter and setter."""
-        paragraph = Paragraph()
-        position = Position.at_page(2)
-
-        assert paragraph.get_position() is None
-
-        paragraph.set_position(position)
-
-        assert paragraph.get_position() == position
-
-    def test_constructor_with_parameters(self):
-        """Test Paragraph constructor with all parameters."""
-        position = Position.at_page(1)
-        text_lines = ["Line 1", "Line 2"]
-        font = Font("Arial", 14.0)
-        color = Color(255, 0, 0)
-        line_spacing = 1.5
-
-        paragraph = Paragraph(position, text_lines, font, color, line_spacing)
-
-        assert paragraph.position == position
-        assert paragraph.text_lines == text_lines
-        assert paragraph.font == font
-        assert paragraph.color == color
-        assert paragraph.line_spacing == line_spacing
-
-
 class TestBoundingRect:
     """Test BoundingRect class functionality."""
 
@@ -278,94 +230,3 @@ class TestPoint:
 
         assert point.x == 123.45
         assert point.y == 678.90
-
-
-class TestTemplateReplacement:
-    """Test TemplateReplacement serialization."""
-
-    def test_text_replacement_to_dict(self):
-        """Test basic text replacement serializes correctly."""
-        r = TemplateReplacement(placeholder="{{NAME}}", text="John")
-        d = r.to_dict()
-        assert d == {"placeholder": "{{NAME}}", "text": "John"}
-
-    def test_text_none_with_image_to_dict(self):
-        """Test image replacement has text=None in serialized output."""
-        img = Image(data=b"\x89PNG", format="PNG")
-        r = TemplateReplacement(placeholder="{{LOGO}}", text=None, image=img)
-        d = r.to_dict()
-        assert d["text"] is None
-        assert "image" in d
-        assert d["image"]["format"] == "PNG"
-
-    def test_image_replacement_base64_encoding(self):
-        """Test image data is base64-encoded in serialized output."""
-        import base64
-
-        raw = b"\x89PNG\r\n\x1a\nfakedata"
-        img = Image(data=raw, format="PNG")
-        r = TemplateReplacement(placeholder="{{LOGO}}", image=img)
-        d = r.to_dict()
-        assert d["image"]["data"] == base64.b64encode(raw).decode("utf-8")
-
-    def test_image_replacement_with_size(self):
-        """Test image replacement with explicit width/height includes size."""
-        img = Image(data=b"img", format="JPEG", width=50, height=30)
-        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
-        d = r.to_dict()
-        assert d["image"]["size"] == {"width": 50, "height": 30}
-
-    def test_image_replacement_without_size(self):
-        """Test image replacement without width/height omits size."""
-        img = Image(data=b"img", format="PNG")
-        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
-        d = r.to_dict()
-        assert "size" not in d["image"]
-
-    def test_image_replacement_with_partial_size(self):
-        """Test image replacement with only width includes partial size."""
-        img = Image(data=b"img", format="PNG", width=100)
-        r = TemplateReplacement(placeholder="{{PIC}}", image=img)
-        d = r.to_dict()
-        assert d["image"]["size"] == {"width": 100}
-
-
-class TestDictToReplacements:
-    """Test _dict_to_replacements helper."""
-
-    def test_string_value(self):
-        """Test simple string values produce text replacements."""
-        result = _dict_to_replacements({"{{A}}": "hello"})
-        assert len(result) == 1
-        assert result[0].placeholder == "{{A}}"
-        assert result[0].text == "hello"
-        assert result[0].image is None
-
-    def test_dict_with_text(self):
-        """Test dict values with 'text' key produce text replacements."""
-        result = _dict_to_replacements({"{{A}}": {"text": "hi", "font": Font("Arial", 12)}})
-        assert result[0].text == "hi"
-        assert result[0].font.name == "Arial"
-
-    def test_dict_with_image_path(self):
-        """Test dict values with 'image' Path produce image replacements."""
-        logo = Path(__file__).parent / "fixtures" / "logo-80.png"
-        result = _dict_to_replacements({"{{LOGO}}": {"image": logo}})
-        assert len(result) == 1
-        assert result[0].text is None
-        assert result[0].image is not None
-        assert result[0].image.data == logo.read_bytes()
-        assert result[0].image.format == "PNG"
-
-    def test_dict_with_image_path_and_size(self):
-        """Test dict values with 'image' Path and width/height."""
-        logo = Path(__file__).parent / "fixtures" / "logo-80.png"
-        result = _dict_to_replacements({"{{LOGO}}": {"image": logo, "width": 50, "height": 30}})
-        assert result[0].image.width == 50
-        assert result[0].image.height == 30
-
-    def test_dict_with_image_bytes(self):
-        """Test dict values with 'image' as raw bytes."""
-        result = _dict_to_replacements({"{{LOGO}}": {"image": b"rawdata"}})
-        assert result[0].image.data == b"rawdata"
-        assert result[0].text is None

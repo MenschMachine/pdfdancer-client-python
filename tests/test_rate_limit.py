@@ -74,7 +74,7 @@ class TestRateLimitHandling:
     def test_rate_limit_exception_raised_after_retries_exhausted(
         self, mock_client_class
     ):
-        """Test that RateLimitException is raised after max retries for 429"""
+        """Test that RateLimitException is raised after all attempts return 429."""
         from pdfdancer import PDFDancer
 
         # Create mock response with 429 status
@@ -102,5 +102,13 @@ class TestRateLimitHandling:
         assert exc_info.value.retry_after == 1
         assert exc_info.value.response == mock_response
 
-        # Verify it retried (max_retries=3, so 4 attempts total)
-        assert mock_httpx_client.post.call_count == 4
+        # max_attempts includes the initial request.
+        assert mock_httpx_client.post.call_count == 3
+
+    @pytest.mark.parametrize("max_attempts", [0, -1, 1.5, True])
+    def test_max_attempts_must_be_a_positive_integer(self, max_attempts):
+        """The initial request requires a positive integral attempt count."""
+        from pdfdancer import PDFDancer, ValidationException
+
+        with pytest.raises(ValidationException, match="max_attempts"):
+            PDFDancer.open(pdf_data=b"fake pdf data", max_attempts=max_attempts)

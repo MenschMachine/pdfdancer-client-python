@@ -47,19 +47,6 @@ class PageBuilder:
         self._page_number = int(page_number)
         return self
 
-    def at_index(self, page_number: int) -> "PageBuilder":
-        """
-        Deprecated: Use at_page() instead. This method will be removed in a future release.
-        """
-        import warnings
-
-        warnings.warn(
-            "at_index() is deprecated, use at_page() instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.at_page(page_number + 1)
-
     def orientation(self, orientation: Orientation) -> "PageBuilder":
         if orientation is None:
             raise ValidationException("Orientation cannot be null")

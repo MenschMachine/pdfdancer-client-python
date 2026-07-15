@@ -5,6 +5,7 @@ from typing import Tuple
 import httpx
 import pytest
 from dotenv import load_dotenv
+
 from pdfdancer.pdfdancer_v1 import _execute_request_with_retries
 
 
@@ -33,16 +34,14 @@ def _read_token() -> str | None:
 
 def _server_up(base_url: str) -> Tuple[bool, str]:
     try:
-        max_retries = max(1, int(os.getenv("PDFDANCER_MAX_RETRIES", "3")))
-        retry_backoff_factor = float(
-            os.getenv("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
-        )
+        max_attempts = max(1, int(os.getenv("PDFDANCER_MAX_ATTEMPTS", "3")))
+        retry_backoff_factor = float(os.getenv("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0"))
         response = _execute_request_with_retries(
             request_callable=lambda: httpx.get(
                 f"{base_url}/ping", timeout=30, verify=False
             ),
             operation="GET /ping",
-            max_attempts=max_retries,
+            max_attempts=max_attempts,
             retry_backoff_factor=retry_backoff_factor,
             retryable_status_codes={408, 429, 500, 502, 503, 504, 520},
         )

@@ -22,7 +22,6 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
-    Dict,
     List,
     Mapping,
     Optional,
@@ -32,7 +31,7 @@ from typing import (
 import httpx
 from dotenv import find_dotenv, load_dotenv
 
-from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
+from . import BezierBuilder, LineBuilder, PathBuilder
 from ._runtime_version import resolve_package_version
 from .exceptions import (
     FontNotFoundException,
@@ -60,8 +59,6 @@ from .models import (
     FormFieldRef,
     Image,
     ModifyPathRequest,
-    ModifyRequest,
-    ModifyTextRequest,
     MoveRequest,
     ObjectRef,
     ObjectType,
@@ -70,29 +67,25 @@ from .models import (
     PageRef,
     PageSize,
     PageSnapshot,
-    Paragraph,
     PathObjectRef,
     Position,
     PositionMode,
-    RedactRequest,
-    RedactResponse,
-    RedactTarget,
-    ReflowPreset,
     ShapeType,
-    TemplateReplacement,
-    TemplateReplaceRequest,
-    TextLine,
     TextObjectRef,
 )
 from .page_builder import PageBuilder
-from .paragraph_builder import ParagraphPageBuilder
+from .text_editing import (
+    TextDeleteRequest,
+    TextEditResponse,
+    TextInsertRequest,
+    TextReplaceRequest,
+    TextStyleRequest,
+)
 from .types import (
     FormFieldObject,
     FormObject,
     ImageObject,
-    ParagraphObject,
     PathObject,
-    PDFObjectBase,
     TextLineObject,
 )
 
@@ -128,15 +121,15 @@ DEFAULT_TOLERANCE = 0.01
 # These settings control automatic retry behavior when encountering transient network errors
 # and transient server response statuses.
 #
-# PDFDANCER_MAX_RETRIES: Maximum number of retry attempts after the initial request (default: 3)
-#   Example: With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+# PDFDANCER_MAX_ATTEMPTS: Maximum number of total attempts (default: 3).
+#   The initial request counts as one attempt, so 3 permits at most 2 retries.
 #
 # PDFDANCER_RETRY_BACKOFF_FACTOR: Multiplier for exponential backoff delays (default: 2.0)
 #   The actual delay for each retry is calculated as: initial_delay * (backoff_factor ** retry_count)
 #   Examples:
 #     - retry_backoff_factor=2.0: delays are 1s, 2s, 4s, 8s, ...
 #     - retry_backoff_factor=3.0: delays are 1s, 3s, 9s, ...
-DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
+DEFAULT_MAX_ATTEMPTS = int(os.environ.get("PDFDANCER_MAX_ATTEMPTS", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
     os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
 )
@@ -145,52 +138,13 @@ DEFAULT_RETRY_MAX_DELAY = 5.0
 DEFAULT_RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504, 520}
 
 
-def _dict_to_replacements(
-    replacements: Dict[str, Union[str, dict]],
-) -> List[TemplateReplacement]:
-    """Convert dict-based replacements to TemplateReplacement list."""
-    result = []
-    for placeholder, value in replacements.items():
-        if isinstance(value, str):
-            result.append(TemplateReplacement(placeholder=placeholder, text=value))
-        elif "image" in value:
-            image_source = value["image"]
-            if isinstance(image_source, Path):
-                image_data = image_source.read_bytes()
-                image_format = image_source.suffix.lstrip(".").upper()
-                if image_format == "JPG":
-                    image_format = "JPEG"
-            elif isinstance(image_source, bytes):
-                image_data = image_source
-                image_format = None
-            else:
-                raise ValueError(
-                    f"Unsupported image source type: {type(image_source)}. "
-                    "Use a Path or bytes."
-                )
-            img = Image(
-                data=image_data,
-                format=value.get("format", image_format),
-                width=value.get("width"),
-                height=value.get("height"),
-            )
-            result.append(
-                TemplateReplacement(
-                    placeholder=placeholder,
-                    text=None,
-                    image=img,
-                )
-            )
-        else:
-            result.append(
-                TemplateReplacement(
-                    placeholder=placeholder,
-                    text=value["text"],
-                    font=value.get("font"),
-                    color=value.get("color"),
-                )
-            )
-    return result
+def _validate_max_attempts(max_attempts: int) -> int:
+    """Validate that the total-attempt limit can include an initial request."""
+    if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
+        raise ValidationException("max_attempts must be an integer")
+    if max_attempts < 1:
+        raise ValidationException("max_attempts must be at least 1")
+    return max_attempts
 
 
 def _generate_timestamp() -> str:
@@ -532,38 +486,11 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(position, tolerance))
 
-    def select_paragraphs(self) -> List[ParagraphObject]:
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(
-            self.root._find_paragraphs(Position.at_page(self.page_number))
-        )
-
-    def select_paragraphs_starting_with(self, text: str) -> List[ParagraphObject]:
-        position = Position.at_page(self.page_number)
-        position.with_text_starts(text)
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
-
-    def select_paragraphs_matching(self, pattern):
-        position = Position.at_page(self.page_number)
-        position.text_pattern = pattern
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
-
     def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
         position = Position.at_page(self.page_number)
         position.text_pattern = pattern
         # noinspection PyProtectedMember
         return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_paragraphs_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[ParagraphObject]:
-        position = Position.at_page_coordinates(self.page_number, x, y)
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(
-            self.root._find_paragraphs(position, tolerance)
-        )
 
     def select_text_lines(self) -> List[TextLineObject]:
         position = Position.at_page(self.page_number)
@@ -633,49 +560,6 @@ class PageClient:
         )
 
     # Singular selection methods (convenience methods returning first match or None)
-
-    def select_paragraph_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph at the specified coordinates.
-
-        Args:
-            x: X coordinate in points
-            y: Y coordinate in points
-            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
-
-        Returns:
-            First ParagraphObject at the coordinates, or None if no match
-        """
-        results = self.select_paragraphs_at(x, y, tolerance)
-        return results[0] if results else None
-
-    def select_paragraph_starting_with(self, text: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph starting with the specified text.
-
-        Args:
-            text: Text to search for at the start of paragraphs
-
-        Returns:
-            First ParagraphObject starting with the text, or None if no match
-        """
-        results = self.select_paragraphs_starting_with(text)
-        return results[0] if results else None
-
-    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            First ParagraphObject matching the pattern, or None if no match
-        """
-        results = self.select_paragraphs_matching(pattern)
-        return results[0] if results else None
 
     def select_text_line_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
@@ -833,53 +717,10 @@ class PageClient:
             self.position = Position.at_page(target_page_number)
         return moved
 
-    def apply_replacements(
-        self,
-        replacements: Dict[str, Union[str, dict]],
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Replace template placeholders on this page.
-
-        Finds exact text matches for placeholders and replaces them with specified
-        content. All placeholders must be found or the operation fails atomically.
-
-        Args:
-            replacements: Dict mapping placeholder strings to replacement values.
-                - Simple: {"{{NAME}}": "John Doe"}
-                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
-                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
-                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
-            reflow_preset: Optional ReflowPreset to control text reflow behavior.
-                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
-                - FIT_OR_FAIL: Reflow must succeed or operation fails
-                - NONE: No reflow, replacement placed as-is
-
-        Returns:
-            True if all replacements were successful
-
-        Example:
-            ```python
-            page.apply_replacements({
-                "{{NAME}}": "John Doe",
-            })
-            ```
-        """
-        replacement_list = _dict_to_replacements(replacements)
-        # noinspection PyProtectedMember
-        return self.root._apply_replacements(
-            replacements=replacement_list,
-            page_number=self.page_number,
-            reflow_preset=reflow_preset,
-        )
-
     def _ref(self):
         return ObjectRef(
             internal_id=self.internal_id, position=self.position, type=self.object_type
         )
-
-    def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphPageBuilder(self.root, self.page_number)
 
     def new_path(self) -> PathBuilder:
         return PathBuilder(self.root, self.page_number)
@@ -897,6 +738,10 @@ class PageClient:
         from .path_builder import RectangleBuilder
 
         return RectangleBuilder(self.root, self.page_number)
+
+    def text(self) -> "PageTextClient":
+        """Return selector-based text operations scoped to this one-based page."""
+        return PageTextClient(self.root, self.page_number)
 
     def select_paths(self):
         # noinspection PyProtectedMember
@@ -926,13 +771,12 @@ class PageClient:
 
     def select_elements(self):
         """
-        Select all elements (paragraphs, images, paths, forms) on this page.
+        Select all live object-reference elements on this page.
 
         Returns:
             List of all PDF objects on this page
         """
         result = []
-        result.extend(self.select_paragraphs())
         result.extend(self.select_text_lines())
         result.extend(self.select_images())
         result.extend(self.select_paths())
@@ -949,6 +793,45 @@ class PageClient:
     def page_orientation(self):
         """Property alias for orientation."""
         return self.orientation
+
+
+class TextClient:
+    """Document-scoped selector-based text editing operations."""
+
+    def __init__(self, root: "PDFDancer") -> None:
+        self._root = root
+
+    def replace(self, request: TextReplaceRequest) -> TextEditResponse:
+        return self._root._edit_text("replace", request)
+
+    def delete(self, request: TextDeleteRequest) -> TextEditResponse:
+        return self._root._edit_text("delete", request)
+
+    def insert(self, request: TextInsertRequest) -> TextEditResponse:
+        return self._root._edit_text("insert", request)
+
+    def style(self, request: TextStyleRequest) -> TextEditResponse:
+        return self._root._edit_text("style", request)
+
+
+class PageTextClient(TextClient):
+    """Selector-based text editing operations scoped to one page."""
+
+    def __init__(self, root: "PDFDancer", page_number: int) -> None:
+        super().__init__(root)
+        self._page_number = page_number
+
+    def replace(self, request: TextReplaceRequest) -> TextEditResponse:
+        return super().replace(request.with_pages((self._page_number,)))
+
+    def delete(self, request: TextDeleteRequest) -> TextEditResponse:
+        return super().delete(request.with_pages((self._page_number,)))
+
+    def insert(self, request: TextInsertRequest) -> TextEditResponse:
+        return super().insert(request.with_pages((self._page_number,)))
+
+    def style(self, request: TextStyleRequest) -> TextEditResponse:
+        return super().style(request.with_pages((self._page_number,)))
 
 
 class PDFDancer:
@@ -969,7 +852,7 @@ class PDFDancer:
         token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 30.0,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
@@ -988,8 +871,8 @@ class PDFDancer:
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -997,6 +880,7 @@ class PDFDancer:
         Returns:
             A ready-to-use `PDFDancer` client instance.
         """
+        _validate_max_attempts(max_attempts)
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
 
@@ -1009,7 +893,7 @@ class PDFDancer:
             pdf_data,
             resolved_base_url,
             timeout,
-            max_retries,
+            max_attempts,
             retry_backoff_factor,
         )
 
@@ -1042,7 +926,7 @@ class PDFDancer:
         """
         # Create temporary client without authentication
         temp_client = httpx.Client(http2=True, verify=not DISABLE_SSL_VERIFY)
-        max_retries = DEFAULT_MAX_RETRIES
+        max_attempts = DEFAULT_MAX_ATTEMPTS
         retry_backoff_factor = DEFAULT_RETRY_BACKOFF_FACTOR
 
         try:
@@ -1051,6 +935,7 @@ class PDFDancer:
                 headers = {
                     "X-Fingerprint": Fingerprint.generate(),
                     "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                    "X-API-VERSION": "2",
                 }
                 return temp_client.post(
                     cls._cleanup_url_path(base_url, "/keys/anon"),
@@ -1061,7 +946,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_token,
                 operation="POST /keys/anon",
-                max_attempts=max_retries + 1,
+                max_attempts=max_attempts,
                 retry_backoff_factor=retry_backoff_factor,
             )
 
@@ -1078,7 +963,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /keys/anon - max retries exhausted",
+                    "Rate limit (429) on POST /keys/anon - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1130,7 +1015,7 @@ class PDFDancer:
         page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
         orientation: Optional[Union[Orientation, str]] = None,
         initial_page_count: int = 1,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
@@ -1152,8 +1037,8 @@ class PDFDancer:
                 mapping with `width`/`height` values.
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1161,6 +1046,7 @@ class PDFDancer:
         Returns:
             A ready-to-use `PDFDancer` client instance with a blank PDF.
         """
+        _validate_max_attempts(max_attempts)
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
 
@@ -1178,7 +1064,7 @@ class PDFDancer:
         instance._token = resolved_token.strip()
         instance._base_url = resolved_base_url.rstrip("/")
         instance._read_timeout = timeout
-        instance._max_retries = max_retries
+        instance._max_attempts = max_attempts
         instance._retry_backoff_factor = retry_backoff_factor
 
         # Create HTTP client for connection reuse with HTTP/2 support
@@ -1187,6 +1073,7 @@ class PDFDancer:
             headers={
                 "Authorization": f"Bearer {instance._token}",
                 "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                "X-API-VERSION": "2",
             },
             verify=not DISABLE_SSL_VERIFY,
         )
@@ -1213,7 +1100,7 @@ class PDFDancer:
         pdf_data: Union[bytes, Path, str, BinaryIO],
         base_url: str,
         read_timeout: float = 0,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ):
         """
@@ -1226,8 +1113,8 @@ class PDFDancer:
             pdf_data: PDF file data as bytes, Path, filename string, or file-like object
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1240,11 +1127,12 @@ class PDFDancer:
         # Strict validation like Java client
         if not token or not token.strip():
             raise ValidationException("Authentication token cannot be null or empty")
+        _validate_max_attempts(max_attempts)
 
         self._token = token.strip()
         self._base_url = base_url.rstrip("/")
         self._read_timeout = read_timeout
-        self._max_retries = max_retries
+        self._max_attempts = max_attempts
         self._retry_backoff_factor = retry_backoff_factor
 
         # Process PDF data with validation
@@ -1256,6 +1144,7 @@ class PDFDancer:
             headers={
                 "Authorization": f"Bearer {self._token}",
                 "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                "X-API-VERSION": "2",
             },
             verify=not DISABLE_SSL_VERIFY,
         )
@@ -1418,7 +1307,7 @@ class PDFDancer:
         def log_create_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1446,7 +1335,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_session,
                 operation="POST /session/create",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_create_attempt,
             )
@@ -1475,7 +1364,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /session/create - max retries exhausted",
+                    "Rate limit (429) on POST /session/create - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1551,7 +1440,7 @@ class PDFDancer:
         def log_blank_pdf_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1575,7 +1464,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_blank_pdf,
                 operation="POST /session/new",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_blank_pdf_attempt,
             )
@@ -1604,7 +1493,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /session/new - max retries exhausted",
+                    "Rate limit (429) on POST /session/new - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1637,6 +1526,7 @@ class PDFDancer:
         """
         headers = {
             "X-Session-Id": self._session_id,
+            "X-API-VERSION": "2",
             "Content-Type": "application/json",
             "X-Generated-At": _generate_timestamp(),
             "X-Fingerprint": Fingerprint.generate(),
@@ -1650,7 +1540,7 @@ class PDFDancer:
         def log_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1672,7 +1562,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_api,
                 operation=f"{method} {path}",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_attempt,
             )
@@ -1713,7 +1603,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    f"Rate limit (429) on {method} {path} - max retries exhausted",
+                    f"Rate limit (429) on {method} {path} - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1768,61 +1658,6 @@ class PDFDancer:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(
                 all_elements, object_type, position, tolerance
-            )
-
-    def select_paragraphs(self) -> List[ParagraphObject]:
-        """
-        Searches for paragraph objects returning ParagraphObject instances.
-        """
-        return self._to_paragraph_objects(self._find_paragraphs(None))
-
-    def select_paragraphs_matching(self, pattern: str) -> List[ParagraphObject]:
-        """
-        Searches for paragraph objects matching a regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            List of ParagraphObject instances matching the pattern
-        """
-        position = Position()
-        position.text_pattern = pattern
-        return self._to_paragraph_objects(self._find_paragraphs(position))
-
-    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            First ParagraphObject matching the pattern, or None if no match
-        """
-        results = self.select_paragraphs_matching(pattern)
-        return results[0] if results else None
-
-    def _find_paragraphs(
-        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextObjectRef]:
-        """
-        Searches for paragraph objects returning TextObjectRef with hierarchical structure.
-        Uses snapshot cache for all queries.
-        """
-        # Use snapshot for all queries (including spatial)
-        if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
-            return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.PARAGRAPH, position, tolerance
-            )
-        else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
-                all_elements.extend(page_snap.elements)
-            return self._filter_snapshot_elements(
-                all_elements, ObjectType.PARAGRAPH, position, tolerance
             )
 
     def _find_images(
@@ -2173,6 +2008,39 @@ class PDFDancer:
 
     # Manipulation Operations
 
+    def _edit_text(
+        self,
+        operation: str,
+        request: Union[
+            TextReplaceRequest,
+            TextDeleteRequest,
+            TextInsertRequest,
+            TextStyleRequest,
+        ],
+    ) -> TextEditResponse:
+        """Execute one validated selector-based text mutation."""
+        expected_types = {
+            "replace": TextReplaceRequest,
+            "delete": TextDeleteRequest,
+            "insert": TextInsertRequest,
+            "style": TextStyleRequest,
+        }
+        expected_type = expected_types.get(operation)
+        if expected_type is None:
+            raise ValidationException(f"Unsupported text operation: {operation}")
+        if not isinstance(request, expected_type):
+            raise ValidationException(
+                f"{operation} requires {expected_type.__name__}, "
+                f"got {type(request).__name__}"
+            )
+
+        response = self._make_request(
+            "POST", f"/pdf/text/{operation}", data=request.to_dict()
+        )
+        result = TextEditResponse.from_dict(response.json())
+        self._invalidate_snapshots()
+        return result
+
     def _delete(self, object_ref: ObjectRef) -> bool:
         """
         Deletes the specified PDF object from the document.
@@ -2222,58 +2090,6 @@ class PDFDancer:
 
         return result
 
-    def _redact(
-        self,
-        targets: List["RedactTarget"],
-        default_replacement: str = "[REDACTED]",
-        placeholder_color: Optional[Color] = None,
-    ) -> "RedactResponse":
-        """
-        Redacts specified objects from the PDF document.
-
-        Args:
-            targets: List of RedactTarget objects identifying what to redact
-            default_replacement: Default replacement text for redacted content
-            placeholder_color: Color for image/path placeholder rectangles
-
-        Returns:
-            RedactResponse with count, success status, and any warnings
-        """
-        if not targets:
-            raise ValidationException("At least one redaction target is required")
-
-        if placeholder_color is None:
-            placeholder_color = Color(0, 0, 0)
-
-        request = RedactRequest(targets, default_replacement, placeholder_color)
-        response = self._make_request("POST", "/pdf/redact", data=request.to_dict())
-        result = RedactResponse.from_dict(response.json())
-
-        if result.success:
-            self._invalidate_snapshots()
-
-        return result
-
-    def redact(
-        self,
-        objects: List["PDFObjectBase"],
-        replacement: str = "[REDACTED]",
-        placeholder_color: Optional[Color] = None,
-    ) -> "RedactResponse":
-        """
-        Redacts multiple objects from the PDF document.
-
-        Args:
-            objects: List of PDF objects to redact
-            replacement: Replacement text for all redacted content
-            placeholder_color: Color for image/path placeholder rectangles
-
-        Returns:
-            RedactResponse with count, success status, and any warnings
-        """
-        targets = [RedactTarget(obj.internal_id, replacement) for obj in objects]
-        return self._redact(targets, replacement, placeholder_color)
-
     def clear_clipping(self, object_ref: ObjectRef) -> bool:
         """
         Clear clipping on a single PDF object.
@@ -2305,88 +2121,6 @@ class PDFDancer:
 
         return result
 
-    # Template Replacement Operations
-
-    def _apply_replacements(
-        self,
-        replacements: List[TemplateReplacement],
-        page_number: Optional[int] = None,
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Internal method to replace template placeholders in the PDF.
-
-        Args:
-            replacements: List of TemplateReplacement objects
-            page_number: Optional 1-based page number. If None, applies to all pages.
-            reflow_preset: Optional reflow behavior preset
-
-        Returns:
-            True if replacement was successful
-        """
-        if not replacements:
-            raise ValidationException("At least one replacement is required")
-
-        # Convert 1-based page_number to 0-based page_index for API
-        page_index = None
-        if page_number is not None:
-            page_index = page_number - 1
-
-        request = TemplateReplaceRequest(
-            replacements=replacements,
-            page_index=page_index,
-            reflow_preset=reflow_preset,
-        )
-        response = self._make_request(
-            "POST", "/template/replace", data=request.to_dict()
-        )
-        result = response.json()
-
-        if result:
-            self._invalidate_snapshots()
-
-        return result
-
-    def apply_replacements(
-        self,
-        replacements: Dict[str, Union[str, dict]],
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Replace template placeholders in the PDF document.
-
-        Finds exact text matches for placeholders and replaces them with specified
-        content. All placeholders must be found or the operation fails atomically.
-
-        Args:
-            replacements: Dict mapping placeholder strings to replacement values.
-                - Simple: {"{{NAME}}": "John Doe"}
-                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
-                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
-                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
-            reflow_preset: Optional ReflowPreset to control text reflow behavior.
-                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
-                - FIT_OR_FAIL: Reflow must succeed or operation fails
-                - NONE: No reflow, replacement placed as-is
-
-        Returns:
-            True if all replacements were successful
-
-        Example:
-            ```python
-            pdf.apply_replacements({
-                "{{NAME}}": "John Doe",
-                "{{DATE}}": "2025-01-15",
-            })
-            ```
-        """
-        replacement_list = _dict_to_replacements(replacements)
-        return self._apply_replacements(
-            replacements=replacement_list,
-            page_number=None,
-            reflow_preset=reflow_preset,
-        )
-
     # Add Operations
 
     def _add_image(self, image: Image, position: Optional[Position] = None) -> bool:
@@ -2410,27 +2144,6 @@ class PDFDancer:
             raise ValidationException("Image position is null")
 
         return self._add_object(image)
-
-    def _add_paragraph(self, paragraph: Paragraph) -> bool:
-        """
-        Adds a paragraph to the PDF document.
-
-        Args:
-            paragraph: The paragraph object to add
-
-        Returns:
-            True if the paragraph was successfully added
-        """
-        if paragraph is None:
-            raise ValidationException("Paragraph cannot be null")
-        if paragraph.get_position() is None:
-            raise ValidationException("Paragraph position is null")
-        if paragraph.get_position().page_number is None:
-            raise ValidationException("Paragraph position page number is null")
-        if paragraph.get_position().page_number < 1:
-            raise ValidationException("Paragraph position page number is less than 1")
-
-        return self._add_object(paragraph)
 
     def _add_path(self, path: "Path") -> bool:
         """
@@ -2630,8 +2343,9 @@ class PDFDancer:
 
         return result
 
-    def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphBuilder(self)
+    def text(self) -> TextClient:
+        """Return document-scoped selector-based text editing operations."""
+        return TextClient(self)
 
     def new_page(
         self, orientation=Orientation.PORTRAIT, size=PageSize.A4
@@ -2652,92 +2366,6 @@ class PDFDancer:
         return PathBuilder(self)
 
     # Modify Operations
-    def _modify_paragraph(
-        self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]
-    ) -> CommandResult:
-        """
-        Modifies a paragraph object or its text content.
-
-        Args:
-            object_ref: Reference to the paragraph to modify
-            new_paragraph: New paragraph object or text string
-
-        Returns:
-            True if the paragraph was successfully modified
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_paragraph is None:
-            return CommandResult.empty("ModifyParagraph", object_ref.internal_id)
-
-        if isinstance(new_paragraph, str):
-            # Text modification - returns CommandResult
-            request_data = ModifyTextRequest(object_ref, new_paragraph).to_dict()
-            response = self._make_request(
-                "PUT", "/pdf/text/paragraph", data=request_data
-            )
-            result = CommandResult.from_dict(response.json())
-        else:
-            # Object modification
-            request_data = ModifyRequest(object_ref, new_paragraph).to_dict()
-            response = self._make_request("PUT", "/pdf/modify", data=request_data)
-            result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
-    def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> CommandResult:
-        """
-        Modifies a text line object.
-
-        Args:
-            object_ref: Reference to the text line to modify
-            new_text: New text content
-
-        Returns:
-            True if the text line was successfully modified
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_text is None:
-            raise ValidationException("New text cannot be null")
-
-        request_data = ModifyTextRequest(object_ref, new_text).to_dict()
-        response = self._make_request("PUT", "/pdf/text/line", data=request_data)
-        result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
-    def _modify_text_line_full(
-        self, object_ref: ObjectRef, new_text_line: TextLine
-    ) -> CommandResult:
-        """
-        Modifies a text line object with full styling (font, color, position).
-
-        Args:
-            object_ref: Reference to the text line to modify
-            new_text_line: New text line object with styling
-
-        Returns:
-            CommandResult indicating success or failure
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_text_line is None:
-            raise ValidationException("New text line cannot be null")
-
-        # Use /pdf/modify endpoint for full object modification
-        request_data = ModifyRequest(object_ref, new_text_line).to_dict()
-        response = self._make_request("PUT", "/pdf/modify", data=request_data)
-        result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
     def _modify_path(
         self,
         object_ref: ObjectRef,
@@ -2864,7 +2492,7 @@ class PDFDancer:
             def log_font_register_attempt(attempt: int) -> None:
                 if DEBUG:
                     retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries})"
+                        f" (attempt {attempt + 1}/{self._max_attempts})"
                         if attempt > 0
                         else ""
                     )
@@ -2883,7 +2511,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_font_register,
                 operation="POST /font/register",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_font_register_attempt,
             )
@@ -2921,7 +2549,7 @@ class PDFDancer:
         Retrieve a snapshot of the entire document with all pages and elements.
 
         Args:
-            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+            types: Optional comma-separated string of object types to filter (e.g., "TEXT_LINE,IMAGE")
 
         Returns:
             DocumentSnapshot containing page count, fonts, and all page snapshots
@@ -2943,7 +2571,7 @@ class PDFDancer:
 
         Args:
             page_number: The page number to snapshot (1-based, page 1 is first page)
-            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+            types: Optional comma-separated string of object types to filter (e.g., "TEXT_LINE,IMAGE")
 
         Returns:
             PageSnapshot containing page reference and all elements on that page
@@ -3037,11 +2665,11 @@ class PDFDancer:
 
         # Filter by object type (handle form field subtypes)
         if object_type == ObjectType.FORM_FIELD:
-            # Form fields include TEXT_FIELD, CHECK_BOX, RADIO_BUTTON, BUTTON, DROPDOWN
+            # Form fields include TEXT_FIELD, CHECKBOX, RADIO_BUTTON, BUTTON, DROPDOWN
             form_field_types = {
                 ObjectType.FORM_FIELD,
                 ObjectType.TEXT_FIELD,
-                ObjectType.CHECK_BOX,
+                ObjectType.CHECKBOX,
                 ObjectType.RADIO_BUTTON,
                 ObjectType.BUTTON,
                 ObjectType.DROPDOWN,
@@ -3238,6 +2866,7 @@ class PDFDancer:
         position = Position()
         position.page_number = pos_data.get("pageNumber")
         position.text_starts_with = pos_data.get("textStartsWith")
+        position.text_pattern = pos_data.get("textPattern")
 
         if "shape" in pos_data:
             position.shape = ShapeType(pos_data["shape"])
@@ -3521,25 +3150,16 @@ class PDFDancer:
                 continue
 
             try:
-                # Normalize type string (API returns "CHECKBOX" but enum is "CHECK_BOX")
-                if elem_type_str == "CHECKBOX":
-                    elem_type_str = "CHECK_BOX"
-                    # Deep copy to avoid modifying original
-                    import copy
-
-                    elem_data = copy.deepcopy(elem_data)
-                    elem_data["type"] = elem_type_str  # Update type in data
-
                 elem_type = ObjectType(elem_type_str)
 
                 # Use appropriate parser based on element type
-                if elem_type in (ObjectType.PARAGRAPH, ObjectType.TEXT_LINE):
+                if elem_type == ObjectType.TEXT_LINE:
                     # Parse as TextObjectRef to capture text, font, color, children
                     elements.append(self._parse_text_object_ref(elem_data))
                 elif elem_type in (
                     ObjectType.FORM_FIELD,
                     ObjectType.TEXT_FIELD,
-                    ObjectType.CHECK_BOX,
+                    ObjectType.CHECKBOX,
                     ObjectType.RADIO_BUTTON,
                     ObjectType.BUTTON,
                     ObjectType.DROPDOWN,
@@ -3571,18 +3191,6 @@ class PDFDancer:
 
         return DocumentSnapshot(page_count=page_count, fonts=fonts, pages=pages)
 
-    # Builder Pattern Support
-
-    def _paragraph_builder(self) -> "ParagraphBuilder":
-        """
-        Creates a new ParagraphBuilder for fluent paragraph construction.
-        Returns:
-            A new ParagraphBuilder instance
-        """
-        from .paragraph_builder import ParagraphBuilder
-
-        return ParagraphBuilder(self)
-
     # Context Manager Support (Python enhancement)
     def __enter__(self):
         """Context manager entry."""
@@ -3603,9 +3211,6 @@ class PDFDancer:
 
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
         return [PathObject(self, ref) for ref in refs]
-
-    def _to_paragraph_objects(self, refs: List[TextObjectRef]) -> List[ParagraphObject]:
-        return [ParagraphObject(self, ref) for ref in refs]
 
     def _to_textline_objects(self, refs: List[TextObjectRef]) -> List[TextLineObject]:
         return [TextLineObject(self, ref) for ref in refs]
@@ -3641,15 +3246,7 @@ class PDFDancer:
         """
         result = []
         for ref in refs:
-            if ref.type == ObjectType.PARAGRAPH:
-                # Need to convert to TextObjectRef first
-                if isinstance(ref, TextObjectRef):
-                    result.append(ParagraphObject(self, ref))
-                else:
-                    # Re-fetch with proper type
-                    text_refs = self._find_paragraphs(ref.position)
-                    result.extend(self._to_paragraph_objects(text_refs))
-            elif ref.type == ObjectType.TEXT_LINE:
+            if ref.type == ObjectType.TEXT_LINE:
                 if isinstance(ref, TextObjectRef):
                     result.append(TextLineObject(self, ref))
                 else:
@@ -3682,13 +3279,12 @@ class PDFDancer:
 
     def select_elements(self):
         """
-        Select all elements (paragraphs, images, paths, forms) in the document.
+        Select all live object-reference elements in the document.
 
         Returns:
             List of all PDF objects in the document
         """
         result = []
-        result.extend(self.select_paragraphs())
         result.extend(self.select_text_lines())
         result.extend(self.select_images())
         result.extend(self.select_paths())

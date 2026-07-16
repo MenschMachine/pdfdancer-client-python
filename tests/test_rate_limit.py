@@ -17,7 +17,7 @@ class TestRateLimitHandling:
 
     def test_rate_limit_with_retry_after_header(self):
         """Test that 429 responses with Retry-After header are handled correctly"""
-        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+        from pdfdancer.pdfdancer_v2 import _get_retry_after_delay
 
         # Create mock response with Retry-After header
         mock_response = Mock(spec=httpx.Response)
@@ -28,7 +28,7 @@ class TestRateLimitHandling:
 
     def test_rate_limit_without_retry_after_header(self):
         """Test that 429 responses without Retry-After header return None"""
-        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+        from pdfdancer.pdfdancer_v2 import _get_retry_after_delay
 
         # Create mock response without Retry-After header
         mock_response = Mock(spec=httpx.Response)
@@ -39,7 +39,7 @@ class TestRateLimitHandling:
 
     def test_rate_limit_with_invalid_retry_after(self):
         """Test that invalid Retry-After values return None"""
-        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+        from pdfdancer.pdfdancer_v2 import _get_retry_after_delay
 
         # Create mock response with invalid Retry-After header
         mock_response = Mock(spec=httpx.Response)
@@ -50,7 +50,7 @@ class TestRateLimitHandling:
 
     def test_rate_limit_with_negative_retry_after(self):
         """Test that negative Retry-After values are ignored."""
-        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+        from pdfdancer.pdfdancer_v2 import _get_retry_after_delay
 
         mock_response = Mock(spec=httpx.Response)
         mock_response.headers = {"Retry-After": "-1"}
@@ -60,7 +60,7 @@ class TestRateLimitHandling:
 
     def test_rate_limit_with_http_date_retry_after(self):
         """Test that HTTP-date Retry-After values are converted to seconds."""
-        from pdfdancer.pdfdancer_v1 import _get_retry_after_delay
+        from pdfdancer.pdfdancer_v2 import _get_retry_after_delay
 
         retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
         mock_response = Mock(spec=httpx.Response)
@@ -70,7 +70,7 @@ class TestRateLimitHandling:
         assert delay is not None
         assert 0 <= delay <= 30
 
-    @patch("pdfdancer.pdfdancer_v1.httpx.Client")
+    @patch("pdfdancer.pdfdancer_v2.httpx.Client")
     def test_rate_limit_exception_raised_after_retries_exhausted(
         self, mock_client_class
     ):

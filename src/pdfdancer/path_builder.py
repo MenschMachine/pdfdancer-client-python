@@ -12,7 +12,7 @@ from .exceptions import ValidationException
 from .models import Bezier, Color, Line, Path, PathSegment, Point, Position
 
 if TYPE_CHECKING:
-    from .pdfdancer_v1 import PDFDancer
+    from .pdfdancer_v2 import PDFDancer
 
 
 class PathBuilder:

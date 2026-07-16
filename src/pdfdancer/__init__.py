@@ -168,8 +168,8 @@ __all__ = [
     "TextStyleSetRequest",
 ]
 
-from . import pdfdancer_v1
-from .pdfdancer_v1 import PDFDancer
+from . import pdfdancer_v2
+from .pdfdancer_v2 import PDFDancer
 
 
 def set_ssl_verify(enabled: bool) -> None:
@@ -187,4 +187,4 @@ def set_ssl_verify(enabled: bool) -> None:
         import pdfdancer
         pdfdancer.set_ssl_verify(False)  # Disable SSL verification
     """
-    pdfdancer_v1.DISABLE_SSL_VERIFY = not enabled
+    pdfdancer_v2.DISABLE_SSL_VERIFY = not enabled

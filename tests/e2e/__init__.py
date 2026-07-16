@@ -6,7 +6,7 @@ import httpx
 import pytest
 from dotenv import load_dotenv
 
-from pdfdancer.pdfdancer_v1 import _execute_request_with_retries
+from pdfdancer.pdfdancer_v2 import _execute_request_with_retries
 
 
 def _get_base_url():

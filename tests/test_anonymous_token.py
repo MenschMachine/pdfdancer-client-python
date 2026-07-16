@@ -21,7 +21,7 @@ class TestAnonymousTokenFallback:
     @pytest.fixture
     def mock_httpx_client(self):
         """Mock httpx.Client for testing."""
-        with patch("pdfdancer.pdfdancer_v1.httpx.Client") as mock_client_class:
+        with patch("pdfdancer.pdfdancer_v2.httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
             yield mock_client
@@ -29,18 +29,18 @@ class TestAnonymousTokenFallback:
     @pytest.fixture
     def clear_env_token(self):
         """Temporarily clear PDFDANCER_TOKEN and PDFDANCER_API_TOKEN from environment."""
-        import pdfdancer.pdfdancer_v1 as pdfdancer_v1
+        import pdfdancer.pdfdancer_v2 as pdfdancer_v2
 
         original_token = os.environ.get("PDFDANCER_TOKEN")
         original_api_token = os.environ.get("PDFDANCER_API_TOKEN")
-        original_env_loaded = pdfdancer_v1._env_loaded
+        original_env_loaded = pdfdancer_v2._env_loaded
         if "PDFDANCER_TOKEN" in os.environ:
             del os.environ["PDFDANCER_TOKEN"]
         if "PDFDANCER_API_TOKEN" in os.environ:
             del os.environ["PDFDANCER_API_TOKEN"]
-        pdfdancer_v1._env_loaded = True
+        pdfdancer_v2._env_loaded = True
         yield
-        pdfdancer_v1._env_loaded = original_env_loaded
+        pdfdancer_v2._env_loaded = original_env_loaded
         if original_token is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token
         if original_api_token is not None:
@@ -138,7 +138,7 @@ class TestAnonymousTokenFallback:
         assert "Failed to obtain anonymous token" in str(exc_info.value)
         assert "Connection failed" in str(exc_info.value)
 
-    @patch("pdfdancer.pdfdancer_v1.time.sleep")
+    @patch("pdfdancer.pdfdancer_v2.time.sleep")
     def test_obtain_anonymous_token_retries_transient_network_error(
         self, mock_sleep, mock_httpx_client
     ):
@@ -169,8 +169,8 @@ class TestAnonymousTokenFallback:
 
         assert "Invalid anonymous token response format" in str(exc_info.value)
 
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer._obtain_anonymous_token")
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer.__init__")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer._obtain_anonymous_token")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer.__init__")
     def test_open_uses_anonymous_token_when_no_token(
         self, mock_init, mock_obtain_token, clear_env_token
     ):
@@ -185,8 +185,8 @@ class TestAnonymousTokenFallback:
         # Verify anonymous token was passed to __init__
         assert mock_init.call_args[0][0] == "anon-token-123"
 
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer._obtain_anonymous_token")
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer.__init__")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer._obtain_anonymous_token")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer.__init__")
     def test_open_uses_explicit_token(self, mock_init, mock_obtain_token):
         """Test that PDFDancer.open() uses explicit token when provided."""
         mock_init.return_value = None
@@ -198,7 +198,7 @@ class TestAnonymousTokenFallback:
         # Verify explicit token was passed to __init__
         assert mock_init.call_args[0][0] == "explicit-token"
 
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer._obtain_anonymous_token")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer._obtain_anonymous_token")
     def test_new_uses_anonymous_token_when_no_token(
         self, mock_obtain_token, clear_env_token, mock_httpx_client
     ):
@@ -215,7 +215,7 @@ class TestAnonymousTokenFallback:
         mock_obtain_token.assert_called_once()
         assert pdf._token == "anon-token-456"
 
-    @patch("pdfdancer.pdfdancer_v1.PDFDancer._obtain_anonymous_token")
+    @patch("pdfdancer.pdfdancer_v2.PDFDancer._obtain_anonymous_token")
     def test_new_uses_explicit_token(self, mock_obtain_token, mock_httpx_client):
         """Test that PDFDancer.new() uses explicit token when provided."""
         # Mock the session creation response

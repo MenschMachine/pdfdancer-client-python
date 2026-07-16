@@ -17,7 +17,7 @@ from .models import BoundingRect as ModelBoundingRect
 
 if TYPE_CHECKING:
     from .models import Color, CommandResult, Image, ImageFlipDirection, PathGroupInfo
-    from .pdfdancer_v1 import PDFDancer
+    from .pdfdancer_v2 import PDFDancer
 
 
 @dataclass

@@ -492,7 +492,7 @@ class TestComplexPathScenarios:
     def test_path_parsing_from_json(self):
         """Test parsing path data from JSON (simulating API response)."""
         # Simulate what the _parse_path method would receive
-        from pdfdancer.pdfdancer_v1 import PDFDancer
+        from pdfdancer.pdfdancer_v2 import PDFDancer
 
         pdf_instance = PDFDancer.__new__(PDFDancer)
 

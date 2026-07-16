@@ -6,7 +6,7 @@ from .exceptions import ValidationException
 from .models import AddPageRequest, Orientation, PageRef, PageSize
 
 if TYPE_CHECKING:
-    from .pdfdancer_v1 import PDFDancer
+    from .pdfdancer_v2 import PDFDancer
 
 
 class PageBuilder:

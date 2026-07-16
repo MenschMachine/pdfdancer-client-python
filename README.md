@@ -372,8 +372,8 @@ Releases are published automatically to PyPI when a `v*` tag is pushed to GitHub
 
 ```bash
 # Create and push a release tag — GitHub Actions handles the rest
-git tag v1.1.0
-git push origin v1.1.0
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
 #### Code Quality
@@ -401,7 +401,7 @@ make check
 pdfdancer-client-python/
 ├── src/pdfdancer/           # Main package source
 │   ├── __init__.py          # Package exports
-│   ├── pdfdancer_v1.py      # Core PDFDancer and PageClient classes
+│   ├── pdfdancer_v2.py      # Core PDFDancer and PageClient classes
 │   ├── text_editing.py      # Selector-based v2 text request builders
 │   ├── image_builder.py     # Fluent image builders
 │   ├── path_builder.py      # Vector path builders (lines, beziers, rectangles)

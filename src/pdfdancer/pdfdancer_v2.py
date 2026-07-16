@@ -1,5 +1,5 @@
 """
-PDFDancer Python Client V1
+PDFDancer Python Client V2
 
 A Python client that closely mirrors the Java Client class structure and functionality.
 Provides session-based PDF manipulation operations with strict validation.
@@ -2234,7 +2234,7 @@ class PDFDancer:
 
     def _clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
         """
-        Internal helper to clear clipping from a path group using the v1 API.
+        Internal helper to clear clipping from a path group using the V2 API.
         """
         if page_number is None:
             raise ValidationException("page_number cannot be null")

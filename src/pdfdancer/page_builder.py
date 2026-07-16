@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Mapping, Optional, Union
 
 from .exceptions import ValidationException
 from .models import AddPageRequest, Orientation, PageRef, PageSize
@@ -47,7 +47,7 @@ class PageBuilder:
         self._page_number = int(page_number)
         return self
 
-    def orientation(self, orientation: Orientation) -> "PageBuilder":
+    def orientation(self, orientation: Union[Orientation, str]) -> "PageBuilder":
         if orientation is None:
             raise ValidationException("Orientation cannot be null")
         if isinstance(orientation, str):
@@ -64,7 +64,9 @@ class PageBuilder:
         self._orientation = Orientation.LANDSCAPE
         return self
 
-    def page_size(self, page_size: PageSize) -> "PageBuilder":
+    def page_size(
+        self, page_size: Union[PageSize, str, Mapping[str, Any]]
+    ) -> "PageBuilder":
         if page_size is None:
             raise ValidationException("Page size cannot be null")
         self._page_size = PageSize.coerce(page_size)

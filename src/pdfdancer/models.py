@@ -106,7 +106,7 @@ class PageSize:
                 self, "name", normalized_name if normalized_name else None
             )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
@@ -387,13 +387,17 @@ class Position:
     def move_x(self, x_offset: float) -> "Position":
         """Move the position horizontally by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.x() + x_offset, self.y()))
+            self.at_coordinates(
+                Point(self.bounding_rect.get_x() + x_offset, self.bounding_rect.get_y())
+            )
         return self
 
     def move_y(self, y_offset: float) -> "Position":
         """Move the position vertically by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.x(), self.y() + y_offset))
+            self.at_coordinates(
+                Point(self.bounding_rect.get_x(), self.bounding_rect.get_y() + y_offset)
+            )
         return self
 
     def x(self) -> Optional[float]:
@@ -458,7 +462,7 @@ class ObjectRef:
         """Update the object type using the public object naming convention."""
         self.type = object_type
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "internalId": self.internal_id,
@@ -496,7 +500,7 @@ class Color:
     WHITE: ClassVar["Color"]
     RED: ClassVar["Color"]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for component in [self.r, self.g, self.b, self.a]:
             if (
                 isinstance(component, bool)
@@ -536,7 +540,7 @@ class Font:
     name: str
     size: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.size <= 0:
             raise ValueError(f"Font size must be positive, got {self.size}")
 
@@ -770,7 +774,7 @@ class FindRequest:
     position: Optional[Position]
     hint: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "objectType": self.object_type.value if self.object_type else None,
@@ -781,9 +785,9 @@ class FindRequest:
         }
 
     @staticmethod
-    def _position_to_dict(position: Position) -> dict:
+    def _position_to_dict(position: Position) -> Dict[str, Any]:
         """Convert Position to dictionary for JSON serialization."""
-        result = {
+        result: Dict[str, Any] = {
             "pageNumber": position.page_number,
             "textStartsWith": position.text_starts_with,
             "textPattern": position.text_pattern,
@@ -819,7 +823,7 @@ class DeleteRequest:
 
     object_ref: ObjectRef
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {"objectRef": self.object_ref.to_dict()}
@@ -844,7 +848,7 @@ class MoveRequest:
     object_ref: ObjectRef
     position: Position
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Server API expects the new coordinates under 'newPosition'
         # Use ObjectRef.to_dict() to ensure proper type normalization
@@ -873,7 +877,7 @@ class PageMoveRequest:
     from_page: int
     to_page: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "fromPage": self.from_page,
             "toPage": self.to_page,
@@ -897,7 +901,7 @@ class AddPageRequest:
     orientation: Optional[Orientation] = None
     page_size: Optional[PageSize] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {}
         if self.page_number is not None:
             payload["pageNumber"] = int(self.page_number)
@@ -933,7 +937,7 @@ class AddRequest:
 
     pdf_object: Any
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization matching server API.
         Server expects an AddRequest with a nested 'object' containing the PDFObject
         (with a 'type' discriminator).
@@ -941,7 +945,7 @@ class AddRequest:
         obj = self.pdf_object
         return {"object": self._object_to_dict(obj)}
 
-    def _object_to_dict(self, obj: Any) -> dict:
+    def _object_to_dict(self, obj: Any) -> Dict[str, Any]:
         """Convert PDF object to dictionary for JSON serialization."""
         import base64
 
@@ -992,11 +996,11 @@ class AddRequest:
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 
-    def _segment_to_dict(self, segment: "PathSegment") -> dict:
+    def _segment_to_dict(self, segment: "PathSegment") -> Dict[str, Any]:
         """Convert a PathSegment (Line or Bezier) to dictionary for JSON serialization."""
         from .models import Bezier, Line
 
-        result = {}
+        result: Dict[str, Any] = {}
 
         # Add common PathSegment properties
         if segment.stroke_color:
@@ -1060,7 +1064,7 @@ class ModifyRequest:
     object_ref: ObjectRef
     new_object: Any
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
@@ -1088,7 +1092,7 @@ class ChangeFormFieldRequest:
     object_ref: ObjectRef
     value: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {"ref": self.object_ref.to_dict(), "value": self.value}
@@ -1161,7 +1165,7 @@ class TextStatus:
     modified: bool
     encodable: bool
     font_type: FontType
-    font_recommendation: FontRecommendation
+    font_recommendation: Optional[FontRecommendation]
 
     def is_modified(self) -> bool:
         """Check if the text has been modified."""
@@ -1175,7 +1179,7 @@ class TextStatus:
         """Get the font type."""
         return self.font_type
 
-    def get_font_recommendation(self) -> FontRecommendation:
+    def get_font_recommendation(self) -> Optional[FontRecommendation]:
         """Get the font recommendation."""
         return self.font_recommendation
 
@@ -1308,7 +1312,7 @@ class CommandResult:
     warning: str | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CommandResult":
+    def from_dict(cls, data: Dict[str, Any]) -> "CommandResult":
         """Create a CommandResult from a dictionary response."""
         return cls(
             command_name=data.get("commandName", ""),
@@ -1399,7 +1403,7 @@ class Size:
     width: float
     height: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         return {"width": self.width, "height": self.height}
 
 
@@ -1478,7 +1482,7 @@ class ImageTransformRequest:
     fill_region_height: Optional[int] = None
     fill_color: Optional[int] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         import base64
 
@@ -1570,7 +1574,7 @@ class ModifyPathRequest:
     stroke_color: Optional[Color] = None
     fill_color: Optional[Color] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result: Dict[str, Any] = {
             "ref": self.object_ref.to_dict(),

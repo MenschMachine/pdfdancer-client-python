@@ -893,7 +893,7 @@ class RectangleBuilder:
         top_left = Point(self._x, self._y + self._height)
 
         # Create four lines forming the rectangle
-        lines = [
+        lines: List[PathSegment] = [
             Line(
                 p0=bottom_left,
                 p1=bottom_right,

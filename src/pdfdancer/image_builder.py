@@ -34,7 +34,7 @@ class ImageBuilder:
         self._image.format = img_path.suffix.lstrip(".").upper() or None
         return self
 
-    def at(self, page, x, y) -> "ImageBuilder":
+    def at(self, page: int, x: float, y: float) -> "ImageBuilder":
         self._image.position = Position.at_page_coordinates(page, x, y)
         return self
 
@@ -73,7 +73,7 @@ class ImageOnPageBuilder:
         self._image.format = img_path.suffix.lstrip(".").upper() or None
         return self
 
-    def at(self, x, y) -> "ImageOnPageBuilder":
+    def at(self, x: float, y: float) -> "ImageOnPageBuilder":
         self._image.position = Position.at_page_coordinates(self._page_number, x, y)
         return self
 

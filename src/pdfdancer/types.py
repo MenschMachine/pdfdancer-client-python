@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Literal, Optional, Type, cast
 
 from . import (
     FormFieldRef,
@@ -12,9 +13,10 @@ from . import (
     Position,
 )
 from .exceptions import ValidationException
+from .models import BoundingRect as ModelBoundingRect
 
 if TYPE_CHECKING:
-    from .models import Color, CommandResult, Image, ImageFlipDirection
+    from .models import Color, CommandResult, Image, ImageFlipDirection, PathGroupInfo
     from .pdfdancer_v1 import PDFDancer
 
 
@@ -52,7 +54,7 @@ class PDFObjectBase:
     @property
     def page_number(self) -> int:
         """Page index where this object resides."""
-        return self.position.page_number
+        return cast(int, self.position.page_number)
 
     def object_ref(self) -> ObjectRef:
         return ObjectRef(self.internal_id, self.position, self.object_type)
@@ -68,7 +70,7 @@ class PDFObjectBase:
         """Move this object to a new position."""
         return self._client._move(
             self.object_ref(),
-            Position.at_page_coordinates(self.position.page_number, x, y),
+            Position.at_page_coordinates(cast(int, self.position.page_number), x, y),
         )
 
     def clear_clipping(self) -> bool:
@@ -84,7 +86,7 @@ class PDFObjectBase:
 class PathObject(PDFObjectBase):
     """Represents a vector path object inside a PDF page."""
 
-    def __init__(self, client: "PDFDancer", object_ref):
+    def __init__(self, client: "PDFDancer", object_ref: ObjectRef):
         """
         Initialize a PathObject.
 
@@ -98,7 +100,7 @@ class PathObject(PDFObjectBase):
         self._object_ref = object_ref
 
     @property
-    def bounding_box(self) -> Optional[BoundingRect]:
+    def bounding_box(self) -> Optional[ModelBoundingRect]:
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
 
@@ -106,7 +108,7 @@ class PathObject(PDFObjectBase):
         """Start a fluent editing session to modify path colors."""
         return PathEditSession(self._client, self.object_ref())
 
-    def object_ref(self):
+    def object_ref(self) -> ObjectRef:
         """Return an ObjectRef for this path."""
         return self._object_ref
 
@@ -122,7 +124,7 @@ class PathObject(PDFObjectBase):
             return self._object_ref.get_fill_color()
         return None
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathObject):
             return False
         return (
@@ -356,7 +358,7 @@ class ImageObject(PDFObjectBase):
         )
         return self._client._transform_image(request)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ImageObject):
             return False
         return (
@@ -369,7 +371,9 @@ class ImageObject(PDFObjectBase):
 class PathGroupObject:
     """Represents a group of vector paths that can be manipulated as a unit."""
 
-    def __init__(self, client: "PDFDancer", page_index: int, info):
+    def __init__(
+        self, client: "PDFDancer", page_index: int, info: "PathGroupInfo"
+    ) -> None:
         self._client = client
         self._page_index = page_index
         self._info = info
@@ -383,7 +387,7 @@ class PathGroupObject:
         return self._info.path_count
 
     @property
-    def bounding_box(self):
+    def bounding_box(self) -> Optional[dict[str, Any]]:
         return self._info.bounding_box
 
     @property
@@ -416,12 +420,12 @@ class PathGroupObject:
             self._page_index + 1, self.group_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"
 
 
 class FormObject(PDFObjectBase):
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, FormObject):
             return False
         return (
@@ -457,7 +461,7 @@ class FormFieldObject(PDFObjectBase):
         ref.value = self.value
         return ref
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, FormFieldObject):
             return False
         return (
@@ -474,22 +478,27 @@ class PathEditSession:
     Fluent editing helper for modifying path stroke and fill colors.
     """
 
-    def __init__(self, client: "PDFDancer", object_ref):
+    def __init__(self, client: "PDFDancer", object_ref: ObjectRef) -> None:
         self._client = client
         self._object_ref = object_ref
-        self._stroke_color = None
-        self._fill_color = None
+        self._stroke_color: Optional["Color"] = None
+        self._fill_color: Optional["Color"] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "PathEditSession":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Literal[False]:
         if exc_type:
             return False
         self.apply()
         return False
 
-    def stroke_color(self, color) -> "PathEditSession":
+    def stroke_color(self, color: "Color") -> "PathEditSession":
         """
         Set the stroke/outline color.
 
@@ -502,7 +511,7 @@ class PathEditSession:
         self._stroke_color = color
         return self
 
-    def fill_color(self, color) -> "PathEditSession":
+    def fill_color(self, color: "Color") -> "PathEditSession":
         """
         Set the fill color.
 
@@ -515,7 +524,7 @@ class PathEditSession:
         self._fill_color = color
         return self
 
-    def apply(self):
+    def apply(self) -> "CommandResult":
         """
         Apply the color modifications to the path.
 

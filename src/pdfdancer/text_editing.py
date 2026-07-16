@@ -152,6 +152,7 @@ class PdfAffineTransform:
 
 
 class PdfAffineTransformBuilder:
+    """Build a six-value PDF affine transformation matrix."""
     def __init__(self) -> None:
         self._transform = PdfAffineTransform(1, 0, 0, 1, 0, 0)
 
@@ -804,6 +805,7 @@ class TextReplaceRequest:
 
 
 class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
+    """Build a validated text-replacement request."""
     def __init__(self) -> None:
         _SelectorLayoutBuilder.__init__(self)
         _TextStyleBuilderBase.__init__(self)
@@ -904,6 +906,7 @@ class TextDeleteRequest:
 
 
 class TextDeleteBuilder(_SelectorLayoutBuilder):
+    """Build a validated text-deletion request."""
     def build(self) -> TextDeleteRequest:
         return TextDeleteRequest(
             self._pages, self._selector(), self._resolved_layout()
@@ -1111,6 +1114,7 @@ class TextInsertRequest:
 
 
 class TextInsertBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
+    """Build a validated text-insertion request."""
     def __init__(self) -> None:
         _SelectorLayoutBuilder.__init__(self)
         _TextStyleBuilderBase.__init__(self)
@@ -1243,6 +1247,7 @@ class TextStyleRequest:
 
 
 class TextStyleBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
+    """Build a validated request that changes existing text appearance."""
     def __init__(self) -> None:
         _SelectorLayoutBuilder.__init__(self)
         _TextStyleBuilderBase.__init__(self)

@@ -65,7 +65,3 @@ strict = true
 [tool.setuptools_scm]
 version_file = "src/pdfdancer/_version.py"
 fallback_version = "0.0.0.dev0"
-
-[tool.poetry.scripts]
-lint = "bash -c 'flake8 src && mypy src'"
-format = "bash -c 'black src && isort src'"

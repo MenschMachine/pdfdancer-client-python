@@ -98,11 +98,15 @@ def test_modify_path_colors():
         # Re-fetch path via select_paths() to verify the stroke color was actually changed
         # Note: select_paths_at() goes to API which doesn't return colors,
         # select_paths() uses snapshot which includes color data
-        paths_after_stroke = [p for p in pdf.select_paths() if p.internal_id == "PATH_0_000001"]
+        paths_after_stroke = [
+            p for p in pdf.select_paths() if p.internal_id == "PATH_0_000001"
+        ]
         assert len(paths_after_stroke) == 1
         path_after_stroke = paths_after_stroke[0]
         stroke_color = path_after_stroke.get_stroke_color()
-        assert stroke_color is not None, "Expected stroke color to be set after modification"
+        assert (
+            stroke_color is not None
+        ), "Expected stroke color to be set after modification"
         assert stroke_color.r == 255, f"Expected red=255 but got {stroke_color.r}"
         assert stroke_color.g == 0, f"Expected green=0 but got {stroke_color.g}"
         assert stroke_color.b == 0, f"Expected blue=0 but got {stroke_color.b}"
@@ -113,14 +117,20 @@ def test_modify_path_colors():
         assert result.success, f"Expected success but got: {result.message}"
 
         # Re-fetch via select_paths() to verify both colors were actually changed
-        paths_after_both = [p for p in pdf.select_paths() if p.internal_id == "PATH_0_000001"]
+        paths_after_both = [
+            p for p in pdf.select_paths() if p.internal_id == "PATH_0_000001"
+        ]
         assert len(paths_after_both) == 1
         path_after_both = paths_after_both[0]
         stroke_color = path_after_both.get_stroke_color()
         fill_color = path_after_both.get_fill_color()
         assert stroke_color is not None, "Expected stroke color to be set"
-        assert fill_color is not None, "Expected fill color to be set after modification"
-        assert stroke_color.r == 255, f"Expected stroke red=255 but got {stroke_color.r}"
+        assert (
+            fill_color is not None
+        ), "Expected fill color to be set after modification"
+        assert (
+            stroke_color.r == 255
+        ), f"Expected stroke red=255 but got {stroke_color.r}"
         assert stroke_color.g == 0, f"Expected stroke green=0 but got {stroke_color.g}"
         assert stroke_color.b == 0, f"Expected stroke blue=0 but got {stroke_color.b}"
         assert fill_color.r == 0, f"Expected fill red=0 but got {fill_color.r}"

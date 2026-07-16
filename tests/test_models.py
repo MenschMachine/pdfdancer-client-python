@@ -100,6 +100,7 @@ class TestObjectRef:
         assert obj_ref.internal_id == "obj-123"
         assert obj_ref.position == position
         assert obj_ref.type == ObjectType.TEXT_LINE
+        assert obj_ref.object_type == ObjectType.TEXT_LINE
 
     def test_getter_methods(self):
         """Test getter methods match Java patterns."""
@@ -109,6 +110,10 @@ class TestObjectRef:
         assert obj_ref.get_internal_id() == "ref-456"
         assert obj_ref.get_position() == position
         assert obj_ref.get_type() == ObjectType.IMAGE
+
+        obj_ref.object_type = ObjectType.PATH
+        assert obj_ref.type == ObjectType.PATH
+        assert obj_ref.object_type == ObjectType.PATH
 
     def test_set_position_updates_position(self):
         """Test set_position() updates position reference."""

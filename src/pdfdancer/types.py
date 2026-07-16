@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from . import (
@@ -9,7 +10,6 @@ from . import (
     ObjectType,
     PathObjectRef,
     Position,
-    TextObjectRef,
 )
 from .exceptions import ValidationException
 
@@ -135,6 +135,24 @@ class PathObject(PDFObjectBase):
 class ImageObject(PDFObjectBase):
     """Represents an image object inside a PDF page."""
 
+    @property
+    def width(self) -> Optional[float]:
+        return (
+            self.position.bounding_rect.width if self.position.bounding_rect else None
+        )
+
+    @property
+    def height(self) -> Optional[float]:
+        return (
+            self.position.bounding_rect.height if self.position.bounding_rect else None
+        )
+
+    @property
+    def aspect_ratio(self) -> Optional[float]:
+        return (
+            self.width / self.height if self.width is not None and self.height else None
+        )
+
     def scale(self, factor: float) -> "CommandResult":
         """Scale this image by a factor.
 
@@ -180,7 +198,7 @@ class ImageObject(PDFObjectBase):
         """Rotate this image by a specified angle.
 
         Args:
-            angle: Rotation angle in degrees (positive = counter-clockwise)
+            angle: Rotation angle in degrees (positive = clockwise)
 
         Returns:
             CommandResult indicating success or failure
@@ -261,6 +279,16 @@ class ImageObject(PDFObjectBase):
         )
         return self._client._transform_image(request)
 
+    def flip_horizontal(self) -> "CommandResult":
+        from .models import ImageFlipDirection
+
+        return self.flip(ImageFlipDirection.HORIZONTAL)
+
+    def flip_vertical(self) -> "CommandResult":
+        from .models import ImageFlipDirection
+
+        return self.flip(ImageFlipDirection.VERTICAL)
+
     def replace(self, new_image: "Image") -> "CommandResult":
         """Replace this image with a new image.
 
@@ -278,6 +306,17 @@ class ImageObject(PDFObjectBase):
             new_image=new_image,
         )
         return self._client._transform_image(request)
+
+    def replace_from_file(self, image_path: Path) -> "CommandResult":
+        from .models import Image
+
+        path = Path(image_path)
+        if not path.is_file():
+            raise ValidationException(f"Image file not found: {path}")
+        data = path.read_bytes()
+        if not data:
+            raise ValidationException("Image file cannot be empty")
+        return self.replace(Image(format=path.suffix.lstrip(".").upper(), data=data))
 
     def fill_region(
         self, x: int, y: int, width: int, height: int, color: "Color"
@@ -356,24 +395,21 @@ class PathGroupObject:
         return self._info.y
 
     def move_to(self, x: float, y: float) -> bool:
-        self._client._move_path_group(self._page_index, self.group_id, x, y)
-        return True
+        return self._client._move_path_group(self._page_index, self.group_id, x, y)
 
     def scale(self, factor: float) -> bool:
-        self._client._scale_path_group(self._page_index, self.group_id, factor)
-        return True
+        return self._client._scale_path_group(self._page_index, self.group_id, factor)
 
     def rotate(self, degrees: float) -> bool:
-        self._client._rotate_path_group(self._page_index, self.group_id, degrees)
-        return True
+        return self._client._rotate_path_group(self._page_index, self.group_id, degrees)
 
     def resize(self, width: float, height: float) -> bool:
-        self._client._resize_path_group(self._page_index, self.group_id, width, height)
-        return True
+        return self._client._resize_path_group(
+            self._page_index, self.group_id, width, height
+        )
 
     def remove(self) -> bool:
-        self._client._remove_path_group(self._page_index, self.group_id)
-        return True
+        return self._client._remove_path_group(self._page_index, self.group_id)
 
     def clear_clipping(self) -> bool:
         return self._client.clear_path_group_clipping(
@@ -395,57 +431,6 @@ class FormObject(PDFObjectBase):
         )
 
 
-class TextLineObject(PDFObjectBase):
-    """Live-API text-line reference supporting generic object operations."""
-
-    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
-        super().__init__(
-            client, object_ref.internal_id, object_ref.type, object_ref.position
-        )
-        self._object_ref = object_ref
-
-    def __getattr__(self, name):
-        """
-        Automatically delegate attribute/method lookup to _object_ref
-        if it's not found on this object.
-        """
-        return getattr(self._object_ref, name)
-
-    def object_ref(self) -> TextObjectRef:
-        return self._object_ref
-
-    def __eq__(self, other):
-        if not isinstance(other, TextLineObject):
-            return False
-        return (
-            self.internal_id == other.internal_id
-            and self.object_type == other.object_type
-            and self.position == other.position
-            and self._object_ref.text == other._object_ref.text
-            and self._object_ref.font_name == other._object_ref.font_name
-            and self._object_ref.font_size == other._object_ref.font_size
-            and self._object_ref.line_spacings == other._object_ref.line_spacings
-            and self._object_ref.color == other._object_ref.color
-            and self._object_ref.children == other._object_ref.children
-        )
-
-
-class FormFieldEdit:
-    def __init__(self, form_field: "FormFieldObject", object_ref: FormFieldRef):
-        self.form_field = form_field
-        self.object_ref = object_ref
-
-    def value(self, new_value: str) -> "FormFieldEdit":
-        self.form_field.value = new_value
-        return self
-
-    def apply(self) -> bool:
-        # noinspection PyProtectedMember
-        return self.form_field._client._change_form_field(
-            self.object_ref, self.form_field.value
-        )
-
-
 class FormFieldObject(PDFObjectBase):
     def __init__(
         self,
@@ -460,8 +445,11 @@ class FormFieldObject(PDFObjectBase):
         self.name = field_name
         self.value = field_value
 
-    def edit(self) -> FormFieldEdit:
-        return FormFieldEdit(self, self.object_ref())
+    def set_value(self, value: str) -> bool:
+        result = self._client._change_form_field(self.object_ref(), value)
+        if result:
+            self.value = value
+        return result
 
     def object_ref(self) -> FormFieldRef:
         ref = FormFieldRef(self.internal_id, self.position, self.object_type)

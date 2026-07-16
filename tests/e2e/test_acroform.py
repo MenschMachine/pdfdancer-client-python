@@ -87,7 +87,7 @@ def test_edit_form_fields():
         assert f.object_type == ObjectType.TEXT_FIELD
         assert f.internal_id == "FORM_FIELD_0_000001"
 
-        f.edit().value("Donald Duck").apply()
+        f.set_value("Donald Duck")
 
         updated = pdf.select_form_fields_by_name("firstName")[0]
         assert updated.name == "firstName"

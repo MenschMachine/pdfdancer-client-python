@@ -86,7 +86,6 @@ from .types import (
     FormObject,
     ImageObject,
     PathObject,
-    TextLineObject,
 )
 
 if TYPE_CHECKING:
@@ -486,32 +485,6 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(position, tolerance))
 
-    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        position.text_pattern = pattern
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_text_lines(self) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        position.with_text_starts(text)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_text_lines_at(
-        self, x, y, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextLineObject]:
-        position = Position.at_page_coordinates(self.page_number, x, y)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(
-            self.root._find_text_lines(position, tolerance)
-        )
-
     def select_images(self) -> List[ImageObject]:
         # noinspection PyProtectedMember
         return self.root._to_image_objects(
@@ -561,49 +534,6 @@ class PageClient:
 
     # Singular selection methods (convenience methods returning first match or None)
 
-    def select_text_line_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> Optional[TextLineObject]:
-        """
-        Select the first text line at the specified coordinates.
-
-        Args:
-            x: X coordinate in points
-            y: Y coordinate in points
-            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
-
-        Returns:
-            First TextLineObject at the coordinates, or None if no match
-        """
-        results = self.select_text_lines_at(x, y, tolerance)
-        return results[0] if results else None
-
-    def select_text_line_starting_with(self, text: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line starting with the specified text.
-
-        Args:
-            text: Text to search for at the start of text lines
-
-        Returns:
-            First TextLineObject starting with the text, or None if no match
-        """
-        results = self.select_text_lines_starting_with(text)
-        return results[0] if results else None
-
-    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            First TextLineObject matching the pattern, or None if no match
-        """
-        results = self.select_text_lines_matching(pattern)
-        return results[0] if results else None
-
     def select_image_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[ImageObject]:
@@ -619,6 +549,10 @@ class PageClient:
             First ImageObject at the coordinates, or None if no match
         """
         results = self.select_images_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_image(self) -> Optional[ImageObject]:
+        results = self.select_images()
         return results[0] if results else None
 
     def select_form_at(
@@ -638,6 +572,10 @@ class PageClient:
         results = self.select_forms_at(x, y, tolerance)
         return results[0] if results else None
 
+    def select_form(self) -> Optional[FormObject]:
+        results = self.select_forms()
+        return results[0] if results else None
+
     def select_form_field_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[FormFieldObject]:
@@ -653,6 +591,10 @@ class PageClient:
             First FormFieldObject at the coordinates, or None if no match
         """
         results = self.select_form_fields_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_form_field(self) -> Optional[FormFieldObject]:
+        results = self.select_form_fields()
         return results[0] if results else None
 
     def select_form_field_by_name(self, field_name: str) -> Optional[FormFieldObject]:
@@ -685,6 +627,10 @@ class PageClient:
         results = self.select_paths_at(x, y, tolerance)
         return results[0] if results else None
 
+    def select_path(self) -> Optional[PathObject]:
+        results = self.select_paths()
+        return results[0] if results else None
+
     @classmethod
     def from_ref(cls, root: "PDFDancer", page_ref: PageRef) -> "PageClient":
         page_client = PageClient(
@@ -705,9 +651,9 @@ class PageClient:
 
     def move_to(self, target_page_number: int) -> bool:
         """Move this page to a different index within the document."""
-        if target_page_number is None or target_page_number < 0:
+        if target_page_number is None or target_page_number < 1:
             raise ValidationException(
-                f"Target page index must be >= 0, got {target_page_number}"
+                f"Target page number must be >= 1, got {target_page_number}"
             )
 
         # noinspection PyProtectedMember
@@ -769,20 +715,17 @@ class PageClient:
         """List all path groups on this page."""
         return self.root._list_path_groups(self.page_number)
 
-    def select_elements(self):
+    def select_elements(self, types: Optional[str] = None):
         """
         Select all live object-reference elements on this page.
 
         Returns:
             List of all PDF objects on this page
         """
-        result = []
-        result.extend(self.select_text_lines())
-        result.extend(self.select_images())
-        result.extend(self.select_paths())
-        result.extend(self.select_forms())
-        result.extend(self.select_form_fields())
-        return result
+        return self.get_snapshot(types).elements
+
+    def get_snapshot(self, types: Optional[str] = None) -> PageSnapshot:
+        return self.root.get_page_snapshot(self.page_number, types)
 
     @property
     def size(self):
@@ -1817,61 +1760,6 @@ class PDFDancer:
                 all_elements, ObjectType.PATH, position, tolerance
             )
 
-    def _find_text_lines(
-        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextObjectRef]:
-        """
-        Searches for text line objects returning TextObjectRef with hierarchical structure.
-        Uses snapshot cache for all queries.
-        """
-        # Use snapshot for all queries (including spatial)
-        if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
-            return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.TEXT_LINE, position, tolerance
-            )
-        else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
-                all_elements.extend(page_snap.elements)
-            return self._filter_snapshot_elements(
-                all_elements, ObjectType.TEXT_LINE, position, tolerance
-            )
-
-    def select_text_lines(self) -> List[TextLineObject]:
-        """
-        Searches for text line objects returning TextLineObject wrappers.
-        """
-        return self._to_textline_objects(self._find_text_lines(None))
-
-    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
-        """
-        Searches for text line objects matching a regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            List of TextLineObject instances matching the pattern
-        """
-        position = Position()
-        position.text_pattern = pattern
-        return self._to_textline_objects(self._find_text_lines(position))
-
-    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            First TextLineObject matching the pattern, or None if no match
-        """
-        results = self.select_text_lines_matching(pattern)
-        return results[0] if results else None
-
     def page(self, page_number: int) -> PageClient:
         """
         Get a specific page by page number, using snapshot cache when available.
@@ -2360,10 +2248,21 @@ class PDFDancer:
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)
 
-    def new_path(self) -> "PathBuilder":
+    def new_path(self, page_number: int) -> "PathBuilder":
         from .path_builder import PathBuilder
 
-        return PathBuilder(self)
+        return PathBuilder(self, page_number)
+
+    def new_line(self, page_number: int) -> LineBuilder:
+        return LineBuilder(self, page_number)
+
+    def new_bezier(self, page_number: int) -> BezierBuilder:
+        return BezierBuilder(self, page_number)
+
+    def new_rectangle(self, page_number: int) -> "RectangleBuilder":
+        from .path_builder import RectangleBuilder
+
+        return RectangleBuilder(self, page_number)
 
     # Modify Operations
     def _modify_path(
@@ -3212,9 +3111,6 @@ class PDFDancer:
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
         return [PathObject(self, ref) for ref in refs]
 
-    def _to_textline_objects(self, refs: List[TextObjectRef]) -> List[TextLineObject]:
-        return [TextLineObject(self, ref) for ref in refs]
-
     def _to_image_objects(self, refs: List[ObjectRef]) -> List[ImageObject]:
         return [
             ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in refs
@@ -3246,13 +3142,7 @@ class PDFDancer:
         """
         result = []
         for ref in refs:
-            if ref.type == ObjectType.TEXT_LINE:
-                if isinstance(ref, TextObjectRef):
-                    result.append(TextLineObject(self, ref))
-                else:
-                    text_refs = self._find_text_lines(ref.position)
-                    result.extend(self._to_textline_objects(text_refs))
-            elif ref.type == ObjectType.IMAGE:
+            if ref.type == ObjectType.IMAGE:
                 result.append(
                     ImageObject(self, ref.internal_id, ref.type, ref.position)
                 )
@@ -3284,10 +3174,5 @@ class PDFDancer:
         Returns:
             List of all PDF objects in the document
         """
-        result = []
-        result.extend(self.select_text_lines())
-        result.extend(self.select_images())
-        result.extend(self.select_paths())
-        result.extend(self.select_forms())
-        result.extend(self.select_form_fields())
-        return result
+        snapshot = self._get_or_fetch_document_snapshot()
+        return [element for page in snapshot.pages for element in page.elements]

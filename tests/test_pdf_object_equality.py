@@ -4,13 +4,12 @@ Tests for __eq__ implementations on PDFObjectBase subclasses.
 
 from unittest.mock import Mock
 
-from pdfdancer import ObjectRef, ObjectType, Position, TextObjectRef
+from pdfdancer import ObjectRef, ObjectType, Position
 from pdfdancer.types import (
     FormFieldObject,
     FormObject,
     ImageObject,
     PathObject,
-    TextLineObject,
 )
 
 
@@ -102,32 +101,6 @@ class TestPDFObjectEquality:
 
         obj1 = FormObject(mock_client, "id123", ObjectType.FORM_X_OBJECT, position)
         obj2 = FormObject(mock_client, "id456", ObjectType.FORM_X_OBJECT, position)
-
-        assert obj1 != obj2
-
-    def test_text_line_object_equality_same_id(self):
-        """TextLineObject instances with same internal_id and type should be equal."""
-        mock_client = Mock()
-        position = Position.at_page(1)
-
-        text_ref1 = TextObjectRef("id123", position, ObjectType.TEXT_LINE)
-        text_ref2 = TextObjectRef("id123", position, ObjectType.TEXT_LINE)
-
-        obj1 = TextLineObject(mock_client, text_ref1)
-        obj2 = TextLineObject(mock_client, text_ref2)
-
-        assert obj1 == obj2
-
-    def test_text_line_object_equality_different_id(self):
-        """TextLineObject instances with different internal_id should not be equal."""
-        mock_client = Mock()
-        position = Position.at_page(1)
-
-        text_ref1 = TextObjectRef("id123", position, ObjectType.TEXT_LINE)
-        text_ref2 = TextObjectRef("id456", position, ObjectType.TEXT_LINE)
-
-        obj1 = TextLineObject(mock_client, text_ref1)
-        obj2 = TextLineObject(mock_client, text_ref2)
 
         assert obj1 != obj2
 

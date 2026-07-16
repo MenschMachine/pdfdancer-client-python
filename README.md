@@ -2,21 +2,14 @@
 
 ![PDFDancer logo](media/logo-silver-60h.webp)
 
-## PDF used to be read-only. We fixed that.
+## Overview
+
+### PDF used to be read-only. We fixed that.
 
 Edit text in real-world PDFs—even ones you didn't create. Move images, reposition headers, and change fonts with
 pixel-perfect control from Python. The same API is also available for TypeScript and Java.
 
-## Highlights
-
-- Replace, insert, delete, and style text with selector-based v2 operations.
-- Locate text-line references, images, vector paths, form fields, and pages by page number, coordinates, or text patterns.
-- Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
-- Add images and vector paths with precise XY positioning.
-- Draw lines, rectangles, and Bezier curves with configurable stroke width, dash patterns, and fill colors.
-- Export results as bytes for downstream processing or save directly to disk with one call.
-
-## What Makes PDFDancer Different
+### What Makes PDFDancer Different
 
 - **Edit text in real-world PDFs**: Work with documents from customers, governments, or vendors—even ones you didn't create.
 - **Pixel-perfect positioning**: Move or add elements at exact coordinates and keep the original layout intact.
@@ -25,6 +18,15 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 - **Coordinate-based selection**: Select objects by position, bounding box, or text patterns.
 - **Vector graphics**: Draw lines, rectangles, and Bezier curves with full control over stroke and fill properties.
 - **Real PDF editing**: Modify the underlying PDF structure instead of merely stamping overlays.
+
+## Highlights
+
+- Replace, insert, delete, and style text with selector-based v2 operations.
+- Locate images, vector paths, form fields, and pages by page number or coordinates; inspect text-line data through snapshots.
+- Programmatically control third-party PDFs—modify invoices, contracts, and reports you did not author.
+- Add images and vector paths with precise XY positioning.
+- Draw lines, rectangles, and Bezier curves with configurable stroke width, dash patterns, and fill colors.
+- Export results as bytes for downstream processing or save directly to disk with one call.
 
 ## Installation
 
@@ -35,9 +37,15 @@ pip install pdfdancer-client-python
 pip install -e .
 ```
 
-Requires Python 3.10+ and a PDFDancer API token.
+## Requirements
 
-## Quick Start — Edit an Existing PDF
+- Python 3.10 or newer.
+- A PDFDancer API token, supplied explicitly or through `PDFDANCER_API_TOKEN` or `PDFDANCER_TOKEN`.
+- Access to the PDFDancer API host. The default is `https://api.pdfdancer.com`.
+
+## Quick Start
+
+### Edit an Existing PDF
 
 ```python
 from pathlib import Path
@@ -80,42 +88,37 @@ with PDFDancer.new(token="your-api-token") as pdf:
     pdf.save("summary.pdf")
 ```
 
-## Work with Forms and Layout
+## Page API
+
+Page numbers are 1-based. `pdf.page(1)` returns a page-scoped client, while `pdf.pages()` returns page clients for the
+document. Use `get_snapshot()` on a page client for a read-only page snapshot.
 
 ```python
-from pdfdancer import PDFDancer
-
-with PDFDancer.open("contract.pdf") as pdf:
-    # Inspect global document structure
-    pages = pdf.pages()
-    print("Total pages:", len(pages))
-
-    # Update form fields
-    signature = pdf.select_form_fields_by_name("signature")[0]
-    signature.edit().value("Signed by Jane Doe").apply()
-
-    # Trim or move content at specific coordinates
-    images = pdf.page(1).select_images()
-    for image in images:
-        x = image.position.x()
-        if x is not None and x < 100:
-            image.delete()
+first_page = pdf.page(1)
+pages = pdf.pages()
+snapshot = first_page.get_snapshot()
 ```
 
-Selectors return typed objects (`TextLineObject`, `ImageObject`, `FormFieldObject`, `PageClient`, …)
-with generic helpers such as `delete()`, `move_to(x, y)`, and `clear_clipping()` where the live API supports them.
+Page-scoped selectors, text editing, and builders automatically restrict the operation to that page.
 
-**Singular selection methods** return the first match (or `None`) for convenience:
+## Selection
+
+Document- and page-scoped selectors return typed objects for images, paths, form XObjects, and form fields. Position
+selectors use PDF coordinates and a default tolerance of `0.01` point. Singular selectors return the first match or
+`None`; plural selectors return lists.
 
 ```python
-line = page.select_text_line_starting_with("Invoice")       # First match or None
-image = page.select_image_at(100, 200)                      # Returns first match or None
-field = pdf.select_form_field_by_name("email")              # Returns first match or None
+document_images = pdf.select_images()
+logo = pdf.page(1).select_image_at(72, 680)
+page_paths = pdf.page(1).select_paths()
 ```
 
-## Draw Vector Paths
+Document and page snapshots provide read-only text-line data. Use the selector-based text API for mutations.
 
-Add lines, curves, and shapes to your PDFs with fluent builders:
+## Builders and Vector Paths
+
+All five dedicated builders are available at document and page scope: image, path, line, Bezier, and rectangle. Add
+lines, curves, and shapes with fluent builders:
 
 ```python
 from pdfdancer import PDFDancer, Color, Point
@@ -159,16 +162,93 @@ with PDFDancer.open("document.pdf") as pdf:
     pdf.save("annotated.pdf")
 ```
 
+`PathBuilder` also provides cursor-based `move_to(...)`, `line_to(...)`, and `bezier_to(...)` operations plus
+`close_path()`, `rectangle(...)`, `circle(...)`, and `solid()` conveniences. A circle is a `PathBuilder` convenience,
+not a separate builder type.
+
+## Images
+
+Create images at document scope with an explicit page or directly from a page client:
+
+```python
+from pathlib import Path
+
+pdf.new_image().from_file(Path("logo.png")).at(page=1, x=72, y=700).add()
+pdf.page(1).new_image().from_file(Path("stamp.png")).at(x=300, y=700).add()
+```
+
+`ImageObject` exposes `width`, `height`, and `aspect_ratio`. It supports replacement from a filesystem path or `Image`,
+proportional or explicit scaling, cropping, opacity, horizontal and vertical flips, region filling, and rotation.
+Positive rotation angles are clockwise. Image transformations return `CommandResult`, which exposes `success`,
+`message`, `warning`, and `element_id`.
+
+## Form Fields
+
+Form-field selection uses the same names at document and page scope. Mutate a selected field directly with
+`set_value(...)`:
+
+```python
+signature = pdf.select_form_fields_by_name("signature")[0]
+changed = signature.set_value("Signed by Jane Doe")
+```
+
+Selectors return typed objects (`ImageObject`, `FormFieldObject`, `PathObject`, `PageClient`, …) with generic helpers
+such as `delete()`, `move_to(x, y)`, and `clear_clipping()` where supported by the selected object type.
+
+## Text Editing
+
+Text editing is selector-based and is available through `pdf.text()` and `pdf.page(page_number).text()`. It supports
+replace, delete, insert, and style operations:
+
+```python
+from pdfdancer import TextDeleteRequest, TextInsertRequest, TextReplaceRequest
+
+pdf.text().replace(
+    TextReplaceRequest.literal("Old product", "New product")
+    .whole_words(True)
+    .max_matches(5)
+    .build()
+)
+
+pdf.page(2).text().delete(
+    TextDeleteRequest.regex(r"Confidential\s+draft")
+    .case_sensitive(False)
+    .build()
+)
+
+pdf.text().insert(
+    TextInsertRequest.before("Terms", "Updated ").whole_words(True).build()
+)
+```
+
+Each mutation returns `TextEditResponse`, including match and change counts, changed page numbers, per-change
+diagnostics, warnings, and errors.
+
+## Shared Models
+
+`Color` requires integral RGBA components in the inclusive range 0–255. Alpha defaults to 255; `BLACK`, `WHITE`, and
+`RED` are provided as constants.
+
+`PageSize` provides A0–A6, B4–B5, Letter, Legal, Tabloid, Executive, Postcard, and 3×5 Index sizes.
+`PageSize.from_dimensions(...)` recognizes both portrait and rotated standard dimensions; custom dimensions must be
+finite and positive.
+
+The exported `ObjectType` enum covers every object type returned by the v2 snapshot and selection APIs.
+
 ## Configuration
 
 - Set `PDFDANCER_API_TOKEN` for authentication (preferred). `PDFDANCER_TOKEN` is also supported for backwards compatibility.
 - Override the API host with `PDFDANCER_BASE_URL` (e.g., sandbox or local environments). Defaults to `https://api.pdfdancer.com`.
 - Tune HTTP read timeouts via the `timeout` argument on `PDFDancer.open()` and `PDFDancer.new()` (default: 30 seconds).
 - Configure total request attempts with `max_attempts` or `PDFDANCER_MAX_ATTEMPTS`; the initial request counts as one attempt.
-- Requests explicitly select API version 2 with both the `/v2` path prefix and `X-API-VERSION: 2`.
 - For testing against self-signed certificates, call `pdfdancer.set_ssl_verify(False)` to temporarily disable TLS verification.
 
-## Error Handling
+## Retry and Error Handling
+
+The default HTTP policy makes three total attempts, including the initial request. It uses exponential backoff starting
+at one second, a multiplier of two, and a five-second delay cap. Statuses 408, 429, 500, 502, 503, 504, and 520 are
+retryable, as are timeout and connection failures. `Retry-After` is honored only for HTTP 429; retry delays do not use
+jitter. Configure the total attempt count with `max_attempts` and the multiplier with `retry_backoff_factor`.
 
 Operations raise subclasses of `PdfDancerException`:
 
@@ -180,7 +260,7 @@ Operations raise subclasses of `PdfDancerException`:
 
 Wrap automated workflows in `try/except` blocks to surface actionable errors to your users.
 
-## Development Setup
+## Development and Testing
 
 ### Prerequisites
 
@@ -197,37 +277,31 @@ git clone https://github.com/MenschMachine/pdfdancer-client-python.git
 cd pdfdancer-client-python
 ```
 
-#### 2. Create a Virtual Environment
+#### 2. Create a Virtual Environment and Install Dependencies
 
 ```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate the virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-
-# On Windows:
-venv\Scripts\activate
+# Create `venv` and install the package with development dependencies
+make install-dev
 ```
 
-You should see `(venv)` in your terminal prompt indicating the virtual environment is active.
-
-#### 3. Install Dependencies
+The Makefile creates the local `venv` when needed and runs all developer targets with its Python interpreter. Activating
+the environment is optional; activate it if you also want to run commands directly:
 
 ```bash
-# Install the package in editable mode with development dependencies
-pip install -e ".[dev]"
+# macOS/Linux
+source venv/bin/activate
 
-# Alternatively, install runtime dependencies only:
-# pip install -e .
+# Windows
+venv\Scripts\activate
 ```
 
 This installs:
 - The `pdfdancer` package in editable mode (changes reflect immediately)
 - Development tooling including `pytest`, `pytest-cov`, `pytest-mock`, `black`, `isort`, `flake8`, `mypy`, `build`, and `twine`.
 
-#### 4. Configure API Token
+To install runtime dependencies without development tools, use `make install`.
+
+#### 3. Configure API Token
 
 Set your PDFDancer API token as an environment variable:
 
@@ -244,7 +318,7 @@ $env:PDFDANCER_API_TOKEN="your-api-token-here"
 
 For permanent configuration, add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
 
-#### 5. Verify Installation
+#### 4. Verify Installation
 
 ```bash
 # Run the test suite
@@ -261,30 +335,33 @@ All tests should pass if everything is set up correctly.
 
 ### Common Development Tasks
 
+Run `make help` to list all developer targets and their configurable variables.
+
 #### Running Tests
 
 ```bash
 # Run all tests with verbose output
-pytest tests/ -v
+make test
 
-# Run specific test file
-pytest tests/test_models.py -v
+# Run tests that do not require API access
+make test-unit
 
 # Run end-to-end tests only
-pytest tests/e2e/ -v
+make test-e2e
 
-# Run with coverage report
-pytest tests/ --cov=pdfdancer --cov-report=term-missing
+# Run a specific test file or pass additional pytest arguments
+make test TEST_PATH=tests/test_models.py
+make test PYTEST_ARGS="-v -x"
+
+# Run all tests with a coverage report
+make coverage
 ```
 
 #### Building Distribution Packages
 
 ```bash
-# Build wheel and source distribution
-python -m build
-
-# Verify the built packages
-python -m twine check dist/*
+# Clean, build, and verify the wheel and source distribution
+make package
 ```
 
 Artifacts will be created in the `dist/` directory. Package versions are derived from Git tags via `setuptools-scm`.
@@ -303,14 +380,19 @@ git push origin v1.1.0
 
 ```bash
 # Format code
-black src tests
-isort src tests
+make format
+
+# Check formatting without changing files
+make format-check
 
 # Lint
-flake8 src tests
+make lint
 
-# Type checking
-mypy src/pdfdancer/
+# Type-check
+make typecheck
+
+# Run formatting checks, linting, type checking, and non-E2E tests
+make check
 ```
 
 ### Project Structure
@@ -337,7 +419,7 @@ pdfdancer-client-python/
 └── README.md                # This file
 ```
 
-### Troubleshooting
+## Troubleshooting
 
 #### Virtual Environment Issues
 
@@ -370,7 +452,7 @@ pip install -e .
 - Check network connectivity to the PDFDancer API
 - Verify you're using Python 3.10 or higher
 
-### Contributing
+## Contributing
 
 Contributions are welcome via pull request. Please:
 
@@ -380,7 +462,7 @@ Contributions are welcome via pull request. Please:
 4. Follow existing code style and patterns
 5. Update documentation as needed
 
-## Helpful links
+## Helpful Links
 
 - [API documentation](https://docs.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)
 - [Product overview](https://www.pdfdancer.com?utm_source=github&utm_medium=readme&utm_campaign=pdfdancer-python)

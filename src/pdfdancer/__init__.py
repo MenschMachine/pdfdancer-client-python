@@ -45,11 +45,9 @@ from .models import (
     ShapeType,
     Size,
     StandardFonts,
-    TextObjectRef,
-    TextStatus,
 )
 from .page_builder import PageBuilder
-from .path_builder import BezierBuilder, LineBuilder, PathBuilder
+from .path_builder import BezierBuilder, LineBuilder, PathBuilder, RectangleBuilder
 from .text_editing import (
     PdfAffineTransform,
     PdfAffineTransformBuilder,
@@ -79,7 +77,15 @@ from .text_editing import (
     TextStyleSelectorRequest,
     TextStyleSetRequest,
 )
-from .types import PathGroupObject
+from .types import (
+    FormFieldObject,
+    FormObject,
+    ImageObject,
+    PathEditSession,
+    PathGroupObject,
+    PathObject,
+    PDFObjectBase,
+)
 
 __version__ = resolve_package_version()
 
@@ -89,6 +95,7 @@ __all__ = [
     "PathBuilder",
     "LineBuilder",
     "BezierBuilder",
+    "RectangleBuilder",
     "ObjectRef",
     "PathObjectRef",
     "ModifyPathRequest",
@@ -103,7 +110,6 @@ __all__ = [
     "Size",
     "BoundingRect",
     "FormFieldRef",
-    "TextObjectRef",
     "PageRef",
     "PositionMode",
     "ShapeType",
@@ -111,7 +117,6 @@ __all__ = [
     "StandardFonts",
     "PageSize",
     "Orientation",
-    "TextStatus",
     "FontRecommendation",
     "FontType",
     "PathSegment",
@@ -120,6 +125,12 @@ __all__ = [
     "Path",
     "PathGroupInfo",
     "PathGroupObject",
+    "PDFObjectBase",
+    "PathObject",
+    "ImageObject",
+    "FormObject",
+    "FormFieldObject",
+    "PathEditSession",
     "PdfDancerException",
     "FontNotFoundException",
     "ValidationException",

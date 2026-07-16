@@ -9,31 +9,6 @@ from pdfdancer import ObjectType, PDFDancer
 from tests.e2e import _require_env_and_fixture
 
 
-def test_page_snapshot_matches_select_text_lines():
-    """Test that snapshot TEXT_LINE data matches the Python-only selector."""
-    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        page = pdf.page(1)
-
-        # Get data via snapshot
-        snapshot = pdf.get_page_snapshot(1)
-        snapshot_text_lines = [
-            e for e in snapshot.elements if e.type == ObjectType.TEXT_LINE
-        ]
-
-        # Get data via select method
-        selected_text_lines = page.select_text_lines()
-
-        # Compare
-        assert len(selected_text_lines) == len(snapshot_text_lines)
-
-        snapshot_ids = {e.internal_id for e in snapshot_text_lines}
-        selected_ids = {line.internal_id for line in selected_text_lines}
-
-        assert selected_ids == snapshot_ids
-
-
 def test_page_snapshot_matches_select_images():
     """Test that page snapshot image data matches select_images() results."""
     base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
@@ -165,30 +140,6 @@ def test_document_snapshot_matches_all_pages():
             assert (
                 individual_page_ids == doc_page_ids
             ), f"Page {i} should have identical elements in document and individual snapshots"
-
-
-def test_type_filter_matches_select_method():
-    """Test that type filtering in snapshot matches select_* method results."""
-    base_url, token, pdf_path = _require_env_and_fixture("Showcase.pdf")
-
-    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
-        text_line_snapshot = pdf.get_page_snapshot(1, "TEXT_LINE")
-
-        selected_text_lines = pdf.page(1).select_text_lines()
-
-        assert len(selected_text_lines) == len(text_line_snapshot.elements)
-
-        # All elements should be text lines.
-        assert all(
-            e.type == ObjectType.TEXT_LINE for e in text_line_snapshot.elements
-        ), "Filtered snapshot should only contain TEXT_LINE types"
-
-        snapshot_ids = {e.internal_id for e in text_line_snapshot.elements}
-        selected_ids = {line.internal_id for line in selected_text_lines}
-
-        assert (
-            selected_ids == snapshot_ids
-        ), "Filtered snapshot and select_text_lines() should return identical IDs"
 
 
 def test_multiple_type_filters_combined():

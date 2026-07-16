@@ -2,6 +2,7 @@
 Model classes for the PDFDancer Python client.
 """
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, ClassVar, Dict, List, Mapping, Optional, Tuple, Union
@@ -45,28 +46,51 @@ class PageSize:
     height: float
 
     _STANDARD_SIZES: ClassVar[Dict[str, Tuple[float, float]]] = {
+        "A0": (2384.0, 3370.0),
+        "A1": (1684.0, 2384.0),
+        "A2": (1191.0, 1684.0),
+        "A3": (842.0, 1191.0),
         "A4": (595.0, 842.0),
+        "A5": (420.0, 595.0),
+        "A6": (298.0, 420.0),
+        "B4": (709.0, 1001.0),
+        "B5": (499.0, 709.0),
         "LETTER": (612.0, 792.0),
         "LEGAL": (612.0, 1008.0),
         "TABLOID": (792.0, 1224.0),
-        "A3": (842.0, 1191.0),
-        "A5": (420.0, 595.0),
+        "EXECUTIVE": (522.0, 756.0),
+        "POSTCARD": (288.0, 432.0),
+        "INDEX_3X5": (216.0, 360.0),
     }
 
     # Convenience aliases populated after class definition; annotated for type checkers.
+    A0: ClassVar["PageSize"]
+    A1: ClassVar["PageSize"]
+    A2: ClassVar["PageSize"]
+    A3: ClassVar["PageSize"]
     A4: ClassVar["PageSize"]
+    A5: ClassVar["PageSize"]
+    A6: ClassVar["PageSize"]
+    B4: ClassVar["PageSize"]
+    B5: ClassVar["PageSize"]
     LETTER: ClassVar["PageSize"]
     LEGAL: ClassVar["PageSize"]
     TABLOID: ClassVar["PageSize"]
-    A3: ClassVar["PageSize"]
-    A5: ClassVar["PageSize"]
+    EXECUTIVE: ClassVar["PageSize"]
+    POSTCARD: ClassVar["PageSize"]
+    INDEX_3X5: ClassVar["PageSize"]
 
     def __post_init__(self) -> None:
         if not isinstance(self.width, (int, float)) or not isinstance(
             self.height, (int, float)
         ):
             raise TypeError("Page width and height must be numeric")
-        if self.width <= 0 or self.height <= 0:
+        if (
+            not math.isfinite(self.width)
+            or not math.isfinite(self.height)
+            or self.width <= 0
+            or self.height <= 0
+        ):
             raise ValueError("Page width and height must be positive values")
 
         width = float(self.width)
@@ -127,14 +151,29 @@ class PageSize:
         """Return a list of supported standard page size names."""
         return sorted(cls._STANDARD_SIZES.keys())
 
+    @classmethod
+    def from_dimensions(
+        cls, width: float, height: float, tolerance: float = 0.5
+    ) -> "PageSize":
+        """Recognize standard dimensions in portrait or rotated orientation."""
+        custom = cls(name=None, width=width, height=height)
+        for name, (standard_width, standard_height) in cls._STANDARD_SIZES.items():
+            direct = (
+                abs(standard_width - custom.width) < tolerance
+                and abs(standard_height - custom.height) < tolerance
+            )
+            rotated = (
+                abs(standard_width - custom.height) < tolerance
+                and abs(standard_height - custom.width) < tolerance
+            )
+            if direct or rotated:
+                return cls.from_name(name)
+        return custom
+
 
 # Populate convenience constants for standard sizes.
-PageSize.A4 = PageSize.from_name("A4")
-PageSize.LETTER = PageSize.from_name("LETTER")
-PageSize.LEGAL = PageSize.from_name("LEGAL")
-PageSize.TABLOID = PageSize.from_name("TABLOID")
-PageSize.A3 = PageSize.from_name("A3")
-PageSize.A5 = PageSize.from_name("A5")
+for _page_size_name in PageSize._STANDARD_SIZES:
+    setattr(PageSize, _page_size_name, PageSize.from_name(_page_size_name))
 
 
 class Orientation(Enum):
@@ -285,8 +324,8 @@ class Position:
 
     Examples:
     ```python
-    # A point on page 0
-    pos = Position.at_page_coordinates(0, x=72, y=720)
+    # A point on page 1
+    pos = Position.at_page_coordinates(1, x=72, y=720)
 
     # Search by name (e.g. a form field) and then move down 12 points
     pos = Position.by_name("Email").move_y(-12)
@@ -409,6 +448,16 @@ class ObjectRef:
         """Returns the type classification of the referenced object."""
         return self.type
 
+    @property
+    def object_type(self) -> ObjectType:
+        """Return the object type using the public object naming convention."""
+        return self.type
+
+    @object_type.setter
+    def object_type(self, object_type: ObjectType) -> None:
+        """Update the object type using the public object naming convention."""
+        self.type = object_type
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -443,12 +492,25 @@ class Color:
     b: int
     a: int = 255  # Alpha channel, default fully opaque
 
+    BLACK: ClassVar["Color"]
+    WHITE: ClassVar["Color"]
+    RED: ClassVar["Color"]
+
     def __post_init__(self):
         for component in [self.r, self.g, self.b, self.a]:
-            if not 0 <= component <= 255:
+            if (
+                isinstance(component, bool)
+                or not isinstance(component, int)
+                or not 0 <= component <= 255
+            ):
                 raise ValueError(
                     f"Color component must be between 0 and 255, got {component}"
                 )
+
+
+Color.BLACK = Color(0, 0, 0)
+Color.WHITE = Color(255, 255, 255)
+Color.RED = Color(255, 0, 0)
 
 
 @dataclass
@@ -698,7 +760,7 @@ class FindRequest:
     ```python
     req = FindRequest(
         object_type=ObjectType.TEXT_LINE,
-        position=Position.at_page_coordinates(0, 72, 700).with_text_starts("Hello"),
+        position=Position.at_page_coordinates(1, 72, 700).with_text_starts("Hello"),
     )
     payload = req.to_dict()
     ```
@@ -1250,10 +1312,10 @@ class CommandResult:
         """Create a CommandResult from a dictionary response."""
         return cls(
             command_name=data.get("commandName", ""),
-            element_id=data.get("elementId", ""),
-            message=data.get("message", ""),
+            element_id=data.get("elementId"),
+            message=data.get("message"),
             success=data.get("success", False),
-            warning=data.get("warning", ""),
+            warning=data.get("warning"),
         )
 
     @classmethod

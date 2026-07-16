@@ -25,75 +25,6 @@ class PDFAssertions(object):
         self._saved_pdf_path = temp_file.name
         self._draw_events_cache = {}
 
-    def assert_textline_has_color(self, text: str, color: Color, page=1):
-        lines = self.pdf.page(page).select_text_lines_matching(text)
-        assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
-        reference = lines[0].object_ref()
-        assert color == reference.get_color(), f"{color} != {reference.get_color()}"
-        assert text in reference.get_text()
-        return self
-
-    def assert_textline_has_font(
-        self, text: str, font_name: str, font_size: int, page=1
-    ):
-        lines = self.pdf.page(page).select_text_lines_starting_with(text)
-        assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
-        reference = lines[0].object_ref()
-        assert (
-            font_name == reference.get_font_name()
-        ), f"Expected {font_name} but got {reference.get_font_name()}"
-        assert (
-            font_size == reference.get_font_size()
-        ), f"{font_size} != {reference.get_font_size()}"
-        return self
-
-    def assert_textline_has_font_matching(
-        self, text, font_name: str, font_size: int, page=1
-    ):
-        lines = self.pdf.page(page).select_text_lines_starting_with(text)
-        assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
-        reference = lines[0].object_ref()
-        assert (
-            font_name in reference.get_font_name()
-        ), f"Expected {reference.get_font_name()} to match {font_name}"
-        assert font_size == reference.get_font_size()
-        return self
-
-    def assert_textline_is_at(
-        self, text: str, x: float, y: float, page=1, epsilon=1e-6
-    ):
-        lines = self.pdf.page(page).select_text_lines_starting_with(text)
-        assert len(lines) == 1, f"Expected 1 line but got {len(lines)}"
-        reference = lines[0].object_ref()
-        assert reference.get_position().x() == pytest.approx(
-            x, rel=0, abs=epsilon
-        ), f"{x} != {reference.get_position().x()}"
-        assert reference.get_position().y() == pytest.approx(
-            y, rel=0, abs=epsilon
-        ), f"{y} != {reference.get_position().y()}"
-
-        by_position = [
-            line
-            for line in self.pdf.page(page).select_text_lines_at(x, y, epsilon)
-            if line.object_ref().get_text()
-            and line.object_ref().get_text().startswith(text)
-        ]
-        assert (
-            len(by_position) == 1
-        ), f"No text line starting with {text!r} found at ({x}, {y})"
-        assert lines[0] == by_position[0]
-        return self
-
-    def assert_textline_does_not_exist(self, text, page=1):
-        lines = self.pdf.page(page).select_text_lines_starting_with(text)
-        assert len(lines) == 0
-        return self
-
-    def assert_textline_exists(self, text, page=1):
-        lines = self.pdf.page(page).select_text_lines_matching(f".*{text}.*")
-        assert len(lines) > 0
-        return self
-
     def assert_number_of_pages(self, page_count: int):
         assert (
             len(self.pdf.pages()) == page_count
@@ -985,25 +916,6 @@ class PDFAssertions(object):
             key=lambda event: self._bbox_center_distance(event["bbox"], x, y),
         )
 
-    def _find_textline_clipping_state(self, text: str, page: int) -> bool:
-        line = self.pdf.page(page).select_text_line_starting_with(text)
-        assert (
-            line is not None
-        ), f"No text line starting with {text!r} found on page {page}"
-
-        x = line.position.x()
-        y = line.position.y()
-        assert x is not None and y is not None
-
-        bbox = line.position.bounding_rect
-        target_bbox = None
-        if bbox is not None:
-            target_bbox = (bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
-
-        return bool(
-            self._find_text_draw_event(text, page, x, y, target_bbox)["clipped"]
-        )
-
     def assert_path_has_clipping(
         self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
@@ -1026,16 +938,6 @@ class PDFAssertions(object):
         self, internal_id: str, page: int = 1
     ) -> "PDFAssertions":
         assert self._find_image_clipping_state(internal_id, page) is False
-        return self
-
-    def assert_textline_has_clipping(self, text: str, page: int = 1) -> "PDFAssertions":
-        assert self._find_textline_clipping_state(text, page) is True
-        return self
-
-    def assert_textline_has_no_clipping(
-        self, text: str, page: int = 1
-    ) -> "PDFAssertions":
-        assert self._find_textline_clipping_state(text, page) is False
         return self
 
     def assert_path_has_bounds(

@@ -266,6 +266,19 @@ def test_page_scoped_coordinate_request_can_be_completed_after_build():
     assert request.to_dict()["target"]["coordinate"]["page"] == 3
 
 
+@pytest.mark.parametrize(
+    "built_request,pages_path",
+    [
+        (TextReplaceRequest.literal("x", "y").pages(9).build(), "pages"),
+        (TextDeleteRequest.literal("x").pages(9).build(), "pages"),
+        (TextStyleRequest.literal("x").pages(9).font("Helvetica").build(), "pages"),
+    ],
+)
+def test_page_scope_overrides_document_request_pages(built_request, pages_path):
+    scoped = built_request.with_pages((2,)).to_dict()
+    assert scoped[pages_path] == [2]
+
+
 def test_style_literal_serializes_all_fields():
     request = (
         TextStyleRequest.literal("target")

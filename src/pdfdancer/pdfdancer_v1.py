@@ -602,10 +602,6 @@ class PageClient:
         results = self.select_form_fields_at(x, y, tolerance)
         return results[0] if results else None
 
-    def select_form_field(self) -> Optional[FormFieldObject]:
-        results = self.select_form_fields()
-        return results[0] if results else None
-
     def select_form_field_by_name(self, field_name: str) -> Optional[FormFieldObject]:
         """
         Select the first form field with the specified name.

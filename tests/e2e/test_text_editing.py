@@ -11,6 +11,7 @@ from pdfdancer import (
     PDFDancer,
     TextDeleteRequest,
     TextInsertRequest,
+    TextLayoutProfile,
     TextReplaceRequest,
     TextStyleRequest,
 )
@@ -259,4 +260,121 @@ def test_page_scoped_style_preserves_text_and_reports_selected_page(
         .assert_pdf_text_occurrence_count("Iowa", 3, page=1)
         .assert_pdf_text_occurrence_count("Iowa", 11, page=2)
         .assert_pdf_text_contains("2012 IA 1040, page 2", page=2)
+    )
+
+
+def test_document_wide_literal_delete_persists_all_matches(iowa_pdf: PDFDancer):
+    response = iowa_pdf.text().delete(TextDeleteRequest.literal("Iowa").build())
+
+    assert response.matched == 14
+    assert response.changed == 14
+    assert response.pages_changed == (1, 2)
+    assert not response.errors
+    PDFAssertions(iowa_pdf).assert_pdf_text_occurrence_count("Iowa", 0)
+
+
+def test_regex_delete_with_reflow_persists(showcase_pdf: PDFDancer):
+    response = showcase_pdf.text().delete(
+        TextDeleteRequest.regex(r"This line will be replaced\.")
+        .reflow_when_supported(TextLayoutProfile.DEFAULT)
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 1
+    assert not response.errors
+    PDFAssertions(showcase_pdf).assert_pdf_text_occurrence_count(
+        "This line will be replaced.", 0, page=1
+    )
+
+
+def test_whole_word_insert_honors_match_boundaries_and_limit(iowa_pdf: PDFDancer):
+    response = iowa_pdf.text().insert(
+        TextInsertRequest.after("Iowa", "_STATE")
+        .whole_words(True)
+        .max_matches(2)
+        .build()
+    )
+
+    assert response.matched == 2
+    assert response.changed == 2
+    assert not response.errors
+    (
+        PDFAssertions(iowa_pdf)
+        .assert_pdf_text_occurrence_count("_STATE", 2)
+        .assert_pdf_text_occurrence_count("Iowa", 14)
+    )
+
+
+def test_coordinate_insert_with_rotation_and_style_persists(iowa_pdf: PDFDancer):
+    response = iowa_pdf.text().insert(
+        TextInsertRequest.at(1, 72, 720, "Coordinate Insert")
+        .rotation_degrees(90)
+        .font("Helvetica-Bold")
+        .size(12)
+        .fill_color(PdfColorRequest.rgb(0.8, 0.1, 0.1))
+        .build()
+    )
+
+    assert response.changed == 1
+    assert not response.errors
+    PDFAssertions(iowa_pdf).assert_pdf_text_occurrence_count(
+        "Coordinate Insert", 1, page=1
+    )
+
+
+def test_regex_style_preserves_text_and_reports_all_matches(showcase_pdf: PDFDancer):
+    response = showcase_pdf.text().style(
+        TextStyleRequest.regex(r"This line will be replaced\.")
+        .fill_color(PdfColorRequest.rgb(1, 0, 0))
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 1
+    assert response.pages_changed == (1,)
+    assert not response.errors
+    PDFAssertions(showcase_pdf).assert_pdf_text_occurrence_count(
+        "This line will be replaced.", 1, page=1
+    )
+
+
+def test_runs_where_style_selects_the_intended_run(showcase_pdf: PDFDancer):
+    response = showcase_pdf.text().style(
+        TextStyleRequest.runs_where()
+        .where_text_contains("This line will be replaced.")
+        .fill_color(PdfColorRequest.rgb(1, 0, 0))
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 1
+    assert not response.errors
+    PDFAssertions(showcase_pdf).assert_pdf_text_occurrence_count(
+        "This line will be replaced.", 1, page=1
+    )
+
+
+def test_required_reflow_exposes_layout_diagnostics(showcase_pdf: PDFDancer):
+    response = showcase_pdf.text().replace(
+        TextReplaceRequest.literal(
+            "This line will be replaced.", "Replacement with reflow."
+        )
+        .require_reflow(TextLayoutProfile.BODY_TEXT)
+        .hyphenation_enabled(False)
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 1
+    assert len(response.change) == 1
+    change = response.change[0]
+    assert change.requested_layout_mode == "requireReflow"
+    assert change.requested_layout_profile == "bodyText"
+    assert change.effective_hyphenation_enabled is False
+    assert change.applied_layout_mode == "REFLOWED"
+    (
+        PDFAssertions(showcase_pdf)
+        .assert_pdf_text_occurrence_count("This line will be replaced.", 0, page=1)
+        .assert_pdf_text_occurrence_count("Replacement with reflow.", 1, page=1)
     )

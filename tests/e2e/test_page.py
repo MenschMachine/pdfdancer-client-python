@@ -147,6 +147,9 @@ def test_add_page_with_builder_custom_size():
 
         assert page_ref.position.page_number == 8
         assert len(pdf.pages()) == 8
+        PDFAssertions(pdf).assert_page_dimension(
+            400, 600, Orientation.LANDSCAPE, page_number=8
+        )
 
 
 def test_add_page_with_builder_all_options():

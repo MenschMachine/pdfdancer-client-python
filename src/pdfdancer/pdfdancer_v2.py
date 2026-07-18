@@ -30,7 +30,6 @@ from typing import (
 )
 
 import httpx
-from dotenv import find_dotenv, load_dotenv
 
 from . import BezierBuilder, LineBuilder, PathBuilder
 from ._runtime_version import resolve_package_version
@@ -99,17 +98,6 @@ if TYPE_CHECKING:
     from .path_builder import RectangleBuilder
     from .types import BoundingRect as GroupBoundingRect
     from .types import PathGroupObject
-
-_env_loaded = False
-
-
-def _load_env() -> None:
-    global _env_loaded
-    if _env_loaded:
-        return
-    load_dotenv(find_dotenv(usecwd=True))
-    _env_loaded = True
-
 
 # Client identifier header for all HTTP requests
 # Prefer the SCM-generated version module; fall back to installed metadata.
@@ -850,7 +838,6 @@ class PDFDancer:
 
     @classmethod
     def _resolve_base_url(cls, base_url: Optional[str]) -> str:
-        _load_env()
         env_base_url = os.getenv("PDFDANCER_BASE_URL")
         resolved_base_url = base_url or (
             env_base_url.strip() if env_base_url and env_base_url.strip() else None
@@ -947,7 +934,6 @@ class PDFDancer:
         1. PDFDANCER_API_TOKEN (preferred)
         2. PDFDANCER_TOKEN (legacy)
         """
-        _load_env()
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)

@@ -29,18 +29,13 @@ class TestAnonymousTokenFallback:
     @pytest.fixture
     def clear_env_token(self):
         """Temporarily clear PDFDANCER_TOKEN and PDFDANCER_API_TOKEN from environment."""
-        import pdfdancer.pdfdancer_v2 as pdfdancer_v2
-
         original_token = os.environ.get("PDFDANCER_TOKEN")
         original_api_token = os.environ.get("PDFDANCER_API_TOKEN")
-        original_env_loaded = pdfdancer_v2._env_loaded
         if "PDFDANCER_TOKEN" in os.environ:
             del os.environ["PDFDANCER_TOKEN"]
         if "PDFDANCER_API_TOKEN" in os.environ:
             del os.environ["PDFDANCER_API_TOKEN"]
-        pdfdancer_v2._env_loaded = True
         yield
-        pdfdancer_v2._env_loaded = original_env_loaded
         if original_token is not None:
             os.environ["PDFDANCER_TOKEN"] = original_token
         if original_api_token is not None:

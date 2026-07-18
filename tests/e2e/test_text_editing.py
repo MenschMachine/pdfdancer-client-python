@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
 
 from pdfdancer import (
     PdfAffineTransform,
@@ -32,7 +31,6 @@ LOGO = Path(__file__).resolve().parents[1] / "fixtures" / "logo-80.png"
 
 
 def _open_local_fixture(path: Path) -> PDFDancer:
-    load_dotenv()
     base_url = _get_base_url()
     up, message = _server_up(base_url)
     if not up:
@@ -46,8 +44,7 @@ def _open_local_fixture(path: Path) -> PDFDancer:
 @pytest.fixture
 def iowa_pdf() -> PDFDancer:
     """Open the shared Java/Python real-world fixture with a fresh local token."""
-    # A fresh anonymous token prevents a stale developer .env token from making
-    # the persistence tests nondeterministic.
+    # A fresh anonymous token keeps the persistence tests deterministic.
     pdf = _open_local_fixture(IOWA_1040)
     try:
         yield pdf

@@ -144,6 +144,7 @@ def test_replace_image_uses_base64_and_pdf_matrix_order():
         "data": base64.b64encode(b"image-bytes").decode("ascii"),
         "transformationMatrix": [20, 0, 5, 10, 3, -2],
     }
+    assert request.to_dict()["layout"] == {"mode": "sourceAnchored"}
 
 
 @pytest.mark.parametrize(

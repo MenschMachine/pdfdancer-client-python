@@ -858,13 +858,16 @@ class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
             if any(value is not None for value in style_values.values())
             else None
         )
+        layout = self._resolved_layout()
+        if self._replace_with_image is not None and layout is None:
+            layout = TextLayoutRequest.source_anchored()
         return TextReplaceRequest(
             self._pages,
             self._selector(),
             self._replace_with,
             self._replace_with_image,
             style,
-            self._resolved_layout(),
+            layout,
         ).validated()
 
 

@@ -131,7 +131,7 @@ def test_add_page_with_builder_at_page():
         (
             PDFAssertions(pdf)
             .assert_page_dimension(
-                PageSize.A5.width, PageSize.A5.height, Orientation.LANDSCAPE, 6
+                PageSize.A5.height, PageSize.A5.width, Orientation.LANDSCAPE, 6
             )
             .assert_total_number_of_elements(0, 6)
         )
@@ -148,7 +148,7 @@ def test_add_page_with_builder_custom_size():
         assert page_ref.position.page_number == 8
         assert len(pdf.pages()) == 8
         PDFAssertions(pdf).assert_page_dimension(
-            400, 600, Orientation.LANDSCAPE, page_number=8
+            600, 400, Orientation.LANDSCAPE, page_number=8
         )
 
 

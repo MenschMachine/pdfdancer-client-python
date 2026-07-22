@@ -122,35 +122,21 @@ def test_image_replace_persists_generated_image(showcase_pdf: PDFDancer):
     }
 
 
-def test_page_scoped_replace_reports_unencodable_font_and_preserves_pdf(
-    iowa_pdf: PDFDancer,
-):
+def test_page_scoped_replace_persists_only_on_selected_page(iowa_pdf: PDFDancer):
     response = (
         iowa_pdf.page(1)
         .text()
-        .replace(
-            # Use only glyphs already encoded by the source font. The live server
-            # reports a per-match font-roundtrip error for this replacement.
-            TextReplaceRequest.literal("Iowa", "Iwoa").build()
-        )
+        .replace(TextReplaceRequest.literal("Iowa", "Iwoa").build())
     )
 
     assert response.matched == 3
-    assert response.changed == 0
-    assert response.pages_changed == ()
-    assert len(response.errors) == 3
-    assert all(error.page == 1 for error in response.errors)
-    assert all(
-        error.message
-        and error.message.startswith(
-            "No decoded replacement font can roundtrip text: Iwoa"
-        )
-        for error in response.errors
-    )
+    assert response.changed == 3
+    assert response.pages_changed == (1,)
+    assert not response.errors
     (
         PDFAssertions(iowa_pdf)
-        .assert_pdf_text_occurrence_count("Iowa", 3, page=1)
-        .assert_pdf_text_occurrence_count("Iwoa", 0, page=1)
+        .assert_pdf_text_occurrence_count("Iowa", 0, page=1)
+        .assert_pdf_text_occurrence_count("Iwoa", 3, page=1)
         .assert_pdf_text_occurrence_count("Iowa", 11, page=2)
         .assert_pdf_text_occurrence_count("Iwoa", 0, page=2)
         .assert_pdf_text_contains("2012 IA 1040, page 2", page=2)

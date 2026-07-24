@@ -1,5 +1,7 @@
 # PDFDancer Python Client
 
+This README documents `pdfdancer-client-python` version `3.0.0`.
+
 ![PDFDancer logo](media/logo-silver-60h.webp)
 
 ## Overview
@@ -31,7 +33,7 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 ## Installation
 
 ```bash
-pip install pdfdancer-client-python
+pip install pdfdancer-client-python==3.0.0
 
 # Editable install for local development
 pip install -e .

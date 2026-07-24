@@ -2,6 +2,7 @@
 Model classes for the PDFDancer Python client.
 """
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, ClassVar, Dict, List, Mapping, Optional, Tuple, Union
@@ -45,28 +46,51 @@ class PageSize:
     height: float
 
     _STANDARD_SIZES: ClassVar[Dict[str, Tuple[float, float]]] = {
+        "A0": (2384.0, 3370.0),
+        "A1": (1684.0, 2384.0),
+        "A2": (1191.0, 1684.0),
+        "A3": (842.0, 1191.0),
         "A4": (595.0, 842.0),
+        "A5": (420.0, 595.0),
+        "A6": (298.0, 420.0),
+        "B4": (709.0, 1001.0),
+        "B5": (499.0, 709.0),
         "LETTER": (612.0, 792.0),
         "LEGAL": (612.0, 1008.0),
         "TABLOID": (792.0, 1224.0),
-        "A3": (842.0, 1191.0),
-        "A5": (420.0, 595.0),
+        "EXECUTIVE": (522.0, 756.0),
+        "POSTCARD": (288.0, 432.0),
+        "INDEX_3X5": (216.0, 360.0),
     }
 
     # Convenience aliases populated after class definition; annotated for type checkers.
+    A0: ClassVar["PageSize"]
+    A1: ClassVar["PageSize"]
+    A2: ClassVar["PageSize"]
+    A3: ClassVar["PageSize"]
     A4: ClassVar["PageSize"]
+    A5: ClassVar["PageSize"]
+    A6: ClassVar["PageSize"]
+    B4: ClassVar["PageSize"]
+    B5: ClassVar["PageSize"]
     LETTER: ClassVar["PageSize"]
     LEGAL: ClassVar["PageSize"]
     TABLOID: ClassVar["PageSize"]
-    A3: ClassVar["PageSize"]
-    A5: ClassVar["PageSize"]
+    EXECUTIVE: ClassVar["PageSize"]
+    POSTCARD: ClassVar["PageSize"]
+    INDEX_3X5: ClassVar["PageSize"]
 
     def __post_init__(self) -> None:
         if not isinstance(self.width, (int, float)) or not isinstance(
             self.height, (int, float)
         ):
             raise TypeError("Page width and height must be numeric")
-        if self.width <= 0 or self.height <= 0:
+        if (
+            not math.isfinite(self.width)
+            or not math.isfinite(self.height)
+            or self.width <= 0
+            or self.height <= 0
+        ):
             raise ValueError("Page width and height must be positive values")
 
         width = float(self.width)
@@ -82,7 +106,7 @@ class PageSize:
                 self, "name", normalized_name if normalized_name else None
             )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
@@ -127,14 +151,29 @@ class PageSize:
         """Return a list of supported standard page size names."""
         return sorted(cls._STANDARD_SIZES.keys())
 
+    @classmethod
+    def from_dimensions(
+        cls, width: float, height: float, tolerance: float = 0.5
+    ) -> "PageSize":
+        """Recognize standard dimensions in portrait or rotated orientation."""
+        custom = cls(name=None, width=width, height=height)
+        for name, (standard_width, standard_height) in cls._STANDARD_SIZES.items():
+            direct = (
+                abs(standard_width - custom.width) < tolerance
+                and abs(standard_height - custom.height) < tolerance
+            )
+            rotated = (
+                abs(standard_width - custom.height) < tolerance
+                and abs(standard_height - custom.width) < tolerance
+            )
+            if direct or rotated:
+                return cls.from_name(name)
+        return custom
+
 
 # Populate convenience constants for standard sizes.
-PageSize.A4 = PageSize.from_name("A4")
-PageSize.LETTER = PageSize.from_name("LETTER")
-PageSize.LEGAL = PageSize.from_name("LEGAL")
-PageSize.TABLOID = PageSize.from_name("TABLOID")
-PageSize.A3 = PageSize.from_name("A3")
-PageSize.A5 = PageSize.from_name("A5")
+for _page_size_name in PageSize._STANDARD_SIZES:
+    setattr(PageSize, _page_size_name, PageSize.from_name(_page_size_name))
 
 
 class Orientation(Enum):
@@ -191,19 +230,24 @@ class StandardFonts(Enum):
 class ObjectType(Enum):
     """Server object type discriminator used in refs, requests, and snapshots."""
 
-    FORM_FIELD = "FORM_FIELD"
-    IMAGE = "IMAGE"
-    FORM_X_OBJECT = "FORM_X_OBJECT"
-    PATH = "PATH"
-    PARAGRAPH = "PARAGRAPH"
-    TEXT_LINE = "TEXT_LINE"
+    PDF = "PDF"
     PAGE = "PAGE"
+    TEXT_ELEMENT = "TEXT_ELEMENT"
+    IMAGE = "IMAGE"
+    PATH = "PATH"
+    LINE = "LINE"
+    RECTANGLE = "RECTANGLE"
+    BEZIER = "BEZIER"
+    CLIPPING = "CLIPPING"
+    FORM_X_OBJECT = "FORM_X_OBJECT"
+    FORM_FIELD = "FORM_FIELD"
+    WORD = "WORD"
+    TEXT_LINE = "TEXT_LINE"
     TEXT_FIELD = "TEXT_FIELD"
-    CHECK_BOX = "CHECK_BOX"
     RADIO_BUTTON = "RADIO_BUTTON"
     BUTTON = "BUTTON"
     DROPDOWN = "DROPDOWN"
-    TEXT_ELEMENT = "TEXT_ELEMENT"
+    CHECKBOX = "CHECKBOX"
 
 
 class PositionMode(Enum):
@@ -280,8 +324,8 @@ class Position:
 
     Examples:
     ```python
-    # A point on page 0
-    pos = Position.at_page_coordinates(0, x=72, y=720)
+    # A point on page 1
+    pos = Position.at_page_coordinates(1, x=72, y=720)
 
     # Search by name (e.g. a form field) and then move down 12 points
     pos = Position.by_name("Email").move_y(-12)
@@ -343,13 +387,17 @@ class Position:
     def move_x(self, x_offset: float) -> "Position":
         """Move the position horizontally by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.x() + x_offset, self.y()))
+            self.at_coordinates(
+                Point(self.bounding_rect.get_x() + x_offset, self.bounding_rect.get_y())
+            )
         return self
 
     def move_y(self, y_offset: float) -> "Position":
         """Move the position vertically by the specified offset."""
         if self.bounding_rect:
-            self.at_coordinates(Point(self.x(), self.y() + y_offset))
+            self.at_coordinates(
+                Point(self.bounding_rect.get_x(), self.bounding_rect.get_y() + y_offset)
+            )
         return self
 
     def x(self) -> Optional[float]:
@@ -374,7 +422,7 @@ class ObjectRef:
     Usage:
     - Instances are typically returned in snapshots or find results.
     - Pass an `ObjectRef` to request objects such as `MoveRequest`, `DeleteRequest`,
-      `ModifyRequest`, or `ModifyTextRequest`.
+      `DeleteRequest`, `MoveRequest`, or `ModifyRequest`.
 
     Example:
     ```python
@@ -404,17 +452,22 @@ class ObjectRef:
         """Returns the type classification of the referenced object."""
         return self.type
 
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        # Normalize type back to API format (API uses "CHECKBOX" not "CHECK_BOX")
-        type_value = self.type.value
-        if type_value == "CHECK_BOX":
-            type_value = "CHECKBOX"
+    @property
+    def object_type(self) -> ObjectType:
+        """Return the object type using the public object naming convention."""
+        return self.type
 
+    @object_type.setter
+    def object_type(self, object_type: ObjectType) -> None:
+        """Update the object type using the public object naming convention."""
+        self.type = object_type
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
         return {
             "internalId": self.internal_id,
             "position": FindRequest._position_to_dict(self.position),
-            "type": type_value,
+            "type": self.type.value,
         }
 
 
@@ -443,12 +496,25 @@ class Color:
     b: int
     a: int = 255  # Alpha channel, default fully opaque
 
-    def __post_init__(self):
+    BLACK: ClassVar["Color"]
+    WHITE: ClassVar["Color"]
+    RED: ClassVar["Color"]
+
+    def __post_init__(self) -> None:
         for component in [self.r, self.g, self.b, self.a]:
-            if not 0 <= component <= 255:
+            if (
+                isinstance(component, bool)
+                or not isinstance(component, int)
+                or not 0 <= component <= 255
+            ):
                 raise ValueError(
                     f"Color component must be between 0 and 255, got {component}"
                 )
+
+
+Color.BLACK = Color(0, 0, 0)
+Color.WHITE = Color(255, 255, 255)
+Color.RED = Color(255, 0, 0)
 
 
 @dataclass
@@ -474,7 +540,7 @@ class Font:
     name: str
     size: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.size <= 0:
             raise ValueError(f"Font size must be positive, got {self.size}")
 
@@ -684,107 +750,6 @@ class Image:
         self.position = position
 
 
-@dataclass
-class TextLine:
-    """
-    One line of text to add to a page.
-
-    Parameters:
-    - position: Anchor position where the first line begins.
-    - text: the text
-      provide separate entries for multiple lines.
-    - font: Font to use for all text elements unless overridden later.
-    - color: Text color.
-
-    """
-
-    position: Optional[Position] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    line_spacing: float = 1.2
-    text: str = ""
-
-    def get_position(self) -> Optional[Position]:
-        """Returns the position of this paragraph."""
-        return self.position
-
-    def set_position(self, position: Position) -> None:
-        """Sets the position of this paragraph."""
-        self.position = position
-
-
-@dataclass
-class Paragraph:
-    """
-    Multi-line text paragraph to add to a page.
-
-    Parameters:
-    - position: Anchor position where the first line begins.
-    - text_lines: List of strings, one per line. Use `\n` within a string only if desired; normally
-      provide separate entries for multiple lines.
-    - font: Font to use for all text elements unless overridden later.
-    - color: Text color.
-    - line_spacing: Distance multiplier between lines. Server expects a list, handled for you by `AddRequest`.
-
-    Example:
-    ```python
-    from pdfdancer.models import Paragraph, Position, Font, Color, StandardFonts, AddRequest
-
-    para = Paragraph(
-        position=Position.at_page_coordinates(0, 72, 700),
-        text_lines=["Hello", "PDFDancer!"],
-        font=Font(StandardFonts.HELVETICA.value, 12),
-        color=Color(50, 50, 50),
-        line_spacing=1.4,
-    )
-    payload = AddRequest(para).to_dict()
-    ```
-    """
-
-    position: Optional[Position] = None
-    text_lines: Optional[List[TextLine]] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    line_spacing: float = 1.2
-    line_spacings: Optional[List[float]] = None
-
-    def get_position(self) -> Optional[Position]:
-        """Returns the position of this paragraph."""
-        return self.position
-
-    def set_position(self, position: Position) -> None:
-        """Sets the position of this paragraph."""
-        self.position = position
-
-    def clear_lines(self) -> None:
-        """Removes all text lines from this paragraph."""
-        self.text_lines = []
-
-    def add_line(self, text_line: TextLine) -> None:
-        """Appends a text line to this paragraph."""
-        if self.text_lines is None:
-            self.text_lines = []
-        self.text_lines.append(text_line)
-
-    def get_lines(self) -> List[TextLine]:
-        """Returns the list of text lines, defaulting to an empty list."""
-        if self.text_lines is None:
-            self.text_lines = []
-        return self.text_lines
-
-    def set_lines(self, lines: List[TextLine]) -> None:
-        """Replaces the current text lines with the provided list."""
-        self.text_lines = list(lines)
-
-    def set_line_spacings(self, spacings: Optional[List[float]]) -> None:
-        """Sets the per-line spacing factors for this paragraph."""
-        self.line_spacings = list(spacings) if spacings else None
-
-    def get_line_spacings(self) -> Optional[List[float]]:
-        """Returns the per-line spacing factors if present."""
-        return list(self.line_spacings) if self.line_spacings else None
-
-
 # Request classes for API communication
 @dataclass
 class FindRequest:
@@ -799,7 +764,7 @@ class FindRequest:
     ```python
     req = FindRequest(
         object_type=ObjectType.TEXT_LINE,
-        position=Position.at_page_coordinates(0, 72, 700).with_text_starts("Hello"),
+        position=Position.at_page_coordinates(1, 72, 700).with_text_starts("Hello"),
     )
     payload = req.to_dict()
     ```
@@ -809,7 +774,7 @@ class FindRequest:
     position: Optional[Position]
     hint: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "objectType": self.object_type.value if self.object_type else None,
@@ -820,9 +785,9 @@ class FindRequest:
         }
 
     @staticmethod
-    def _position_to_dict(position: Position) -> dict:
+    def _position_to_dict(position: Position) -> Dict[str, Any]:
         """Convert Position to dictionary for JSON serialization."""
-        result = {
+        result: Dict[str, Any] = {
             "pageNumber": position.page_number,
             "textStartsWith": position.text_starts_with,
             "textPattern": position.text_pattern,
@@ -858,7 +823,7 @@ class DeleteRequest:
 
     object_ref: ObjectRef
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {"objectRef": self.object_ref.to_dict()}
@@ -883,7 +848,7 @@ class MoveRequest:
     object_ref: ObjectRef
     position: Position
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Server API expects the new coordinates under 'newPosition'
         # Use ObjectRef.to_dict() to ensure proper type normalization
@@ -891,55 +856,6 @@ class MoveRequest:
             "objectRef": self.object_ref.to_dict(),
             "newPosition": FindRequest._position_to_dict(self.position),
         }
-
-
-@dataclass
-class RedactTarget:
-    """A single redaction target identifying an object by its internal ID."""
-
-    id: str
-    replacement: str
-
-    def to_dict(self) -> dict:
-        return {"id": self.id, "replacement": self.replacement}
-
-
-@dataclass
-class RedactRequest:
-    """Request for redacting content from a PDF document."""
-
-    targets: List["RedactTarget"]
-    default_replacement: str
-    placeholder_color: "Color"
-
-    def to_dict(self) -> dict:
-        return {
-            "targets": [t.to_dict() for t in self.targets],
-            "defaultReplacement": self.default_replacement,
-            "placeholderColor": {
-                "r": self.placeholder_color.r,
-                "g": self.placeholder_color.g,
-                "b": self.placeholder_color.b,
-                "a": self.placeholder_color.a,
-            },
-        }
-
-
-@dataclass
-class RedactResponse:
-    """Response from a redaction operation."""
-
-    count: int
-    success: bool
-    warnings: List[str]
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "RedactResponse":
-        return cls(
-            count=data.get("count", 0),
-            success=data.get("success", False),
-            warnings=data.get("warnings", []),
-        )
 
 
 @dataclass
@@ -961,7 +877,7 @@ class PageMoveRequest:
     from_page: int
     to_page: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "fromPage": self.from_page,
             "toPage": self.to_page,
@@ -985,7 +901,7 @@ class AddPageRequest:
     orientation: Optional[Orientation] = None
     page_size: Optional[PageSize] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {}
         if self.page_number is not None:
             payload["pageNumber"] = int(self.page_number)
@@ -1012,23 +928,16 @@ class AddRequest:
     """Request to add a new object to the document.
 
     Parameters:
-    - pdf_object: The object to add (e.g. `Image`, `Paragraph`, or `Path`).
-
-    Usage:
-    ```python
-    para = Paragraph(position=Position.at_page_coordinates(0, 72, 700), text_lines=["Hello"])
-    req = AddRequest(para)
-    payload = req.to_dict()  # ready to send to the server API
-    ```
+    - pdf_object: The object to add (`Image` or `Path`).
 
     Notes:
     - Serialization details (like base64 for image `data`, or per-segment position for paths)
       are handled for you in `to_dict()`.
     """
 
-    pdf_object: Any  # Can be Image, Paragraph, etc.
+    pdf_object: Any
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization matching server API.
         Server expects an AddRequest with a nested 'object' containing the PDFObject
         (with a 'type' discriminator).
@@ -1036,7 +945,7 @@ class AddRequest:
         obj = self.pdf_object
         return {"object": self._object_to_dict(obj)}
 
-    def _object_to_dict(self, obj: Any) -> dict:
+    def _object_to_dict(self, obj: Any) -> Dict[str, Any]:
         """Convert PDF object to dictionary for JSON serialization."""
         import base64
 
@@ -1084,128 +993,14 @@ class AddRequest:
                 "size": size,
                 "data": data_b64,
             }
-        elif isinstance(obj, Paragraph):
-
-            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
-                if font:
-                    return {"name": font.name, "size": font.size}
-                return None
-
-            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
-                if color:
-                    return {
-                        "red": color.r,
-                        "green": color.g,
-                        "blue": color.b,
-                        "alpha": color.a,
-                    }
-                return None
-
-            lines_payload = []
-            if obj.text_lines:
-                for line in obj.text_lines:
-                    if isinstance(line, TextLine):
-                        line_text = line.text
-                        line_font = line.font or obj.font
-                        line_color = line.color or obj.color
-                        line_position = line.position or obj.position
-                    else:
-                        line_text = str(line)
-                        line_font = obj.font
-                        line_color = obj.color
-                        line_position = obj.position
-
-                    text_element = {
-                        "text": line_text,
-                        "font": _font_to_dict(line_font),
-                        "color": _color_to_dict(line_color),
-                        "position": (
-                            FindRequest._position_to_dict(line_position)
-                            if line_position
-                            else None
-                        ),
-                    }
-                    text_line = {"textElements": [text_element]}
-                    if line_color:
-                        text_line["color"] = _color_to_dict(line_color)
-                    if line_position:
-                        text_line["position"] = FindRequest._position_to_dict(
-                            line_position
-                        )
-                    lines_payload.append(text_line)
-
-            line_spacings = None
-            if getattr(obj, "line_spacings", None):
-                line_spacings = list(obj.line_spacings)
-            elif getattr(obj, "line_spacing", None) is not None:
-                line_spacings = [obj.line_spacing]
-
-            return {
-                "type": "PARAGRAPH",
-                "position": (
-                    FindRequest._position_to_dict(obj.position)
-                    if obj.position
-                    else None
-                ),
-                "lines": lines_payload if lines_payload else None,
-                "lineSpacings": line_spacings,
-                "font": _font_to_dict(obj.font),
-            }
-        elif isinstance(obj, TextLine):
-
-            def _font_to_dict(font: Optional[Font]) -> Optional[dict]:
-                if font:
-                    return {"name": font.name, "size": font.size}
-                return None
-
-            def _color_to_dict(color: Optional[Color]) -> Optional[dict]:
-                if color:
-                    return {
-                        "red": color.r,
-                        "green": color.g,
-                        "blue": color.b,
-                        "alpha": color.a,
-                    }
-                return None
-
-            # Build textElement with only non-null fields
-            text_element = {
-                "text": obj.text,
-            }
-
-            if obj.font:
-                text_element["font"] = _font_to_dict(obj.font)
-            if obj.color:
-                text_element["color"] = _color_to_dict(obj.color)
-            if obj.position:
-                text_element["position"] = FindRequest._position_to_dict(obj.position)
-
-            # TEXT_LINE structure matches paragraph line format (textElements only)
-            result = {
-                "type": "TEXT_LINE",
-                "position": (
-                    FindRequest._position_to_dict(obj.position)
-                    if obj.position
-                    else None
-                ),
-                "textElements": [text_element],
-            }
-
-            # Only include top-level font/color if they are not None
-            if obj.font:
-                result["font"] = _font_to_dict(obj.font)
-            if obj.color:
-                result["color"] = _color_to_dict(obj.color)
-
-            return result
         else:
             raise ValueError(f"Unsupported object type: {type(obj)}")
 
-    def _segment_to_dict(self, segment: "PathSegment") -> dict:
+    def _segment_to_dict(self, segment: "PathSegment") -> Dict[str, Any]:
         """Convert a PathSegment (Line or Bezier) to dictionary for JSON serialization."""
         from .models import Bezier, Line
 
-        result = {}
+        result: Dict[str, Any] = {}
 
         # Add common PathSegment properties
         if segment.stroke_color:
@@ -1263,50 +1058,19 @@ class ModifyRequest:
 
     Parameters:
     - object_ref: The existing object to replace.
-    - new_object: The replacement object (e.g. `Paragraph`, `Image`, or `Path`).
-
-    Example:
-    ```python
-    new_para = Paragraph(position=old.position, text_lines=["Updated text"])
-    req = ModifyRequest(object_ref=old, new_object=new_para)
-    payload = req.to_dict()
-    ```
+    - new_object: The replacement object (`Image` or `Path`).
     """
 
     object_ref: ObjectRef
     new_object: Any
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {
             "ref": self.object_ref.to_dict(),
             "newObject": AddRequest(None)._object_to_dict(self.new_object),
         }
-
-
-@dataclass
-class ModifyTextRequest:
-    """Request to change the text content of a text object.
-
-    Parameters:
-    - object_ref: The text object to modify (e.g. a `TextObjectRef`).
-    - new_text: Replacement text content.
-
-    Example:
-    ```python
-    req = ModifyTextRequest(object_ref=text_ref, new_text="Hello world")
-    payload = req.to_dict()
-    ```
-    """
-
-    object_ref: ObjectRef
-    new_text: str
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        # Use ObjectRef.to_dict() to ensure proper type normalization
-        return {"ref": self.object_ref.to_dict(), "newTextLine": self.new_text}
 
 
 @dataclass
@@ -1328,7 +1092,7 @@ class ChangeFormFieldRequest:
     object_ref: ObjectRef
     value: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         # Use ObjectRef.to_dict() to ensure proper type normalization
         return {"ref": self.object_ref.to_dict(), "value": self.value}
@@ -1342,7 +1106,7 @@ class FormFieldRef(ObjectRef):
     Parameters (usually provided by the server):
     - internal_id: Identifier of the form field object.
     - position: Position of the field.
-    - type: One of `ObjectType.TEXT_FIELD`, `ObjectType.CHECK_BOX`, etc.
+    - type: One of `ObjectType.TEXT_FIELD`, `ObjectType.CHECKBOX`, etc.
     - name: Field name (as defined inside the PDF).
     - value: Current field value (string representation).
 
@@ -1401,7 +1165,7 @@ class TextStatus:
     modified: bool
     encodable: bool
     font_type: FontType
-    font_recommendation: FontRecommendation
+    font_recommendation: Optional[FontRecommendation]
 
     def is_modified(self) -> bool:
         """Check if the text has been modified."""
@@ -1415,7 +1179,7 @@ class TextStatus:
         """Get the font type."""
         return self.font_type
 
-    def get_font_recommendation(self) -> FontRecommendation:
+    def get_font_recommendation(self) -> Optional[FontRecommendation]:
         """Get the font recommendation."""
         return self.font_recommendation
 
@@ -1438,7 +1202,7 @@ class TextObjectRef(ObjectRef):
     Usage:
     - Instances are returned by find/snapshot APIs. You generally should not instantiate
       them manually, but you may read their properties or pass their `ObjectRef`-like
-      identity to modification requests (e.g., `ModifyTextRequest`).
+      identity to generic object operations.
     """
 
     def __init__(
@@ -1548,14 +1312,14 @@ class CommandResult:
     warning: str | None
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CommandResult":
+    def from_dict(cls, data: Dict[str, Any]) -> "CommandResult":
         """Create a CommandResult from a dictionary response."""
         return cls(
             command_name=data.get("commandName", ""),
-            element_id=data.get("elementId", ""),
-            message=data.get("message", ""),
+            element_id=data.get("elementId"),
+            message=data.get("message"),
             success=data.get("success", False),
-            warning=data.get("warning", ""),
+            warning=data.get("warning"),
         )
 
     @classmethod
@@ -1639,7 +1403,7 @@ class Size:
     width: float
     height: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         return {"width": self.width, "height": self.height}
 
 
@@ -1682,113 +1446,6 @@ class ImageFlipDirection(Enum):
     BOTH = "BOTH"
 
 
-class ReflowPreset(Enum):
-    """Reflow preset for template replacement operations.
-
-    Controls how text reflow is handled when replacement text differs in length
-    from the original placeholder.
-
-    Values:
-    - BEST_EFFORT: Attempt to reflow text, but proceed even if it doesn't fit perfectly.
-    - FIT_OR_FAIL: Reflow must succeed or the operation fails.
-    - NONE: No reflow - replacement text is placed as-is.
-    """
-
-    BEST_EFFORT = "BEST_EFFORT"
-    FIT_OR_FAIL = "FIT_OR_FAIL"
-    NONE = "NONE"
-
-
-@dataclass
-class TemplateReplacement:
-    """A single template placeholder replacement.
-
-    Parameters:
-    - placeholder: The exact text to find and replace in the PDF.
-    - text: The text to replace the placeholder with. None for image replacements.
-    - font: Optional font for the replacement text.
-    - color: Optional color for the replacement text.
-    - image: Optional Image to replace the placeholder with. When set, text should be None.
-    """
-
-    placeholder: str
-    text: Optional[str] = None
-    font: Optional[Font] = None
-    color: Optional[Color] = None
-    image: Optional[Image] = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        import base64
-
-        result: Dict[str, Any] = {
-            "placeholder": self.placeholder,
-            "text": self.text,
-        }
-        if self.font:
-            result["font"] = {"name": self.font.name, "size": self.font.size}
-        if self.color:
-            result["color"] = {
-                "red": self.color.r,
-                "green": self.color.g,
-                "blue": self.color.b,
-                "alpha": self.color.a,
-            }
-        if self.image:
-            image_dict: Dict[str, Any] = {}
-            if self.image.data:
-                image_dict["data"] = base64.b64encode(self.image.data).decode("utf-8")
-            if self.image.format:
-                image_dict["format"] = self.image.format
-            if self.image.width is not None or self.image.height is not None:
-                size: Dict[str, float] = {}
-                if self.image.width is not None:
-                    size["width"] = self.image.width
-                if self.image.height is not None:
-                    size["height"] = self.image.height
-                image_dict["size"] = size
-            result["image"] = image_dict
-        return result
-
-
-@dataclass
-class TemplateReplaceRequest:
-    """Request for batch template placeholder replacements.
-
-    Parameters:
-    - replacements: List of TemplateReplacement objects.
-    - page_index: Optional 0-based page index. If None, applies to all pages.
-    - reflow_preset: Optional ReflowPreset for text reflow behavior.
-
-    Example:
-    ```python
-    request = TemplateReplaceRequest(
-        replacements=[
-            TemplateReplacement("{{NAME}}", "John Doe"),
-            TemplateReplacement("{{DATE}}", "2025-01-15"),
-        ],
-        page_index=0,  # First page (0-based)
-        reflow_preset=ReflowPreset.BEST_EFFORT,
-    )
-    ```
-    """
-
-    replacements: List[TemplateReplacement]
-    page_index: Optional[int] = None
-    reflow_preset: Optional[ReflowPreset] = None
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary for JSON serialization."""
-        result: Dict[str, Any] = {
-            "replacements": [r.to_dict() for r in self.replacements],
-        }
-        if self.page_index is not None:
-            result["pageIndex"] = self.page_index
-        if self.reflow_preset is not None:
-            result["reflowPreset"] = self.reflow_preset.value
-        return result
-
-
 @dataclass
 class ImageTransformRequest:
     """Request to transform an image in the PDF document.
@@ -1825,7 +1482,7 @@ class ImageTransformRequest:
     fill_region_height: Optional[int] = None
     fill_color: Optional[int] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         import base64
 
@@ -1917,7 +1574,7 @@ class ModifyPathRequest:
     stroke_color: Optional[Color] = None
     fill_color: Optional[Color] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         result: Dict[str, Any] = {
             "ref": self.object_ref.to_dict(),

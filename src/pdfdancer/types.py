@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from pathlib import Path
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, Literal, Optional, Type, cast
 
 from . import (
     FormFieldRef,
     ObjectRef,
     ObjectType,
     PathObjectRef,
-    Point,
     Position,
-    TextObjectRef,
 )
 from .exceptions import ValidationException
+from .models import BoundingRect as ModelBoundingRect
 
 if TYPE_CHECKING:
-    from .models import Color, CommandResult, Image, ImageFlipDirection
-    from .pdfdancer_v1 import PDFDancer
+    from .models import Color, CommandResult, Image, ImageFlipDirection, PathGroupInfo
+    from .pdfdancer_v2 import PDFDancer
 
 
 @dataclass
@@ -35,7 +35,7 @@ class UnsupportedOperation(Exception):
 
 class PDFObjectBase:
     """
-    Base class for all PDF objects (paths, paragraphs, text lines, etc.)
+    Base class for selectable PDF object references (paths, text lines, etc.)
     providing shared behavior such as position, deletion, and movement.
     """
 
@@ -54,7 +54,7 @@ class PDFObjectBase:
     @property
     def page_number(self) -> int:
         """Page index where this object resides."""
-        return self.position.page_number
+        return cast(int, self.position.page_number)
 
     def object_ref(self) -> ObjectRef:
         return ObjectRef(self.internal_id, self.position, self.object_type)
@@ -70,20 +70,12 @@ class PDFObjectBase:
         """Move this object to a new position."""
         return self._client._move(
             self.object_ref(),
-            Position.at_page_coordinates(self.position.page_number, x, y),
+            Position.at_page_coordinates(cast(int, self.position.page_number), x, y),
         )
 
     def clear_clipping(self) -> bool:
         """Detach any active clipping path from this object."""
         return self._client.clear_clipping(self.object_ref())
-
-    def redact(self, replacement: str = "[REDACTED]") -> bool:
-        """Redact this object from the PDF document."""
-        from .models import RedactTarget
-
-        target = RedactTarget(self.internal_id, replacement)
-        result = self._client._redact([target], replacement)
-        return result.success
 
 
 # -------------------------------------------------------------------
@@ -94,7 +86,7 @@ class PDFObjectBase:
 class PathObject(PDFObjectBase):
     """Represents a vector path object inside a PDF page."""
 
-    def __init__(self, client: "PDFDancer", object_ref):
+    def __init__(self, client: "PDFDancer", object_ref: ObjectRef):
         """
         Initialize a PathObject.
 
@@ -108,7 +100,7 @@ class PathObject(PDFObjectBase):
         self._object_ref = object_ref
 
     @property
-    def bounding_box(self) -> Optional[BoundingRect]:
+    def bounding_box(self) -> Optional[ModelBoundingRect]:
         """Optional bounding rectangle (if available)."""
         return self.position.bounding_rect
 
@@ -116,7 +108,7 @@ class PathObject(PDFObjectBase):
         """Start a fluent editing session to modify path colors."""
         return PathEditSession(self._client, self.object_ref())
 
-    def object_ref(self):
+    def object_ref(self) -> ObjectRef:
         """Return an ObjectRef for this path."""
         return self._object_ref
 
@@ -132,7 +124,7 @@ class PathObject(PDFObjectBase):
             return self._object_ref.get_fill_color()
         return None
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, PathObject):
             return False
         return (
@@ -144,6 +136,24 @@ class PathObject(PDFObjectBase):
 
 class ImageObject(PDFObjectBase):
     """Represents an image object inside a PDF page."""
+
+    @property
+    def width(self) -> Optional[float]:
+        return (
+            self.position.bounding_rect.width if self.position.bounding_rect else None
+        )
+
+    @property
+    def height(self) -> Optional[float]:
+        return (
+            self.position.bounding_rect.height if self.position.bounding_rect else None
+        )
+
+    @property
+    def aspect_ratio(self) -> Optional[float]:
+        return (
+            self.width / self.height if self.width is not None and self.height else None
+        )
 
     def scale(self, factor: float) -> "CommandResult":
         """Scale this image by a factor.
@@ -190,7 +200,7 @@ class ImageObject(PDFObjectBase):
         """Rotate this image by a specified angle.
 
         Args:
-            angle: Rotation angle in degrees (positive = counter-clockwise)
+            angle: Rotation angle in degrees (positive = clockwise)
 
         Returns:
             CommandResult indicating success or failure
@@ -271,6 +281,16 @@ class ImageObject(PDFObjectBase):
         )
         return self._client._transform_image(request)
 
+    def flip_horizontal(self) -> "CommandResult":
+        from .models import ImageFlipDirection
+
+        return self.flip(ImageFlipDirection.HORIZONTAL)
+
+    def flip_vertical(self) -> "CommandResult":
+        from .models import ImageFlipDirection
+
+        return self.flip(ImageFlipDirection.VERTICAL)
+
     def replace(self, new_image: "Image") -> "CommandResult":
         """Replace this image with a new image.
 
@@ -288,6 +308,17 @@ class ImageObject(PDFObjectBase):
             new_image=new_image,
         )
         return self._client._transform_image(request)
+
+    def replace_from_file(self, image_path: Path) -> "CommandResult":
+        from .models import Image
+
+        path = Path(image_path)
+        if not path.is_file():
+            raise ValidationException(f"Image file not found: {path}")
+        data = path.read_bytes()
+        if not data:
+            raise ValidationException("Image file cannot be empty")
+        return self.replace(Image(format=path.suffix.lstrip(".").upper(), data=data))
 
     def fill_region(
         self, x: int, y: int, width: int, height: int, color: "Color"
@@ -327,7 +358,7 @@ class ImageObject(PDFObjectBase):
         )
         return self._client._transform_image(request)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, ImageObject):
             return False
         return (
@@ -340,7 +371,9 @@ class ImageObject(PDFObjectBase):
 class PathGroupObject:
     """Represents a group of vector paths that can be manipulated as a unit."""
 
-    def __init__(self, client: "PDFDancer", page_index: int, info):
+    def __init__(
+        self, client: "PDFDancer", page_index: int, info: "PathGroupInfo"
+    ) -> None:
         self._client = client
         self._page_index = page_index
         self._info = info
@@ -354,7 +387,7 @@ class PathGroupObject:
         return self._info.path_count
 
     @property
-    def bounding_box(self):
+    def bounding_box(self) -> Optional[dict[str, Any]]:
         return self._info.bounding_box
 
     @property
@@ -366,393 +399,39 @@ class PathGroupObject:
         return self._info.y
 
     def move_to(self, x: float, y: float) -> bool:
-        self._client._move_path_group(self._page_index, self.group_id, x, y)
-        return True
+        return self._client._move_path_group(self._page_index, self.group_id, x, y)
 
     def scale(self, factor: float) -> bool:
-        self._client._scale_path_group(self._page_index, self.group_id, factor)
-        return True
+        return self._client._scale_path_group(self._page_index, self.group_id, factor)
 
     def rotate(self, degrees: float) -> bool:
-        self._client._rotate_path_group(self._page_index, self.group_id, degrees)
-        return True
+        return self._client._rotate_path_group(self._page_index, self.group_id, degrees)
 
     def resize(self, width: float, height: float) -> bool:
-        self._client._resize_path_group(self._page_index, self.group_id, width, height)
-        return True
+        return self._client._resize_path_group(
+            self._page_index, self.group_id, width, height
+        )
 
     def remove(self) -> bool:
-        self._client._remove_path_group(self._page_index, self.group_id)
-        return True
+        return self._client._remove_path_group(self._page_index, self.group_id)
 
     def clear_clipping(self) -> bool:
         return self._client.clear_path_group_clipping(
             self._page_index + 1, self.group_id
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"
 
 
 class FormObject(PDFObjectBase):
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, FormObject):
             return False
         return (
             self.internal_id == other.internal_id
             and self.object_type == other.object_type
             and self.position == other.position
-        )
-
-
-class BaseTextEdit:
-    """Common base for text-like editable objects (Paragraph, TextLine, etc.)"""
-
-    def __init__(self, target_obj, object_ref):
-        self._color = None
-        self._position = None
-        self._font_size = None
-        self._font_name = None
-        self._new_text = None
-        self._target_obj = target_obj
-        self._object_ref = object_ref
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if not exc_type:
-            self.apply()
-
-    # --- Common fluent configuration methods ---
-
-    def replace(self, text: str):
-        self._new_text = text
-        return self
-
-    def font(self, font_name: str, font_size: float):
-        self._font_name = font_name
-        self._font_size = font_size
-        return self
-
-    def color(self, color):
-        self._color = color
-        return self
-
-    def move_to(self, x: float, y: float):
-        self._position = Position().at_coordinates(Point(x, y))
-        return self
-
-    # --- Abstract method: implemented by subclass ---
-    def apply(self):
-        raise NotImplementedError("Subclasses must implement apply()")
-
-
-class TextLineEdit(BaseTextEdit):
-    def apply(self) -> bool:
-        # If only text changed (no font, color, or position), use simple text modification
-        only_text_changed = (
-            self._new_text is not None
-            and self._font_name is None
-            and self._font_size is None
-            and self._color is None
-            and self._position is None
-        )
-
-        if only_text_changed:
-            # noinspection PyProtectedMember
-            result = self._target_obj._client._modify_text_line(
-                self._object_ref, self._new_text
-            )
-            if result.warning:
-                print(f"WARNING: {result.warning}", file=sys.stderr)
-            return result
-
-        # If only position changed (move operation)
-        only_move = (
-            self._position is not None
-            and self._new_text is None
-            and self._font_name is None
-            and self._font_size is None
-            and self._color is None
-        )
-
-        if only_move:
-            page_number = (
-                self._object_ref.position.page_number
-                if self._object_ref.position
-                else None
-            )
-            if page_number is None:
-                raise ValidationException(
-                    "Text line position must include a page number to move"
-                )
-
-            # Extract x, y from self._position
-            x = self._position.x()
-            y = self._position.y()
-            if x is None or y is None:
-                raise ValidationException("Position must have x and y coordinates")
-
-            position = Position.at_page_coordinates(page_number, x, y)
-            # noinspection PyProtectedMember
-            result = self._target_obj._client._move(self._object_ref, position)
-            return result
-
-        # For font/color changes or combined operations, use TextLineBuilder
-        # This ensures proper handling of font/color fallbacks just like ParagraphEditSession
-        from .text_line_builder import TextLineBuilder
-
-        builder = TextLineBuilder.from_object_ref(
-            self._target_obj._client, self._object_ref
-        )
-
-        # Apply modifications to builder
-        # IMPORTANT: Always explicitly set text to ensure it's preserved
-        if self._new_text is not None:
-            builder.text(self._new_text)
-        elif hasattr(self._object_ref, "text") and self._object_ref.text:
-            # Preserve original text when only changing font/color/position
-            builder.text(self._object_ref.text)
-
-        # IMPORTANT: Always explicitly set font to ensure it's preserved
-        if self._font_name is not None and self._font_size is not None:
-            builder.font(self._font_name, self._font_size)
-        elif hasattr(self._object_ref, "font_name") and hasattr(
-            self._object_ref, "font_size"
-        ):
-            if self._object_ref.font_name and self._object_ref.font_size:
-                # Preserve original font when only changing color/position
-                builder.font(self._object_ref.font_name, self._object_ref.font_size)
-
-        if self._color is not None:
-            builder.color(self._color)
-        if self._position is not None:
-            x = self._position.x()
-            y = self._position.y()
-            if x is None or y is None:
-                raise ValidationException("Position must have x and y coordinates")
-            page_number = (
-                self._object_ref.position.page_number
-                if self._object_ref.position
-                else None
-            )
-            if page_number is None:
-                raise ValidationException(
-                    "Text line position must include a page number"
-                )
-            builder.at(page_number, x, y)
-
-        # Use builder's modify method which handles all the complexity
-        result = builder.modify(self._object_ref)
-        if result.warning:
-            print(f"WARNING: {result.warning}", file=sys.stderr)
-        return result
-
-
-class ParagraphObject(PDFObjectBase):
-    """Represents a paragraph text block inside a PDF page."""
-
-    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
-        super().__init__(
-            client, object_ref.internal_id, object_ref.type, object_ref.position
-        )
-        self._object_ref = object_ref
-
-    def __getattr__(self, name):
-        """
-        Automatically delegate attribute/method lookup to _object_ref
-        if it's not found on this object.
-        """
-        return getattr(self._object_ref, name)
-
-    def edit(self):
-        return ParagraphEditSession(self._client, self.object_ref())
-
-    def object_ref(self) -> TextObjectRef:
-        return self._object_ref
-
-    def __eq__(self, other):
-        if not isinstance(other, ParagraphObject):
-            return False
-        return (
-            self.internal_id == other.internal_id
-            and self.object_type == other.object_type
-            and self.position == other.position
-            and self._object_ref.text == other._object_ref.text
-            and self._object_ref.font_name == other._object_ref.font_name
-            and self._object_ref.font_size == other._object_ref.font_size
-            and self._object_ref.line_spacings == other._object_ref.line_spacings
-            and self._object_ref.color == other._object_ref.color
-            and self._object_ref.children == other._object_ref.children
-        )
-
-
-class TextLineObject(PDFObjectBase):
-    """Represents a single line of text inside a PDF page."""
-
-    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
-        super().__init__(
-            client, object_ref.internal_id, object_ref.type, object_ref.position
-        )
-        self._object_ref = object_ref
-
-    def __getattr__(self, name):
-        """
-        Automatically delegate attribute/method lookup to _object_ref
-        if it's not found on this object.
-        """
-        return getattr(self._object_ref, name)
-
-    def edit(self) -> TextLineEdit:
-        return TextLineEdit(self, self.object_ref())
-
-    def object_ref(self) -> TextObjectRef:
-        return self._object_ref
-
-    def __eq__(self, other):
-        if not isinstance(other, TextLineObject):
-            return False
-        return (
-            self.internal_id == other.internal_id
-            and self.object_type == other.object_type
-            and self.position == other.position
-            and self._object_ref.text == other._object_ref.text
-            and self._object_ref.font_name == other._object_ref.font_name
-            and self._object_ref.font_size == other._object_ref.font_size
-            and self._object_ref.line_spacings == other._object_ref.line_spacings
-            and self._object_ref.color == other._object_ref.color
-            and self._object_ref.children == other._object_ref.children
-        )
-
-
-class ParagraphEditSession:
-    """
-    Fluent editing helper that reuses ParagraphBuilder for modifications while preserving
-    the legacy context-manager workflow (replace/font/color/etc.).
-    """
-
-    def __init__(self, client: "PDFDancer", object_ref: TextObjectRef):
-        self._client = client
-        self._object_ref = object_ref
-        self._new_text = None
-        self._font_name = None
-        self._font_size = None
-        self._color = None
-        self._line_spacing = None
-        self._new_position = None
-        self._has_changes = False
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            return False
-        self.apply()
-        return False
-
-    def replace(self, text: str):
-        self._new_text = text
-        self._has_changes = True
-        return self
-
-    def font(self, font_name, font_size: float):
-        self._font_name = font_name
-        self._font_size = font_size
-        self._has_changes = True
-        return self
-
-    def color(self, color):
-        self._color = color
-        self._has_changes = True
-        return self
-
-    def line_spacing(self, spacing: float):
-        self._line_spacing = spacing
-        self._has_changes = True
-        return self
-
-    def move_to(self, x: float, y: float):
-        self._new_position = (x, y)
-        self._has_changes = True
-        return self
-
-    def apply(self):
-        if not self._has_changes:
-            return self._client._modify_paragraph(self._object_ref, None)
-
-        only_text_changed = (
-            self._new_text is not None
-            and self._font_name is None
-            and self._font_size is None
-            and self._color is None
-            and self._line_spacing is None
-            and self._new_position is None
-        )
-
-        if only_text_changed:
-            result = self._client._modify_paragraph(self._object_ref, self._new_text)
-            self._has_changes = False
-            return result
-
-        only_move = (
-            self._new_position is not None
-            and self._new_text is None
-            and self._font_name is None
-            and self._font_size is None
-            and self._color is None
-            and self._line_spacing is None
-        )
-
-        if only_move:
-            page_number = (
-                self._object_ref.position.page_number
-                if self._object_ref.position
-                else None
-            )
-            if page_number is None:
-                raise ValidationException(
-                    "Paragraph position must include a page number to move"
-                )
-            position = Position.at_page_coordinates(page_number, *self._new_position)
-            result = self._client._move(self._object_ref, position)
-            self._has_changes = False
-            return result
-
-        from .paragraph_builder import ParagraphBuilder
-
-        builder = ParagraphBuilder.from_object_ref(self._client, self._object_ref)
-
-        if self._new_text is not None:
-            builder.text(self._new_text)
-        if self._font_name is not None and self._font_size is not None:
-            builder.font(self._font_name, self._font_size)
-        if self._color is not None:
-            builder.color(self._color)
-        if self._line_spacing is not None:
-            builder.line_spacing(self._line_spacing)
-        if self._new_position is not None:
-            builder.move_to(*self._new_position)
-
-        result = builder.modify(self._object_ref)
-        self._has_changes = False
-        return result
-
-
-class FormFieldEdit:
-    def __init__(self, form_field: "FormFieldObject", object_ref: FormFieldRef):
-        self.form_field = form_field
-        self.object_ref = object_ref
-
-    def value(self, new_value: str) -> "FormFieldEdit":
-        self.form_field.value = new_value
-        return self
-
-    def apply(self) -> bool:
-        # noinspection PyProtectedMember
-        return self.form_field._client._change_form_field(
-            self.object_ref, self.form_field.value
         )
 
 
@@ -770,8 +449,11 @@ class FormFieldObject(PDFObjectBase):
         self.name = field_name
         self.value = field_value
 
-    def edit(self) -> FormFieldEdit:
-        return FormFieldEdit(self, self.object_ref())
+    def set_value(self, value: str) -> bool:
+        result = self._client._change_form_field(self.object_ref(), value)
+        if result:
+            self.value = value
+        return result
 
     def object_ref(self) -> FormFieldRef:
         ref = FormFieldRef(self.internal_id, self.position, self.object_type)
@@ -779,7 +461,7 @@ class FormFieldObject(PDFObjectBase):
         ref.value = self.value
         return ref
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, FormFieldObject):
             return False
         return (
@@ -796,22 +478,27 @@ class PathEditSession:
     Fluent editing helper for modifying path stroke and fill colors.
     """
 
-    def __init__(self, client: "PDFDancer", object_ref):
+    def __init__(self, client: "PDFDancer", object_ref: ObjectRef) -> None:
         self._client = client
         self._object_ref = object_ref
-        self._stroke_color = None
-        self._fill_color = None
+        self._stroke_color: Optional["Color"] = None
+        self._fill_color: Optional["Color"] = None
 
-    def __enter__(self):
+    def __enter__(self) -> "PathEditSession":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> Literal[False]:
         if exc_type:
             return False
         self.apply()
         return False
 
-    def stroke_color(self, color) -> "PathEditSession":
+    def stroke_color(self, color: "Color") -> "PathEditSession":
         """
         Set the stroke/outline color.
 
@@ -824,7 +511,7 @@ class PathEditSession:
         self._stroke_color = color
         return self
 
-    def fill_color(self, color) -> "PathEditSession":
+    def fill_color(self, color: "Color") -> "PathEditSession":
         """
         Set the fill color.
 
@@ -837,7 +524,7 @@ class PathEditSession:
         self._fill_color = color
         return self
 
-    def apply(self):
+    def apply(self) -> "CommandResult":
         """
         Apply the color modifications to the path.
 

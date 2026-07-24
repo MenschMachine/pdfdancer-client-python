@@ -1,5 +1,5 @@
 """
-PDFDancer Python Client V1
+PDFDancer Python Client V2
 
 A Python client that closely mirrors the Java Client class structure and functionality.
 Provides session-based PDF manipulation operations with strict validation.
@@ -22,17 +22,16 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
-    Dict,
     List,
     Mapping,
     Optional,
     Union,
+    cast,
 )
 
 import httpx
-from dotenv import find_dotenv, load_dotenv
 
-from . import BezierBuilder, LineBuilder, ParagraphBuilder, PathBuilder
+from . import BezierBuilder, LineBuilder, PathBuilder
 from ._runtime_version import resolve_package_version
 from .exceptions import (
     FontNotFoundException,
@@ -60,8 +59,6 @@ from .models import (
     FormFieldRef,
     Image,
     ModifyPathRequest,
-    ModifyRequest,
-    ModifyTextRequest,
     MoveRequest,
     ObjectRef,
     ObjectType,
@@ -70,50 +67,42 @@ from .models import (
     PageRef,
     PageSize,
     PageSnapshot,
-    Paragraph,
+)
+from .models import Path as PDFPath
+from .models import (
+    PathGroupInfo,
     PathObjectRef,
     Position,
     PositionMode,
-    RedactRequest,
-    RedactResponse,
-    RedactTarget,
-    ReflowPreset,
     ShapeType,
-    TemplateReplacement,
-    TemplateReplaceRequest,
-    TextLine,
     TextObjectRef,
 )
 from .page_builder import PageBuilder
-from .paragraph_builder import ParagraphPageBuilder
+from .text_editing import (
+    TextDeleteRequest,
+    TextEditResponse,
+    TextInsertRequest,
+    TextReplaceRequest,
+    TextStyleRequest,
+)
 from .types import (
     FormFieldObject,
     FormObject,
     ImageObject,
-    ParagraphObject,
     PathObject,
-    PDFObjectBase,
-    TextLineObject,
 )
 
 if TYPE_CHECKING:
+    from .models import BoundingRect as ModelBoundingRect
     from .models import ImageTransformRequest, PathSegment
     from .path_builder import RectangleBuilder
-
-_env_loaded = False
-
-
-def _load_env():
-    global _env_loaded
-    if _env_loaded:
-        return
-    load_dotenv(find_dotenv(usecwd=True))
-    _env_loaded = True
-
+    from .types import BoundingRect as GroupBoundingRect
+    from .types import PathGroupObject
 
 # Client identifier header for all HTTP requests
 # Prefer the SCM-generated version module; fall back to installed metadata.
 CLIENT_HEADER_VALUE = f"python/{resolve_package_version(default='unknown')}"
+API_PATH_PREFIX = "/v2"
 
 # Global variable to disable SSL certificate verification
 # Set to True to skip SSL verification (useful for testing with self-signed certificates)
@@ -127,15 +116,15 @@ DEFAULT_TOLERANCE = 0.01
 # These settings control automatic retry behavior when encountering transient network errors
 # and transient server response statuses.
 #
-# PDFDANCER_MAX_RETRIES: Maximum number of retry attempts after the initial request (default: 3)
-#   Example: With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+# PDFDANCER_MAX_ATTEMPTS: Maximum number of total attempts (default: 3).
+#   The initial request counts as one attempt, so 3 permits at most 2 retries.
 #
 # PDFDANCER_RETRY_BACKOFF_FACTOR: Multiplier for exponential backoff delays (default: 2.0)
 #   The actual delay for each retry is calculated as: initial_delay * (backoff_factor ** retry_count)
 #   Examples:
 #     - retry_backoff_factor=2.0: delays are 1s, 2s, 4s, 8s, ...
 #     - retry_backoff_factor=3.0: delays are 1s, 3s, 9s, ...
-DEFAULT_MAX_RETRIES = int(os.environ.get("PDFDANCER_MAX_RETRIES", "3"))
+DEFAULT_MAX_ATTEMPTS = int(os.environ.get("PDFDANCER_MAX_ATTEMPTS", "3"))
 DEFAULT_RETRY_BACKOFF_FACTOR = float(
     os.environ.get("PDFDANCER_RETRY_BACKOFF_FACTOR", "2.0")
 )
@@ -144,52 +133,13 @@ DEFAULT_RETRY_MAX_DELAY = 5.0
 DEFAULT_RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504, 520}
 
 
-def _dict_to_replacements(
-    replacements: Dict[str, Union[str, dict]],
-) -> List[TemplateReplacement]:
-    """Convert dict-based replacements to TemplateReplacement list."""
-    result = []
-    for placeholder, value in replacements.items():
-        if isinstance(value, str):
-            result.append(TemplateReplacement(placeholder=placeholder, text=value))
-        elif "image" in value:
-            image_source = value["image"]
-            if isinstance(image_source, Path):
-                image_data = image_source.read_bytes()
-                image_format = image_source.suffix.lstrip(".").upper()
-                if image_format == "JPG":
-                    image_format = "JPEG"
-            elif isinstance(image_source, bytes):
-                image_data = image_source
-                image_format = None
-            else:
-                raise ValueError(
-                    f"Unsupported image source type: {type(image_source)}. "
-                    "Use a Path or bytes."
-                )
-            img = Image(
-                data=image_data,
-                format=value.get("format", image_format),
-                width=value.get("width"),
-                height=value.get("height"),
-            )
-            result.append(
-                TemplateReplacement(
-                    placeholder=placeholder,
-                    text=None,
-                    image=img,
-                )
-            )
-        else:
-            result.append(
-                TemplateReplacement(
-                    placeholder=placeholder,
-                    text=value["text"],
-                    font=value.get("font"),
-                    color=value.get("color"),
-                )
-            )
-    return result
+def _validate_max_attempts(max_attempts: int) -> int:
+    """Validate that the total-attempt limit can include an initial request."""
+    if isinstance(max_attempts, bool) or not isinstance(max_attempts, int):
+        raise ValidationException("max_attempts must be an integer")
+    if max_attempts < 1:
+        raise ValidationException("max_attempts must be at least 1")
+    return max_attempts
 
 
 def _generate_timestamp() -> str:
@@ -404,8 +354,6 @@ def _execute_request_with_retries(
         The last response returned by the request callable.
 
     Raises:
-        httpx.HTTPStatusError: When a retryable HTTP status error exhausts attempts,
-            or when a non-retryable HTTP status error is raised by the request callable.
         httpx.RequestError: When a non-retriable request error occurs.
     """
     attempts = max(1, max_attempts)
@@ -517,6 +465,7 @@ class PageClient:
         self.position = Position.at_page(page_number)
         self.internal_id = f"PAGE-{page_number}"
         self.page_size = page_size
+        self.orientation: Optional[Union[Orientation, str]]
         if isinstance(orientation, str):
             normalized = orientation.strip().upper()
             try:
@@ -532,59 +481,6 @@ class PageClient:
         position = Position.at_page_coordinates(self.page_number, x, y)
         # noinspection PyProtectedMember
         return self.root._to_path_objects(self.root._find_paths(position, tolerance))
-
-    def select_paragraphs(self) -> List[ParagraphObject]:
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(
-            self.root._find_paragraphs(Position.at_page(self.page_number))
-        )
-
-    def select_paragraphs_starting_with(self, text: str) -> List[ParagraphObject]:
-        position = Position.at_page(self.page_number)
-        position.with_text_starts(text)
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
-
-    def select_paragraphs_matching(self, pattern):
-        position = Position.at_page(self.page_number)
-        position.text_pattern = pattern
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(self.root._find_paragraphs(position))
-
-    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        position.text_pattern = pattern
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_paragraphs_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[ParagraphObject]:
-        position = Position.at_page_coordinates(self.page_number, x, y)
-        # noinspection PyProtectedMember
-        return self.root._to_paragraph_objects(
-            self.root._find_paragraphs(position, tolerance)
-        )
-
-    def select_text_lines(self) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_text_lines_starting_with(self, text: str) -> List[TextLineObject]:
-        position = Position.at_page(self.page_number)
-        position.with_text_starts(text)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(self.root._find_text_lines(position))
-
-    def select_text_lines_at(
-        self, x, y, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextLineObject]:
-        position = Position.at_page_coordinates(self.page_number, x, y)
-        # noinspection PyProtectedMember
-        return self.root._to_textline_objects(
-            self.root._find_text_lines(position, tolerance)
-        )
 
     def select_images(self) -> List[ImageObject]:
         # noinspection PyProtectedMember
@@ -635,92 +531,6 @@ class PageClient:
 
     # Singular selection methods (convenience methods returning first match or None)
 
-    def select_paragraph_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph at the specified coordinates.
-
-        Args:
-            x: X coordinate in points
-            y: Y coordinate in points
-            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
-
-        Returns:
-            First ParagraphObject at the coordinates, or None if no match
-        """
-        results = self.select_paragraphs_at(x, y, tolerance)
-        return results[0] if results else None
-
-    def select_paragraph_starting_with(self, text: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph starting with the specified text.
-
-        Args:
-            text: Text to search for at the start of paragraphs
-
-        Returns:
-            First ParagraphObject starting with the text, or None if no match
-        """
-        results = self.select_paragraphs_starting_with(text)
-        return results[0] if results else None
-
-    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            First ParagraphObject matching the pattern, or None if no match
-        """
-        results = self.select_paragraphs_matching(pattern)
-        return results[0] if results else None
-
-    def select_text_line_at(
-        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
-    ) -> Optional[TextLineObject]:
-        """
-        Select the first text line at the specified coordinates.
-
-        Args:
-            x: X coordinate in points
-            y: Y coordinate in points
-            tolerance: Tolerance in points for spatial matching (default: DEFAULT_TOLERANCE)
-
-        Returns:
-            First TextLineObject at the coordinates, or None if no match
-        """
-        results = self.select_text_lines_at(x, y, tolerance)
-        return results[0] if results else None
-
-    def select_text_line_starting_with(self, text: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line starting with the specified text.
-
-        Args:
-            text: Text to search for at the start of text lines
-
-        Returns:
-            First TextLineObject starting with the text, or None if no match
-        """
-        results = self.select_text_lines_starting_with(text)
-        return results[0] if results else None
-
-    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            First TextLineObject matching the pattern, or None if no match
-        """
-        results = self.select_text_lines_matching(pattern)
-        return results[0] if results else None
-
     def select_image_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[ImageObject]:
@@ -738,6 +548,10 @@ class PageClient:
         results = self.select_images_at(x, y, tolerance)
         return results[0] if results else None
 
+    def select_image(self) -> Optional[ImageObject]:
+        results = self.select_images()
+        return results[0] if results else None
+
     def select_form_at(
         self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
     ) -> Optional[FormObject]:
@@ -753,6 +567,10 @@ class PageClient:
             First FormObject at the coordinates, or None if no match
         """
         results = self.select_forms_at(x, y, tolerance)
+        return results[0] if results else None
+
+    def select_form(self) -> Optional[FormObject]:
+        results = self.select_forms()
         return results[0] if results else None
 
     def select_form_field_at(
@@ -802,10 +620,15 @@ class PageClient:
         results = self.select_paths_at(x, y, tolerance)
         return results[0] if results else None
 
+    def select_path(self) -> Optional[PathObject]:
+        results = self.select_paths()
+        return results[0] if results else None
+
     @classmethod
     def from_ref(cls, root: "PDFDancer", page_ref: PageRef) -> "PageClient":
+        page_number = cast(int, page_ref.position.page_number)
         page_client = PageClient(
-            page_number=page_ref.position.page_number,
+            page_number=page_number,
             root=root,
             page_size=page_ref.page_size,
             orientation=page_ref.orientation,
@@ -813,7 +636,7 @@ class PageClient:
         page_client.internal_id = page_ref.internal_id
         if page_ref.position is not None:
             page_client.position = page_ref.position
-            page_client.page_number = page_ref.position.page_number
+            page_client.page_number = cast(int, page_ref.position.page_number)
         return page_client
 
     def delete(self) -> bool:
@@ -822,9 +645,9 @@ class PageClient:
 
     def move_to(self, target_page_number: int) -> bool:
         """Move this page to a different index within the document."""
-        if target_page_number is None or target_page_number < 0:
+        if target_page_number is None or target_page_number < 1:
             raise ValidationException(
-                f"Target page index must be >= 0, got {target_page_number}"
+                f"Target page number must be >= 1, got {target_page_number}"
             )
 
         # noinspection PyProtectedMember
@@ -834,53 +657,10 @@ class PageClient:
             self.position = Position.at_page(target_page_number)
         return moved
 
-    def apply_replacements(
-        self,
-        replacements: Dict[str, Union[str, dict]],
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Replace template placeholders on this page.
-
-        Finds exact text matches for placeholders and replaces them with specified
-        content. All placeholders must be found or the operation fails atomically.
-
-        Args:
-            replacements: Dict mapping placeholder strings to replacement values.
-                - Simple: {"{{NAME}}": "John Doe"}
-                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
-                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
-                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
-            reflow_preset: Optional ReflowPreset to control text reflow behavior.
-                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
-                - FIT_OR_FAIL: Reflow must succeed or operation fails
-                - NONE: No reflow, replacement placed as-is
-
-        Returns:
-            True if all replacements were successful
-
-        Example:
-            ```python
-            page.apply_replacements({
-                "{{NAME}}": "John Doe",
-            })
-            ```
-        """
-        replacement_list = _dict_to_replacements(replacements)
-        # noinspection PyProtectedMember
-        return self.root._apply_replacements(
-            replacements=replacement_list,
-            page_number=self.page_number,
-            reflow_preset=reflow_preset,
-        )
-
-    def _ref(self):
+    def _ref(self) -> ObjectRef:
         return ObjectRef(
             internal_id=self.internal_id, position=self.position, type=self.object_type
         )
-
-    def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphPageBuilder(self.root, self.page_number)
 
     def new_path(self) -> PathBuilder:
         return PathBuilder(self.root, self.page_number)
@@ -899,13 +679,17 @@ class PageClient:
 
         return RectangleBuilder(self.root, self.page_number)
 
-    def select_paths(self):
+    def text(self) -> "PageTextClient":
+        """Return selector-based text operations scoped to this one-based page."""
+        return PageTextClient(self.root, self.page_number)
+
+    def select_paths(self) -> List[PathObject]:
         # noinspection PyProtectedMember
         return self.root._to_path_objects(
             self.root._find_paths(Position.at_page(self.page_number))
         )
 
-    def group_paths(self, path_ids):
+    def group_paths(self, path_ids: List[str]) -> "PathGroupObject":
         """Group paths by their IDs. Returns a PathGroupObject."""
         from .types import PathGroupObject
 
@@ -913,7 +697,7 @@ class PageClient:
         info = self.root._create_path_group(page_index, path_ids=path_ids)
         return PathGroupObject(self.root, page_index, info)
 
-    def group_paths_in_region(self, region):
+    def group_paths_in_region(self, region: "GroupBoundingRect") -> "PathGroupObject":
         """Group paths within a bounding region. Returns a PathGroupObject."""
         from .types import PathGroupObject
 
@@ -921,37 +705,70 @@ class PageClient:
         info = self.root._create_path_group(page_index, region=region)
         return PathGroupObject(self.root, page_index, info)
 
-    def get_path_groups(self):
+    def get_path_groups(self) -> List["PathGroupObject"]:
         """List all path groups on this page."""
+        return self.root._list_path_groups(self.page_number)
 
-        page_index = self.page_number - 1
-        return self.root._list_path_groups(page_index)
-
-    def select_elements(self):
+    def select_elements(self, types: Optional[str] = None) -> List[ObjectRef]:
         """
-        Select all elements (paragraphs, images, paths, forms) on this page.
+        Select all live object-reference elements on this page.
 
         Returns:
             List of all PDF objects on this page
         """
-        result = []
-        result.extend(self.select_paragraphs())
-        result.extend(self.select_text_lines())
-        result.extend(self.select_images())
-        result.extend(self.select_paths())
-        result.extend(self.select_forms())
-        result.extend(self.select_form_fields())
-        return result
+        return self.get_snapshot(types).elements
+
+    def get_snapshot(self, types: Optional[str] = None) -> PageSnapshot:
+        return self.root.get_page_snapshot(self.page_number, types)
 
     @property
-    def size(self):
+    def size(self) -> Optional[PageSize]:
         """Property alias for page size."""
         return self.page_size
 
     @property
-    def page_orientation(self):
+    def page_orientation(self) -> Optional[Union[Orientation, str]]:
         """Property alias for orientation."""
         return self.orientation
+
+
+class TextClient:
+    """Document-scoped selector-based text editing operations."""
+
+    def __init__(self, root: "PDFDancer") -> None:
+        self._root = root
+
+    def replace(self, request: TextReplaceRequest) -> TextEditResponse:
+        return self._root._edit_text("replace", request)
+
+    def delete(self, request: TextDeleteRequest) -> TextEditResponse:
+        return self._root._edit_text("delete", request)
+
+    def insert(self, request: TextInsertRequest) -> TextEditResponse:
+        return self._root._edit_text("insert", request)
+
+    def style(self, request: TextStyleRequest) -> TextEditResponse:
+        return self._root._edit_text("style", request)
+
+
+class PageTextClient(TextClient):
+    """Selector-based text editing operations scoped to one page."""
+
+    def __init__(self, root: "PDFDancer", page_number: int) -> None:
+        super().__init__(root)
+        self._page_number = page_number
+
+    def replace(self, request: TextReplaceRequest) -> TextEditResponse:
+        return super().replace(request.with_pages((self._page_number,)))
+
+    def delete(self, request: TextDeleteRequest) -> TextEditResponse:
+        return super().delete(request.with_pages((self._page_number,)))
+
+    def insert(self, request: TextInsertRequest) -> TextEditResponse:
+        return super().insert(request.with_pages((self._page_number,)))
+
+    def style(self, request: TextStyleRequest) -> TextEditResponse:
+        return super().style(request.with_pages((self._page_number,)))
 
 
 class PDFDancer:
@@ -961,6 +778,8 @@ class PDFDancer:
     including session management, object searching, manipulation, and retrieval.
     Handles authentication, session lifecycle, and HTTP communication transparently.
     """
+
+    _pdf_bytes: Optional[bytes]
 
     # --------------------------------------------------------------
     # CLASS METHOD ENTRY POINT
@@ -972,7 +791,7 @@ class PDFDancer:
         token: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: float = 30.0,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
@@ -991,8 +810,8 @@ class PDFDancer:
             base_url: Override for the API base URL; falls back to `PDFDANCER_BASE_URL`
                 or defaults to `https://api.pdfdancer.com`.
             timeout: HTTP read timeout in seconds.
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1000,6 +819,7 @@ class PDFDancer:
         Returns:
             A ready-to-use `PDFDancer` client instance.
         """
+        _validate_max_attempts(max_attempts)
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
 
@@ -1012,13 +832,12 @@ class PDFDancer:
             pdf_data,
             resolved_base_url,
             timeout,
-            max_retries,
+            max_attempts,
             retry_backoff_factor,
         )
 
     @classmethod
-    def _resolve_base_url(cls, base_url: Optional[str]) -> Optional[str]:
-        _load_env()
+    def _resolve_base_url(cls, base_url: Optional[str]) -> str:
         env_base_url = os.getenv("PDFDANCER_BASE_URL")
         resolved_base_url = base_url or (
             env_base_url.strip() if env_base_url and env_base_url.strip() else None
@@ -1030,7 +849,7 @@ class PDFDancer:
     @classmethod
     def _obtain_anonymous_token(cls, base_url: str, timeout: float = 30.0) -> str:
         """
-        Obtain an anonymous token from the /keys/anon endpoint.
+        Obtain an anonymous token from the /v2/keys/anon endpoint.
 
         Args:
             base_url: Base URL of the PDFDancer API server
@@ -1045,7 +864,7 @@ class PDFDancer:
         """
         # Create temporary client without authentication
         temp_client = httpx.Client(http2=True, verify=not DISABLE_SSL_VERIFY)
-        max_retries = DEFAULT_MAX_RETRIES
+        max_attempts = DEFAULT_MAX_ATTEMPTS
         retry_backoff_factor = DEFAULT_RETRY_BACKOFF_FACTOR
 
         try:
@@ -1054,6 +873,7 @@ class PDFDancer:
                 headers = {
                     "X-Fingerprint": Fingerprint.generate(),
                     "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                    "X-API-VERSION": "2",
                 }
                 return temp_client.post(
                     cls._cleanup_url_path(base_url, "/keys/anon"),
@@ -1064,7 +884,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_token,
                 operation="POST /keys/anon",
-                max_attempts=max_retries + 1,
+                max_attempts=max_attempts,
                 retry_backoff_factor=retry_backoff_factor,
             )
 
@@ -1073,7 +893,7 @@ class PDFDancer:
 
             # Extract token from response (matches Java AnonTokenResponse structure)
             if isinstance(token_data, dict) and "token" in token_data:
-                return token_data["token"]
+                return cast(str, token_data["token"])
 
             raise HttpClientException("Invalid anonymous token response format")
 
@@ -1081,7 +901,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /keys/anon - max retries exhausted",
+                    "Rate limit (429) on POST /keys/anon - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1114,7 +934,6 @@ class PDFDancer:
         1. PDFDANCER_API_TOKEN (preferred)
         2. PDFDANCER_TOKEN (legacy)
         """
-        _load_env()
         resolved_token = token.strip() if token and token.strip() else None
         if resolved_token is None:
             # Check PDFDANCER_API_TOKEN first (preferred), then PDFDANCER_TOKEN (legacy)
@@ -1133,7 +952,7 @@ class PDFDancer:
         page_size: Optional[Union[PageSize, str, Mapping[str, Any]]] = None,
         orientation: Optional[Union[Orientation, str]] = None,
         initial_page_count: int = 1,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ) -> "PDFDancer":
         """
@@ -1155,8 +974,8 @@ class PDFDancer:
                 mapping with `width`/`height` values.
             orientation: Page orientation (default: PORTRAIT). Can be Orientation enum or string.
             initial_page_count: Number of initial blank pages (default: 1).
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1164,6 +983,7 @@ class PDFDancer:
         Returns:
             A ready-to-use `PDFDancer` client instance with a blank PDF.
         """
+        _validate_max_attempts(max_attempts)
         resolved_token = cls._resolve_token(token)
         resolved_base_url = cls._resolve_base_url(base_url)
 
@@ -1181,7 +1001,7 @@ class PDFDancer:
         instance._token = resolved_token.strip()
         instance._base_url = resolved_base_url.rstrip("/")
         instance._read_timeout = timeout
-        instance._max_retries = max_retries
+        instance._max_attempts = max_attempts
         instance._retry_backoff_factor = retry_backoff_factor
 
         # Create HTTP client for connection reuse with HTTP/2 support
@@ -1190,6 +1010,7 @@ class PDFDancer:
             headers={
                 "Authorization": f"Bearer {instance._token}",
                 "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                "X-API-VERSION": "2",
             },
             verify=not DISABLE_SSL_VERIFY,
         )
@@ -1216,7 +1037,7 @@ class PDFDancer:
         pdf_data: Union[bytes, Path, str, BinaryIO],
         base_url: str,
         read_timeout: float = 0,
-        max_retries: int = DEFAULT_MAX_RETRIES,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         retry_backoff_factor: float = DEFAULT_RETRY_BACKOFF_FACTOR,
     ):
         """
@@ -1229,8 +1050,8 @@ class PDFDancer:
             pdf_data: PDF file data as bytes, Path, filename string, or file-like object
             base_url: Base URL of the PDFDancer API server
             read_timeout: Timeout in seconds for HTTP requests (default: 30.0)
-            max_retries: Maximum number of retry attempts for transient network errors (default: 3).
-                With max_retries=3, the client makes up to 4 total attempts (1 initial + 3 retries).
+            max_attempts: Maximum number of total attempts (default: 3).
+                The initial request counts as one attempt.
             retry_backoff_factor: Base multiplier for exponential backoff delays (default: 2.0).
                 Delay calculation: initial_delay * (retry_backoff_factor ** attempt_number).
                 Examples: 2.0 → delays of 1s, 2s, 4s; 3.0 → delays of 1s, 3s, 9s.
@@ -1243,15 +1064,16 @@ class PDFDancer:
         # Strict validation like Java client
         if not token or not token.strip():
             raise ValidationException("Authentication token cannot be null or empty")
+        _validate_max_attempts(max_attempts)
 
         self._token = token.strip()
         self._base_url = base_url.rstrip("/")
         self._read_timeout = read_timeout
-        self._max_retries = max_retries
+        self._max_attempts = max_attempts
         self._retry_backoff_factor = retry_backoff_factor
 
         # Process PDF data with validation
-        self._pdf_bytes = self._process_pdf_data(pdf_data)
+        self._pdf_bytes: Optional[bytes] = self._process_pdf_data(pdf_data)
 
         # Create HTTP client for connection reuse with HTTP/2 support
         self._client = httpx.Client(
@@ -1259,6 +1081,7 @@ class PDFDancer:
             headers={
                 "Authorization": f"Bearer {self._token}",
                 "X-PDFDancer-Client": CLIENT_HEADER_VALUE,
+                "X-API-VERSION": "2",
             },
             verify=not DISABLE_SSL_VERIFY,
         )
@@ -1340,7 +1163,7 @@ class PDFDancer:
 
             # Check for top-level message
             if "message" in error_data:
-                return error_data["message"]
+                return cast(str, error_data["message"])
 
             # Fallback to response content
             return response.text or f"HTTP {response.status_code}"
@@ -1368,18 +1191,24 @@ class PDFDancer:
     @staticmethod
     def _cleanup_url_path(base_url: str, path: str) -> str:
         """
-        Combine base_url and path, ensuring no double slashes.
+        Combine base_url and API path, ensuring no double slashes.
 
         Args:
             base_url: Base URL (may or may not have trailing slash)
             path: Path segment (may or may not have leading slash)
 
         Returns:
-            Combined URL with no double slashes
+            Combined URL with the v2 API prefix and no double slashes
         """
         base = base_url.rstrip("/")
         path = path.lstrip("/")
-        return f"{base}/{path}"
+
+        if base.endswith(API_PATH_PREFIX) or path.startswith(
+            API_PATH_PREFIX.strip("/") + "/"
+        ):
+            return f"{base}/{path}"
+
+        return f"{base}{API_PATH_PREFIX}/{path}"
 
     def _create_session(self) -> str:
         """
@@ -1399,7 +1228,7 @@ class PDFDancer:
         )
         body_parts.append(b"Content-Type: application/pdf\r\n")
         body_parts.append(b"\r\n")  # End of headers, no Content-Transfer-Encoding
-        body_parts.append(self._pdf_bytes)
+        body_parts.append(cast(bytes, self._pdf_bytes))
         body_parts.append(b"\r\n")
         body_parts.append(f"--{boundary}--\r\n".encode("utf-8"))
 
@@ -1415,7 +1244,7 @@ class PDFDancer:
         def log_create_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1443,7 +1272,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_session,
                 operation="POST /session/create",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_create_attempt,
             )
@@ -1472,7 +1301,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /session/create - max retries exhausted",
+                    "Rate limit (429) on POST /session/create - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1514,7 +1343,7 @@ class PDFDancer:
             HttpClientException: If HTTP communication fails
         """
         # Build request payload (outside retry loop since validation should only happen once)
-        request_data = {}
+        request_data: dict[str, Any] = {}
 
         # Handle page_size - convert to type-safe object with dimensions
         if page_size is not None:
@@ -1541,14 +1370,14 @@ class PDFDancer:
             raise ValidationException(
                 f"Initial page count must be at least 1, got {initial_page_count}"
             )
-        request_data["initialPageCount"] = initial_page_count
+        request_data["initialPageCount"] = int(initial_page_count)
         request_body = json.dumps(request_data)
         request_size = len(request_body.encode("utf-8"))
 
         def log_blank_pdf_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1572,7 +1401,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_blank_pdf,
                 operation="POST /session/new",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_blank_pdf_attempt,
             )
@@ -1601,7 +1430,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    "Rate limit (429) on POST /session/new - max retries exhausted",
+                    "Rate limit (429) on POST /session/new - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1626,18 +1455,18 @@ class PDFDancer:
         self,
         method: str,
         path: str,
-        data: Optional[dict] = None,
-        params: Optional[dict] = None,
+        data: Optional[dict[str, Any]] = None,
+        params: Optional[dict[str, Any]] = None,
     ) -> httpx.Response:
         """
         Make HTTP request with session headers, error handling, and automatic retry for transient errors.
         """
         headers = {
             "X-Session-Id": self._session_id,
+            "X-API-VERSION": "2",
             "Content-Type": "application/json",
             "X-Generated-At": _generate_timestamp(),
             "X-Fingerprint": Fingerprint.generate(),
-            "X-API-VERSION": "1",
         }
 
         request_body = json.dumps(data) if data is not None else None
@@ -1648,7 +1477,7 @@ class PDFDancer:
         def log_attempt(attempt: int) -> None:
             if DEBUG:
                 retry_info = (
-                    f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                    f" (attempt {attempt + 1}/{self._max_attempts})"
                     if attempt > 0
                     else ""
                 )
@@ -1670,7 +1499,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_api,
                 operation=f"{method} {path}",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_attempt,
             )
@@ -1711,7 +1540,7 @@ class PDFDancer:
             if e.response.status_code == 429:
                 retry_after = _get_retry_after_delay(e.response)
                 print(
-                    f"Rate limit (429) on {method} {path} - max retries exhausted",
+                    f"Rate limit (429) on {method} {path} - maximum attempts exhausted",
                     file=sys.stderr,
                 )
                 raise RateLimitException(
@@ -1755,72 +1584,17 @@ class PDFDancer:
 
         # Use snapshot for all other queries
         if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
+            page_snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
-                snapshot.elements, object_type, position, tolerance
+                page_snapshot.elements, object_type, position, tolerance
             )
         else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
+            document_snapshot = self._get_or_fetch_document_snapshot()
+            all_elements: List[ObjectRef] = []
+            for page_snap in document_snapshot.pages:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(
                 all_elements, object_type, position, tolerance
-            )
-
-    def select_paragraphs(self) -> List[ParagraphObject]:
-        """
-        Searches for paragraph objects returning ParagraphObject instances.
-        """
-        return self._to_paragraph_objects(self._find_paragraphs(None))
-
-    def select_paragraphs_matching(self, pattern: str) -> List[ParagraphObject]:
-        """
-        Searches for paragraph objects matching a regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            List of ParagraphObject instances matching the pattern
-        """
-        position = Position()
-        position.text_pattern = pattern
-        return self._to_paragraph_objects(self._find_paragraphs(position))
-
-    def select_paragraph_matching(self, pattern: str) -> Optional[ParagraphObject]:
-        """
-        Select the first paragraph matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against paragraph text
-
-        Returns:
-            First ParagraphObject matching the pattern, or None if no match
-        """
-        results = self.select_paragraphs_matching(pattern)
-        return results[0] if results else None
-
-    def _find_paragraphs(
-        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextObjectRef]:
-        """
-        Searches for paragraph objects returning TextObjectRef with hierarchical structure.
-        Uses snapshot cache for all queries.
-        """
-        # Use snapshot for all queries (including spatial)
-        if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
-            return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.PARAGRAPH, position, tolerance
-            )
-        else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
-                all_elements.extend(page_snap.elements)
-            return self._filter_snapshot_elements(
-                all_elements, ObjectType.PARAGRAPH, position, tolerance
             )
 
     def _find_images(
@@ -1832,14 +1606,14 @@ class PDFDancer:
         """
         # Use snapshot for all queries (including spatial)
         if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
+            page_snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.IMAGE, position, tolerance
+                page_snapshot.elements, ObjectType.IMAGE, position, tolerance
             )
         else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
+            document_snapshot = self._get_or_fetch_document_snapshot()
+            all_elements: List[ObjectRef] = []
+            for page_snap in document_snapshot.pages:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(
                 all_elements, ObjectType.IMAGE, position, tolerance
@@ -1866,14 +1640,14 @@ class PDFDancer:
         """
         # Use snapshot for all queries (including spatial)
         if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
+            page_snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.FORM_X_OBJECT, position, tolerance
+                page_snapshot.elements, ObjectType.FORM_X_OBJECT, position, tolerance
             )
         else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
+            document_snapshot = self._get_or_fetch_document_snapshot()
+            all_elements: List[ObjectRef] = []
+            for page_snap in document_snapshot.pages:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(
                 all_elements, ObjectType.FORM_X_OBJECT, position, tolerance
@@ -1916,17 +1690,23 @@ class PDFDancer:
         """
         # Use snapshot for all queries (including name and spatial)
         if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
-            return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.FORM_FIELD, position, tolerance
+            page_snapshot = self._get_or_fetch_page_snapshot(position.page_number)
+            return cast(
+                List[FormFieldRef],
+                self._filter_snapshot_elements(
+                    page_snapshot.elements, ObjectType.FORM_FIELD, position, tolerance
+                ),
             )
         else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
+            document_snapshot = self._get_or_fetch_document_snapshot()
+            all_elements: List[ObjectRef] = []
+            for page_snap in document_snapshot.pages:
                 all_elements.extend(page_snap.elements)
-            return self._filter_snapshot_elements(
-                all_elements, ObjectType.FORM_FIELD, position, tolerance
+            return cast(
+                List[FormFieldRef],
+                self._filter_snapshot_elements(
+                    all_elements, ObjectType.FORM_FIELD, position, tolerance
+                ),
             )
 
     def _change_form_field(self, form_field_ref: FormFieldRef, new_value: str) -> bool:
@@ -1941,7 +1721,7 @@ class PDFDancer:
             response = self._make_request(
                 "PUT", "/pdf/modify/formField", data=request_data
             )
-            return response.json()
+            return cast(bool, response.json())
         finally:
             self._invalidate_snapshots()
 
@@ -1966,74 +1746,19 @@ class PDFDancer:
 
         # For simple page-level "all paths" queries, use snapshot
         if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
+            page_snapshot = self._get_or_fetch_page_snapshot(position.page_number)
             return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.PATH, position, tolerance
+                page_snapshot.elements, ObjectType.PATH, position, tolerance
             )
         else:
             # Document-level query - use document snapshot
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
+            document_snapshot = self._get_or_fetch_document_snapshot()
+            all_elements: List[ObjectRef] = []
+            for page_snap in document_snapshot.pages:
                 all_elements.extend(page_snap.elements)
             return self._filter_snapshot_elements(
                 all_elements, ObjectType.PATH, position, tolerance
             )
-
-    def _find_text_lines(
-        self, position: Optional[Position] = None, tolerance: float = DEFAULT_TOLERANCE
-    ) -> List[TextObjectRef]:
-        """
-        Searches for text line objects returning TextObjectRef with hierarchical structure.
-        Uses snapshot cache for all queries.
-        """
-        # Use snapshot for all queries (including spatial)
-        if position and position.page_number is not None:
-            snapshot = self._get_or_fetch_page_snapshot(position.page_number)
-            return self._filter_snapshot_elements(
-                snapshot.elements, ObjectType.TEXT_LINE, position, tolerance
-            )
-        else:
-            snapshot = self._get_or_fetch_document_snapshot()
-            all_elements = []
-            for page_snap in snapshot.pages:
-                all_elements.extend(page_snap.elements)
-            return self._filter_snapshot_elements(
-                all_elements, ObjectType.TEXT_LINE, position, tolerance
-            )
-
-    def select_text_lines(self) -> List[TextLineObject]:
-        """
-        Searches for text line objects returning TextLineObject wrappers.
-        """
-        return self._to_textline_objects(self._find_text_lines(None))
-
-    def select_text_lines_matching(self, pattern: str) -> List[TextLineObject]:
-        """
-        Searches for text line objects matching a regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            List of TextLineObject instances matching the pattern
-        """
-        position = Position()
-        position.text_pattern = pattern
-        return self._to_textline_objects(self._find_text_lines(position))
-
-    def select_text_line_matching(self, pattern: str) -> Optional[TextLineObject]:
-        """
-        Select the first text line matching the specified regex pattern.
-
-        Args:
-            pattern: Regex pattern to match against text line text
-
-        Returns:
-            First TextLineObject matching the pattern, or None if no match
-        """
-        results = self.select_text_lines_matching(pattern)
-        return results[0] if results else None
 
     def page(self, page_number: int) -> PageClient:
         """
@@ -2124,7 +1849,7 @@ class PDFDancer:
         if result:
             self._invalidate_snapshots()
 
-        return result
+        return cast(bool, result)
 
     def move_page(self, from_page: int, to_page: int) -> bool:
         """
@@ -2171,6 +1896,39 @@ class PDFDancer:
 
     # Manipulation Operations
 
+    def _edit_text(
+        self,
+        operation: str,
+        request: Union[
+            TextReplaceRequest,
+            TextDeleteRequest,
+            TextInsertRequest,
+            TextStyleRequest,
+        ],
+    ) -> TextEditResponse:
+        """Execute one validated selector-based text mutation."""
+        expected_types = {
+            "replace": TextReplaceRequest,
+            "delete": TextDeleteRequest,
+            "insert": TextInsertRequest,
+            "style": TextStyleRequest,
+        }
+        expected_type = expected_types.get(operation)
+        if expected_type is None:
+            raise ValidationException(f"Unsupported text operation: {operation}")
+        if not isinstance(request, expected_type):
+            raise ValidationException(
+                f"{operation} requires {expected_type.__name__}, "
+                f"got {type(request).__name__}"
+            )
+
+        response = self._make_request(
+            "POST", f"/pdf/text/{operation}", data=request.to_dict()
+        )
+        result = TextEditResponse.from_dict(response.json())
+        self._invalidate_snapshots()
+        return result
+
     def _delete(self, object_ref: ObjectRef) -> bool:
         """
         Deletes the specified PDF object from the document.
@@ -2192,7 +1950,7 @@ class PDFDancer:
         if result:
             self._invalidate_snapshots()
 
-        return result
+        return cast(bool, result)
 
     def _move(self, object_ref: ObjectRef, position: Position) -> bool:
         """
@@ -2218,59 +1976,7 @@ class PDFDancer:
         if result:
             self._invalidate_snapshots()
 
-        return result
-
-    def _redact(
-        self,
-        targets: List["RedactTarget"],
-        default_replacement: str = "[REDACTED]",
-        placeholder_color: Optional[Color] = None,
-    ) -> "RedactResponse":
-        """
-        Redacts specified objects from the PDF document.
-
-        Args:
-            targets: List of RedactTarget objects identifying what to redact
-            default_replacement: Default replacement text for redacted content
-            placeholder_color: Color for image/path placeholder rectangles
-
-        Returns:
-            RedactResponse with count, success status, and any warnings
-        """
-        if not targets:
-            raise ValidationException("At least one redaction target is required")
-
-        if placeholder_color is None:
-            placeholder_color = Color(0, 0, 0)
-
-        request = RedactRequest(targets, default_replacement, placeholder_color)
-        response = self._make_request("POST", "/pdf/redact", data=request.to_dict())
-        result = RedactResponse.from_dict(response.json())
-
-        if result.success:
-            self._invalidate_snapshots()
-
-        return result
-
-    def redact(
-        self,
-        objects: List["PDFObjectBase"],
-        replacement: str = "[REDACTED]",
-        placeholder_color: Optional[Color] = None,
-    ) -> "RedactResponse":
-        """
-        Redacts multiple objects from the PDF document.
-
-        Args:
-            objects: List of PDF objects to redact
-            replacement: Replacement text for all redacted content
-            placeholder_color: Color for image/path placeholder rectangles
-
-        Returns:
-            RedactResponse with count, success status, and any warnings
-        """
-        targets = [RedactTarget(obj.internal_id, replacement) for obj in objects]
-        return self._redact(targets, replacement, placeholder_color)
+        return cast(bool, result)
 
     def clear_clipping(self, object_ref: ObjectRef) -> bool:
         """
@@ -2303,88 +2009,6 @@ class PDFDancer:
 
         return result
 
-    # Template Replacement Operations
-
-    def _apply_replacements(
-        self,
-        replacements: List[TemplateReplacement],
-        page_number: Optional[int] = None,
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Internal method to replace template placeholders in the PDF.
-
-        Args:
-            replacements: List of TemplateReplacement objects
-            page_number: Optional 1-based page number. If None, applies to all pages.
-            reflow_preset: Optional reflow behavior preset
-
-        Returns:
-            True if replacement was successful
-        """
-        if not replacements:
-            raise ValidationException("At least one replacement is required")
-
-        # Convert 1-based page_number to 0-based page_index for API
-        page_index = None
-        if page_number is not None:
-            page_index = page_number - 1
-
-        request = TemplateReplaceRequest(
-            replacements=replacements,
-            page_index=page_index,
-            reflow_preset=reflow_preset,
-        )
-        response = self._make_request(
-            "POST", "/template/replace", data=request.to_dict()
-        )
-        result = response.json()
-
-        if result:
-            self._invalidate_snapshots()
-
-        return result
-
-    def apply_replacements(
-        self,
-        replacements: Dict[str, Union[str, dict]],
-        reflow_preset: Optional[ReflowPreset] = None,
-    ) -> bool:
-        """
-        Replace template placeholders in the PDF document.
-
-        Finds exact text matches for placeholders and replaces them with specified
-        content. All placeholders must be found or the operation fails atomically.
-
-        Args:
-            replacements: Dict mapping placeholder strings to replacement values.
-                - Simple: {"{{NAME}}": "John Doe"}
-                - With options: {"{{NAME}}": {"text": "John", "font": Font(...), "color": Color(...)}}
-                - With image: {"{{LOGO}}": {"image": Path("logo.png")}}
-                - With image and size: {"{{LOGO}}": {"image": Path("logo.png"), "width": 50, "height": 50}}
-            reflow_preset: Optional ReflowPreset to control text reflow behavior.
-                - BEST_EFFORT: Attempt to reflow, proceed even if imperfect
-                - FIT_OR_FAIL: Reflow must succeed or operation fails
-                - NONE: No reflow, replacement placed as-is
-
-        Returns:
-            True if all replacements were successful
-
-        Example:
-            ```python
-            pdf.apply_replacements({
-                "{{NAME}}": "John Doe",
-                "{{DATE}}": "2025-01-15",
-            })
-            ```
-        """
-        replacement_list = _dict_to_replacements(replacements)
-        return self._apply_replacements(
-            replacements=replacement_list,
-            page_number=None,
-            reflow_preset=reflow_preset,
-        )
-
     # Add Operations
 
     def _add_image(self, image: Image, position: Optional[Position] = None) -> bool:
@@ -2409,46 +2033,27 @@ class PDFDancer:
 
         return self._add_object(image)
 
-    def _add_paragraph(self, paragraph: Paragraph) -> bool:
-        """
-        Adds a paragraph to the PDF document.
-
-        Args:
-            paragraph: The paragraph object to add
-
-        Returns:
-            True if the paragraph was successfully added
-        """
-        if paragraph is None:
-            raise ValidationException("Paragraph cannot be null")
-        if paragraph.get_position() is None:
-            raise ValidationException("Paragraph position is null")
-        if paragraph.get_position().page_number is None:
-            raise ValidationException("Paragraph position page number is null")
-        if paragraph.get_position().page_number < 1:
-            raise ValidationException("Paragraph position page number is less than 1")
-
-        return self._add_object(paragraph)
-
-    def _add_path(self, path: "Path") -> bool:
+    def _add_path(self, path: PDFPath) -> bool:
         """
         Internal method to add a path to the document after validation.
         """
 
         if path is None:
             raise ValidationException("Path cannot be null")
-        if path.get_position() is None:
+        position = path.get_position()
+        if position is None:
             raise ValidationException("Path position is null")
-        if path.get_position().page_number is None:
+        if position.page_number is None:
             raise ValidationException("Path position page number is null")
-        if path.get_position().page_number < 1:
+        if position.page_number < 1:
             raise ValidationException("Path position page number is less than 1")
-        if not path.get_path_segments() or len(path.get_path_segments()) == 0:
+        path_segments = path.get_path_segments()
+        if not path_segments:
             raise ValidationException("Path must have at least one segment")
 
         return self._add_object(path)
 
-    def _add_object(self, pdf_object) -> bool:
+    def _add_object(self, pdf_object: Any) -> bool:
         """
         Internal method to add any PDF object.
         """
@@ -2460,7 +2065,7 @@ class PDFDancer:
         if result:
             self._invalidate_snapshots()
 
-        return result
+        return cast(bool, result)
 
     def _add_page(self, request: Optional[AddPageRequest]) -> PageRef:
         """
@@ -2505,14 +2110,17 @@ class PDFDancer:
         return result
 
     # Path Group Operations (internal, 0-based page_index)
-    def _create_path_group(self, page_index, path_ids=None, region=None):
-        from .models import PathGroupInfo
-
+    def _create_path_group(
+        self,
+        page_index: int,
+        path_ids: Optional[List[str]] = None,
+        region: Optional["GroupBoundingRect"] = None,
+    ) -> PathGroupInfo:
         if path_ids is not None:
             if not isinstance(path_ids, list) or len(path_ids) == 0:
                 raise ValidationException("path_ids must be a non-empty list")
 
-        data = {"pageIndex": page_index}
+        data: dict[str, Any] = {"pageIndex": page_index}
         if path_ids is not None:
             data["pathIds"] = path_ids
         if region is not None:
@@ -2526,7 +2134,9 @@ class PDFDancer:
         self._invalidate_snapshots()
         return PathGroupInfo.from_dict(response.json())
 
-    def _move_path_group(self, page_index, group_id, x, y):
+    def _move_path_group(
+        self, page_index: int, group_id: str, x: float, y: float
+    ) -> bool:
         data = {
             "pageIndex": page_index,
             "groupId": group_id,
@@ -2535,10 +2145,16 @@ class PDFDancer:
         }
         response = self._make_request("PUT", "/pdf/path-group/move", data=data)
         self._invalidate_snapshots()
-        return response.json()
+        return cast(bool, response.json())
 
-    def _transform_path_group(self, page_index, group_id, transform_type, **kwargs):
-        data = {
+    def _transform_path_group(
+        self,
+        page_index: int,
+        group_id: str,
+        transform_type: str,
+        **kwargs: Any,
+    ) -> bool:
+        data: dict[str, Any] = {
             "pageIndex": page_index,
             "groupId": group_id,
             "transformType": transform_type,
@@ -2546,21 +2162,25 @@ class PDFDancer:
         data.update({k: v for k, v in kwargs.items() if v is not None})
         response = self._make_request("PUT", "/pdf/path-group/transform", data=data)
         self._invalidate_snapshots()
-        return response.json()
+        return cast(bool, response.json())
 
-    def _scale_path_group(self, page_index, group_id, factor):
+    def _scale_path_group(self, page_index: int, group_id: str, factor: float) -> bool:
         if factor <= 0:
             raise ValidationException("Scale factor must be positive")
         return self._transform_path_group(
             page_index, group_id, "SCALE", scaleFactor=factor
         )
 
-    def _rotate_path_group(self, page_index, group_id, degrees):
+    def _rotate_path_group(
+        self, page_index: int, group_id: str, degrees: float
+    ) -> bool:
         return self._transform_path_group(
             page_index, group_id, "ROTATE", rotationAngle=degrees
         )
 
-    def _resize_path_group(self, page_index, group_id, width, height):
+    def _resize_path_group(
+        self, page_index: int, group_id: str, width: float, height: float
+    ) -> bool:
         if width <= 0 or height <= 0:
             raise ValidationException("Width and height must be positive")
         return self._transform_path_group(
@@ -2571,18 +2191,18 @@ class PDFDancer:
             targetHeight=height,
         )
 
-    def _remove_path_group(self, page_index, group_id):
+    def _remove_path_group(self, page_index: int, group_id: str) -> bool:
         data = {"pageIndex": page_index, "groupId": group_id}
         response = self._make_request("DELETE", "/pdf/path-group/remove", data=data)
         self._invalidate_snapshots()
-        return response.json()
+        return cast(bool, response.json())
 
-    def _list_path_groups(self, page_index):
-        from .models import PathGroupInfo
+    def _list_path_groups(self, page_number: int) -> List["PathGroupObject"]:
         from .types import PathGroupObject
 
-        response = self._make_request("GET", f"/pdf/page/{page_index}/path-groups")
+        response = self._make_request("GET", f"/pdf/page/{page_number}/path-groups")
         infos = [PathGroupInfo.from_dict(d) for d in response.json()]
+        page_index = page_number - 1
         return [PathGroupObject(self, page_index, info) for info in infos]
 
     def clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
@@ -2600,7 +2220,7 @@ class PDFDancer:
 
     def _clear_path_group_clipping(self, page_number: int, group_id: str) -> bool:
         """
-        Internal helper to clear clipping from a path group using the v1 API.
+        Internal helper to clear clipping from a path group using the V2 API.
         """
         if page_number is None:
             raise ValidationException("page_number cannot be null")
@@ -2627,11 +2247,14 @@ class PDFDancer:
 
         return result
 
-    def new_paragraph(self) -> ParagraphBuilder:
-        return ParagraphBuilder(self)
+    def text(self) -> TextClient:
+        """Return document-scoped selector-based text editing operations."""
+        return TextClient(self)
 
     def new_page(
-        self, orientation=Orientation.PORTRAIT, size=PageSize.A4
+        self,
+        orientation: Optional[Union[Orientation, str]] = Orientation.PORTRAIT,
+        size: Optional[Union[PageSize, str, Mapping[str, Any]]] = PageSize.A4,
     ) -> PageBuilder:
         builder = PageBuilder(self)
         if orientation is not None:
@@ -2643,98 +2266,23 @@ class PDFDancer:
     def new_image(self) -> ImageBuilder:
         return ImageBuilder(self)
 
-    def new_path(self) -> "PathBuilder":
+    def new_path(self, page_number: int) -> "PathBuilder":
         from .path_builder import PathBuilder
 
-        return PathBuilder(self)
+        return PathBuilder(self, page_number)
+
+    def new_line(self, page_number: int) -> LineBuilder:
+        return LineBuilder(self, page_number)
+
+    def new_bezier(self, page_number: int) -> BezierBuilder:
+        return BezierBuilder(self, page_number)
+
+    def new_rectangle(self, page_number: int) -> "RectangleBuilder":
+        from .path_builder import RectangleBuilder
+
+        return RectangleBuilder(self, page_number)
 
     # Modify Operations
-    def _modify_paragraph(
-        self, object_ref: ObjectRef, new_paragraph: Union[Paragraph, str]
-    ) -> CommandResult:
-        """
-        Modifies a paragraph object or its text content.
-
-        Args:
-            object_ref: Reference to the paragraph to modify
-            new_paragraph: New paragraph object or text string
-
-        Returns:
-            True if the paragraph was successfully modified
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_paragraph is None:
-            return CommandResult.empty("ModifyParagraph", object_ref.internal_id)
-
-        if isinstance(new_paragraph, str):
-            # Text modification - returns CommandResult
-            request_data = ModifyTextRequest(object_ref, new_paragraph).to_dict()
-            response = self._make_request(
-                "PUT", "/pdf/text/paragraph", data=request_data
-            )
-            result = CommandResult.from_dict(response.json())
-        else:
-            # Object modification
-            request_data = ModifyRequest(object_ref, new_paragraph).to_dict()
-            response = self._make_request("PUT", "/pdf/modify", data=request_data)
-            result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
-    def _modify_text_line(self, object_ref: ObjectRef, new_text: str) -> CommandResult:
-        """
-        Modifies a text line object.
-
-        Args:
-            object_ref: Reference to the text line to modify
-            new_text: New text content
-
-        Returns:
-            True if the text line was successfully modified
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_text is None:
-            raise ValidationException("New text cannot be null")
-
-        request_data = ModifyTextRequest(object_ref, new_text).to_dict()
-        response = self._make_request("PUT", "/pdf/text/line", data=request_data)
-        result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
-    def _modify_text_line_full(
-        self, object_ref: ObjectRef, new_text_line: TextLine
-    ) -> CommandResult:
-        """
-        Modifies a text line object with full styling (font, color, position).
-
-        Args:
-            object_ref: Reference to the text line to modify
-            new_text_line: New text line object with styling
-
-        Returns:
-            CommandResult indicating success or failure
-        """
-        if object_ref is None:
-            raise ValidationException("Object reference cannot be null")
-        if new_text_line is None:
-            raise ValidationException("New text line cannot be null")
-
-        # Use /pdf/modify endpoint for full object modification
-        request_data = ModifyRequest(object_ref, new_text_line).to_dict()
-        response = self._make_request("PUT", "/pdf/modify", data=request_data)
-        result = CommandResult.from_dict(response.json())
-
-        # Invalidate snapshot caches after mutation
-        self._invalidate_snapshots()
-        return result
-
     def _modify_path(
         self,
         object_ref: ObjectRef,
@@ -2861,7 +2409,7 @@ class PDFDancer:
             def log_font_register_attempt(attempt: int) -> None:
                 if DEBUG:
                     retry_info = (
-                        f" (attempt {attempt + 1}/{self._max_retries + 1})"
+                        f" (attempt {attempt + 1}/{self._max_attempts})"
                         if attempt > 0
                         else ""
                     )
@@ -2880,7 +2428,7 @@ class PDFDancer:
             response = _execute_request_with_retries(
                 request_callable=request_font_register,
                 operation="POST /font/register",
-                max_attempts=self._max_retries + 1,
+                max_attempts=self._max_attempts,
                 retry_backoff_factor=self._retry_backoff_factor,
                 pre_request_hook=log_font_register_attempt,
             )
@@ -2918,7 +2466,7 @@ class PDFDancer:
         Retrieve a snapshot of the entire document with all pages and elements.
 
         Args:
-            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+            types: Optional comma-separated string of object types to filter (e.g., "TEXT_LINE,IMAGE")
 
         Returns:
             DocumentSnapshot containing page count, fonts, and all page snapshots
@@ -2940,7 +2488,7 @@ class PDFDancer:
 
         Args:
             page_number: The page number to snapshot (1-based, page 1 is first page)
-            types: Optional comma-separated string of object types to filter (e.g., "PARAGRAPH,IMAGE")
+            types: Optional comma-separated string of object types to filter (e.g., "TEXT_LINE,IMAGE")
 
         Returns:
             PageSnapshot containing page reference and all elements on that page
@@ -3013,11 +2561,11 @@ class PDFDancer:
 
     def _filter_snapshot_elements(
         self,
-        elements: List,
-        object_type: ObjectType,
+        elements: List[ObjectRef],
+        object_type: Optional[ObjectType],
         position: Optional[Position] = None,
         tolerance: float = DEFAULT_TOLERANCE,
-    ) -> List:
+    ) -> List[ObjectRef]:
         """
         Filter snapshot elements client-side based on object type and position criteria.
 
@@ -3033,12 +2581,14 @@ class PDFDancer:
         import re
 
         # Filter by object type (handle form field subtypes)
-        if object_type == ObjectType.FORM_FIELD:
-            # Form fields include TEXT_FIELD, CHECK_BOX, RADIO_BUTTON, BUTTON, DROPDOWN
+        if object_type is None:
+            filtered = list(elements)
+        elif object_type == ObjectType.FORM_FIELD:
+            # Form fields include TEXT_FIELD, CHECKBOX, RADIO_BUTTON, BUTTON, DROPDOWN
             form_field_types = {
                 ObjectType.FORM_FIELD,
                 ObjectType.TEXT_FIELD,
-                ObjectType.CHECK_BOX,
+                ObjectType.CHECKBOX,
                 ObjectType.RADIO_BUTTON,
                 ObjectType.BUTTON,
                 ObjectType.DROPDOWN,
@@ -3097,7 +2647,11 @@ class PDFDancer:
         return result
 
     @staticmethod
-    def _rects_intersect(rect1, rect2, tolerance: float = DEFAULT_TOLERANCE) -> bool:
+    def _rects_intersect(
+        rect1: "ModelBoundingRect",
+        rect2: "ModelBoundingRect",
+        tolerance: float = DEFAULT_TOLERANCE,
+    ) -> bool:
         """
         Check if two bounding rectangles intersect or are very close.
         Handles point queries (width/height = 0) with tolerance.
@@ -3164,7 +2718,7 @@ class PDFDancer:
 
     # Utility Methods
 
-    def _parse_object_ref(self, obj_data: dict) -> ObjectRef:
+    def _parse_object_ref(self, obj_data: dict[str, Any]) -> ObjectRef:
         """Parse JSON object data into ObjectRef instance."""
         position_data = obj_data.get("position", {})
         position = self._parse_position(position_data) if position_data else None
@@ -3172,12 +2726,12 @@ class PDFDancer:
         object_type = ObjectType(obj_data["type"])
 
         return ObjectRef(
-            internal_id=obj_data["internalId"] if "internalId" in obj_data else None,
-            position=position,
+            internal_id=cast(str, obj_data.get("internalId")),
+            position=cast(Position, position),
             type=object_type,
         )
 
-    def _parse_form_field_ref(self, obj_data: dict) -> FormFieldRef:
+    def _parse_form_field_ref(self, obj_data: dict[str, Any]) -> FormFieldRef:
         """Parse JSON object data into ObjectRef instance."""
         position_data = obj_data.get("position", {})
         position = self._parse_position(position_data) if position_data else None
@@ -3185,14 +2739,14 @@ class PDFDancer:
         object_type = ObjectType(obj_data["type"])
 
         return FormFieldRef(
-            internal_id=obj_data["internalId"] if "internalId" in obj_data else None,
-            position=position,
+            internal_id=cast(str, obj_data.get("internalId")),
+            position=cast(Position, position),
             type=object_type,
             name=obj_data["name"] if "name" in obj_data else None,
             value=obj_data["value"] if "value" in obj_data else None,
         )
 
-    def _parse_path_object_ref(self, obj_data: dict) -> PathObjectRef:
+    def _parse_path_object_ref(self, obj_data: dict[str, Any]) -> PathObjectRef:
         """Parse JSON object data into PathObjectRef instance with color information."""
         position_data = obj_data.get("position", {})
         position = self._parse_position(position_data) if position_data else None
@@ -3208,7 +2762,12 @@ class PDFDancer:
             blue = stroke_color_data.get("blue")
             alpha = stroke_color_data.get("alpha", 255)
             if all(isinstance(v, int) for v in [red, green, blue]):
-                stroke_color = Color(red, green, blue, alpha)
+                stroke_color = Color(
+                    cast(int, red),
+                    cast(int, green),
+                    cast(int, blue),
+                    cast(int, alpha),
+                )
 
         # Parse fill color if present
         fill_color = None
@@ -3219,22 +2778,28 @@ class PDFDancer:
             blue = fill_color_data.get("blue")
             alpha = fill_color_data.get("alpha", 255)
             if all(isinstance(v, int) for v in [red, green, blue]):
-                fill_color = Color(red, green, blue, alpha)
+                fill_color = Color(
+                    cast(int, red),
+                    cast(int, green),
+                    cast(int, blue),
+                    cast(int, alpha),
+                )
 
         return PathObjectRef(
-            internal_id=obj_data["internalId"] if "internalId" in obj_data else None,
-            position=position,
+            internal_id=cast(str, obj_data.get("internalId")),
+            position=cast(Position, position),
             object_type=object_type,
             stroke_color=stroke_color,
             fill_color=fill_color,
         )
 
     @staticmethod
-    def _parse_position(pos_data: dict) -> Position:
+    def _parse_position(pos_data: dict[str, Any]) -> Position:
         """Parse JSON position data into Position instance."""
         position = Position()
         position.page_number = pos_data.get("pageNumber")
         position.text_starts_with = pos_data.get("textStartsWith")
+        position.text_pattern = pos_data.get("textPattern")
 
         if "shape" in pos_data:
             position.shape = ShapeType(pos_data["shape"])
@@ -3255,7 +2820,7 @@ class PDFDancer:
         return position
 
     def _parse_text_object_ref(
-        self, obj_data: dict, fallback_id: Optional[str] = None
+        self, obj_data: dict[str, Any], fallback_id: Optional[str] = None
     ) -> TextObjectRef:
         """Parse JSON object data into TextObjectRef instance with hierarchical structure."""
         position_data = obj_data.get("position", {})
@@ -3279,7 +2844,12 @@ class PDFDancer:
             blue = color_data.get("blue")
             alpha = color_data.get("alpha", 255)
             if all(isinstance(v, int) for v in [red, green, blue]):
-                color = Color(red, green, blue, alpha)
+                color = Color(
+                    cast(int, red),
+                    cast(int, green),
+                    cast(int, blue),
+                    cast(int, alpha),
+                )
 
         # Parse status if present
         status = None
@@ -3305,7 +2875,7 @@ class PDFDancer:
             )
 
         text_object = TextObjectRef(
-            internal_id=internal_id,
+            internal_id=cast(str, internal_id),
             position=position,
             object_type=object_type,
             text=(
@@ -3342,7 +2912,7 @@ class PDFDancer:
 
         return text_object
 
-    def _parse_page_ref(self, obj_data: dict) -> PageRef:
+    def _parse_page_ref(self, obj_data: dict[str, Any]) -> PageRef:
         """Parse JSON object data into PageRef instance with page-specific properties."""
         position_data = obj_data.get("position", {})
         position = self._parse_position(position_data) if position_data else None
@@ -3371,14 +2941,14 @@ class PDFDancer:
             orientation = orientation_value
 
         return PageRef(
-            internal_id=obj_data.get("internalId"),
-            position=position,
+            internal_id=cast(str, obj_data.get("internalId")),
+            position=cast(Position, position),
             type=object_type,
             page_size=page_size,
             orientation=orientation,
         )
 
-    def _parse_path_segment(self, segment_data: dict) -> "PathSegment":
+    def _parse_path_segment(self, segment_data: dict[str, Any]) -> "PathSegment":
         """Parse JSON data into PathSegment instance (Line or Bezier)."""
         from .models import Bezier, Color, Line, PathSegment, Point
 
@@ -3472,7 +3042,7 @@ class PDFDancer:
                 dash_phase=dash_phase,
             )
 
-    def _parse_path(self, obj_data: dict) -> "Path":
+    def _parse_path(self, obj_data: dict[str, Any]) -> PDFPath:
         """Parse JSON data into Path instance with path segments."""
         from .models import Path
 
@@ -3495,7 +3065,7 @@ class PDFDancer:
             even_odd_fill=even_odd_fill,
         )
 
-    def _parse_document_font_info(self, data: dict) -> FontRecommendation:
+    def _parse_document_font_info(self, data: dict[str, Any]) -> FontRecommendation:
         """Parse JSON data into FontRecommendation instance."""
         font_type_str = data.get("fontType", "SYSTEM")
         font_type = FontType(font_type_str)
@@ -3506,37 +3076,28 @@ class PDFDancer:
             similarity_score=data.get("similarityScore", 0.0),
         )
 
-    def _parse_page_snapshot(self, data: dict) -> PageSnapshot:
+    def _parse_page_snapshot(self, data: dict[str, Any]) -> PageSnapshot:
         """Parse JSON data into PageSnapshot instance with proper type handling."""
         page_ref = self._parse_page_ref(data.get("pageRef", {}))
 
         # Parse elements using appropriate parser based on type
-        elements = []
+        elements: List[ObjectRef] = []
         for elem_data in data.get("elements", []):
             elem_type_str = elem_data.get("type")
             if not elem_type_str:
                 continue
 
             try:
-                # Normalize type string (API returns "CHECKBOX" but enum is "CHECK_BOX")
-                if elem_type_str == "CHECKBOX":
-                    elem_type_str = "CHECK_BOX"
-                    # Deep copy to avoid modifying original
-                    import copy
-
-                    elem_data = copy.deepcopy(elem_data)
-                    elem_data["type"] = elem_type_str  # Update type in data
-
                 elem_type = ObjectType(elem_type_str)
 
                 # Use appropriate parser based on element type
-                if elem_type in (ObjectType.PARAGRAPH, ObjectType.TEXT_LINE):
+                if elem_type == ObjectType.TEXT_LINE:
                     # Parse as TextObjectRef to capture text, font, color, children
                     elements.append(self._parse_text_object_ref(elem_data))
                 elif elem_type in (
                     ObjectType.FORM_FIELD,
                     ObjectType.TEXT_FIELD,
-                    ObjectType.CHECK_BOX,
+                    ObjectType.CHECKBOX,
                     ObjectType.RADIO_BUTTON,
                     ObjectType.BUTTON,
                     ObjectType.DROPDOWN,
@@ -3555,7 +3116,7 @@ class PDFDancer:
 
         return PageSnapshot(page_ref=page_ref, elements=elements)
 
-    def _parse_document_snapshot(self, data: dict) -> DocumentSnapshot:
+    def _parse_document_snapshot(self, data: dict[str, Any]) -> DocumentSnapshot:
         """Parse JSON data into DocumentSnapshot instance."""
         page_count = data.get("pageCount", 0)
         fonts = [
@@ -3568,24 +3129,17 @@ class PDFDancer:
 
         return DocumentSnapshot(page_count=page_count, fonts=fonts, pages=pages)
 
-    # Builder Pattern Support
-
-    def _paragraph_builder(self) -> "ParagraphBuilder":
-        """
-        Creates a new ParagraphBuilder for fluent paragraph construction.
-        Returns:
-            A new ParagraphBuilder instance
-        """
-        from .paragraph_builder import ParagraphBuilder
-
-        return ParagraphBuilder(self)
-
     # Context Manager Support (Python enhancement)
-    def __enter__(self):
+    def __enter__(self) -> "PDFDancer":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Any,
+    ) -> None:
         """Context manager exit - cleanup if needed."""
         # Close the HTTP client to free resources
         if hasattr(self, "_client"):
@@ -3593,19 +3147,13 @@ class PDFDancer:
         # TODO Could add session cleanup here if API supports it. Cleanup on the server
         pass
 
-    def close(self):
+    def close(self) -> None:
         """Close the HTTP client and free resources."""
         if hasattr(self, "_client"):
             self._client.close()
 
     def _to_path_objects(self, refs: List[ObjectRef]) -> List[PathObject]:
         return [PathObject(self, ref) for ref in refs]
-
-    def _to_paragraph_objects(self, refs: List[TextObjectRef]) -> List[ParagraphObject]:
-        return [ParagraphObject(self, ref) for ref in refs]
-
-    def _to_textline_objects(self, refs: List[TextObjectRef]) -> List[TextLineObject]:
-        return [TextLineObject(self, ref) for ref in refs]
 
     def _to_image_objects(self, refs: List[ObjectRef]) -> List[ImageObject]:
         return [
@@ -3620,7 +3168,12 @@ class PDFDancer:
     def _to_form_field_objects(self, refs: List[FormFieldRef]) -> List[FormFieldObject]:
         return [
             FormFieldObject(
-                self, ref.internal_id, ref.type, ref.position, ref.name, ref.value
+                self,
+                ref.internal_id,
+                ref.type,
+                ref.position,
+                cast(str, ref.name),
+                cast(str, ref.value),
             )
             for ref in refs
         ]
@@ -3631,33 +3184,21 @@ class PDFDancer:
     def _to_page_object(self, ref: PageRef) -> PageClient:
         return PageClient.from_ref(self, ref)
 
-    def _to_mixed_objects(self, refs: List[ObjectRef]) -> List:
+    def _to_mixed_objects(
+        self, refs: List[ObjectRef]
+    ) -> List[Union[ImageObject, PathObject, FormObject, FormFieldObject]]:
         """
         Convert a list of ObjectRefs to their appropriate object types.
         Handles mixed object types by checking the type of each ref.
         """
-        result = []
+        result: List[Union[ImageObject, PathObject, FormObject, FormFieldObject]] = []
         for ref in refs:
-            if ref.type == ObjectType.PARAGRAPH:
-                # Need to convert to TextObjectRef first
-                if isinstance(ref, TextObjectRef):
-                    result.append(ParagraphObject(self, ref))
-                else:
-                    # Re-fetch with proper type
-                    text_refs = self._find_paragraphs(ref.position)
-                    result.extend(self._to_paragraph_objects(text_refs))
-            elif ref.type == ObjectType.TEXT_LINE:
-                if isinstance(ref, TextObjectRef):
-                    result.append(TextLineObject(self, ref))
-                else:
-                    text_refs = self._find_text_lines(ref.position)
-                    result.extend(self._to_textline_objects(text_refs))
-            elif ref.type == ObjectType.IMAGE:
+            if ref.type == ObjectType.IMAGE:
                 result.append(
                     ImageObject(self, ref.internal_id, ref.type, ref.position)
                 )
             elif ref.type == ObjectType.PATH:
-                result.append(PathObject(self, ref.internal_id, ref.type, ref.position))
+                result.append(PathObject(self, ref))
             elif ref.type == ObjectType.FORM_X_OBJECT:
                 result.append(FormObject(self, ref.internal_id, ref.type, ref.position))
             elif ref.type == ObjectType.FORM_FIELD:
@@ -3668,8 +3209,8 @@ class PDFDancer:
                             ref.internal_id,
                             ref.type,
                             ref.position,
-                            ref.name,
-                            ref.value,
+                            cast(str, ref.name),
+                            cast(str, ref.value),
                         )
                     )
                 else:
@@ -3677,18 +3218,12 @@ class PDFDancer:
                     result.extend(self._to_form_field_objects(form_refs))
         return result
 
-    def select_elements(self):
+    def select_elements(self) -> List[ObjectRef]:
         """
-        Select all elements (paragraphs, images, paths, forms) in the document.
+        Select all live object-reference elements in the document.
 
         Returns:
             List of all PDF objects in the document
         """
-        result = []
-        result.extend(self.select_paragraphs())
-        result.extend(self.select_text_lines())
-        result.extend(self.select_images())
-        result.extend(self.select_paths())
-        result.extend(self.select_forms())
-        result.extend(self.select_form_fields())
-        return result
+        snapshot = self._get_or_fetch_document_snapshot()
+        return [element for page in snapshot.pages for element in page.elements]

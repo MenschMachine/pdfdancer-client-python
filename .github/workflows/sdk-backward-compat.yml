@@ -11,10 +11,13 @@ on:
         required: true
         type: string
       sdk_token:
-        description: 'API token for testing'
+        description: 'Non-secret test token; never enter production credentials'
         required: true
         type: string
         default: '42'
+
+permissions:
+  contents: read
 
 jobs:
   get-tags:
@@ -47,14 +50,15 @@ jobs:
 
     steps:
       - name: Checkout SDK at ${{ matrix.tag }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: MenschMachine/pdfdancer-client-python
           ref: ${{ matrix.tag }}
           path: sdk
+          submodules: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
@@ -69,20 +73,20 @@ jobs:
       - name: Run e2e tests
         working-directory: sdk
         run: |
-          PDFDANCER_BASE_URL=${{ github.event.client_payload.api_url || inputs.api_url }} \
-          PDFDANCER_API_TOKEN=${{ github.event.client_payload.sdk_token || inputs.sdk_token }} \
           ../venv/bin/python -m pytest -v -x \
             -k "not test_redact_multiple_paths and not test_context_manager_vs_manual_apply" \
             --junitxml=test-results.xml
         env:
-          PYTHONWARNINGS: "ignore:Unverified HTTPS request"
+          PDFDANCER_BASE_URL: ${{ github.event.client_payload.api_url || inputs.api_url }}
+          PDFDANCER_API_TOKEN: ${{ github.event.client_payload.sdk_token || inputs.sdk_token }}
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-${{ matrix.tag }}
           path: |
             sdk/test-results.xml
             sdk/.pytest_cache/
+          if-no-files-found: ignore
           retention-days: 7

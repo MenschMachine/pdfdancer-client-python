@@ -1,13 +1,6 @@
 import pytest
 
-from pdfdancer import (
-    Color,
-    Orientation,
-    PageSize,
-    PDFDancer,
-    StandardFonts,
-    ValidationException,
-)
+from pdfdancer import Orientation, PageSize, PDFDancer, ValidationException
 from tests.e2e import _require_env
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -70,54 +63,6 @@ def test_create_blank_pdf_with_string_params():
                 PageSize.LETTER.width, PageSize.LETTER.height, Orientation.PORTRAIT
             )
         )
-
-
-def test_create_blank_pdf_add_content():
-    """Test creating a blank PDF and adding content"""
-    base_url, token = _require_env()
-
-    with PDFDancer.new(token=token, base_url=base_url) as pdf:
-        (
-            pdf.new_paragraph()
-            .text("Hello from blank PDF")
-            .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)
-            .color(Color(0, 255, 00))
-            .at(1, 100, 201.5)
-            .add()
-        )
-
-        paragraphs = pdf.select_paragraphs()
-        assert len(paragraphs) == 1, "Should have one paragraph"
-        assert paragraphs[0].get_text() == "Hello from blank PDF"
-
-        (PDFAssertions(pdf).assert_paragraph_is_at("Hello from blank PDF", 100, 201.5))
-
-
-def test_create_blank_pdf_add_and_modify_content():
-    """Test creating a blank PDF and adding content"""
-    base_url, token = _require_env()
-
-    with PDFDancer.new(token=token, base_url=base_url) as pdf:
-        (
-            pdf.new_paragraph()
-            .text("Hello from blank PDF")
-            .font(StandardFonts.COURIER_BOLD_OBLIQUE, 9)
-            .color(Color(128, 56, 127))
-            .at(1, 100, 201.5)
-            .add()
-        )
-        assert pdf.page(1).select_text_lines()[0].internal_id
-        pdf.save("/tmp/test_create_blank_pdf_add_and_modify_content.pdf")
-
-        with PDFDancer.open(
-            "/tmp/test_create_blank_pdf_add_and_modify_content.pdf",
-            token=token,
-            base_url=base_url,
-        ) as pdf2:
-            for i in range(0, 10):
-                line = pdf2.page(1).select_text_lines()[0]
-                assert line.edit().replace(f"hello {i}").apply()
-            pdf2.save("/tmp/test_create_blank_pdf_add_and_modify_content2.pdf")
 
 
 def test_create_blank_pdf_add_page():

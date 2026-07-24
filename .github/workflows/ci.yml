@@ -9,8 +9,8 @@ on:
 
 jobs:
   test:
-    # Quick minimal test on non-main branches
-    if: github.ref != 'refs/heads/main'
+    # Run the minimal matrix for automatic non-main events.
+    if: github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,15 +23,15 @@ jobs:
         python-version: [ '3.12' ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
       - name: Resolve API base URL
         id: resolve-api-base-url
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
-          github-token: ${{ secrets.PROPAGATE_TOKEN }}
+          github-token: ${{ secrets.PROPAGATE_TOKEN || github.token }}
           script: |
             const fallbackUrl = 'https://api-staging.pdfdancer.com';
             const pr = context.payload.pull_request;
@@ -74,7 +74,7 @@ jobs:
             core.setOutput('base_url', urlMatch[1]);
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -92,9 +92,11 @@ jobs:
 
       - name: Run tests
         run: |
-          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
-          PDFDANCER_API_TOKEN=42 \
-          venv/bin/python -m pytest tests/ -v --maxfail=3
+          mkdir -p test-results
+          venv/bin/python -m pytest tests/ -v --maxfail=3 --junitxml=test-results/junit.xml
+        env:
+          PDFDANCER_BASE_URL: ${{ steps.resolve-api-base-url.outputs.base_url }}
+          PDFDANCER_API_TOKEN: 42
 
       - name: Build distribution packages
         run: venv/bin/python -m build
@@ -102,10 +104,21 @@ jobs:
       - name: Validate packages
         run: venv/bin/python -m twine check dist/*
 
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-results-python-${{ matrix.python-version }}
+          path: |
+            test-results/
+            .pytest_cache/
+          if-no-files-found: ignore
+          retention-days: 7
+
 
   test-full-matrix:
-    # Full matrix only on main
-    if: github.ref == 'refs/heads/main'
+    # Run the full matrix on main and for every manual dispatch.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -119,20 +132,12 @@ jobs:
         python-version: [ '3.10', '3.11', '3.12', '3.13' ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - name: Resolve API base URL
-        id: resolve-api-base-url
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.PROPAGATE_TOKEN }}
-          script: |
-            core.setOutput('base_url', 'https://api-staging.pdfdancer.com');
-
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -154,9 +159,11 @@ jobs:
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: |
-          PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }} \
-          PDFDANCER_API_TOKEN=42 \
-          venv/bin/python -m pytest tests/ -v --maxfail=3
+          mkdir -p test-results
+          venv/bin/python -m pytest tests/ -v --maxfail=3 --junitxml=test-results/junit.xml
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Build & Validate (Unix)
         if: runner.os != 'Windows'
@@ -185,9 +192,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          set PDFDANCER_BASE_URL=${{ steps.resolve-api-base-url.outputs.base_url }}
-          set PDFDANCER_API_TOKEN=42
-          venv\Scripts\python -m pytest tests/ -v --maxfail=3
+          if not exist test-results mkdir test-results
+          venv\Scripts\python -m pytest tests/ -v --maxfail=3 --junitxml=test-results/junit.xml
+        env:
+          PDFDANCER_BASE_URL: https://api-staging.pdfdancer.com
+          PDFDANCER_API_TOKEN: 42
 
       - name: Build & Validate (Windows)
         if: runner.os == 'Windows'
@@ -195,3 +204,14 @@ jobs:
         run: |
           venv\Scripts\python -m build
           venv\Scripts\python -m twine check dist/*
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-results-${{ matrix.os }}-python-${{ matrix.python-version }}
+          path: |
+            test-results/
+            .pytest_cache/
+          if-no-files-found: ignore
+          retention-days: 7

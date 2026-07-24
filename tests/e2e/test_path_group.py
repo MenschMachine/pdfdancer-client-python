@@ -1,4 +1,4 @@
-from pdfdancer.pdfdancer_v1 import PDFDancer
+from pdfdancer.pdfdancer_v2 import PDFDancer
 from pdfdancer.types import BoundingRect
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
@@ -75,11 +75,7 @@ def test_group_and_move():
         assert abs(groups[0].y - 300.0) < 0.01
 
         # Paths should have moved away from original positions
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_no_path_at(80, 720)
-        )
+        (PDFAssertions(pdf).assert_number_of_paths(9).assert_no_path_at(80, 720))
 
 
 def test_group_and_remove():
@@ -100,11 +96,7 @@ def test_group_and_remove():
         assert len(groups) == 0
 
         # Removing a group deletes its paths from the PDF
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(8)
-            .assert_no_path_at(80, 720)
-        )
+        (PDFAssertions(pdf).assert_number_of_paths(8).assert_no_path_at(80, 720))
 
 
 def test_scale_path_group():
@@ -142,11 +134,7 @@ def test_rotate_path_group():
         group.rotate(90.0)
 
         # Paths should have moved from original positions after 90° rotation
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_no_path_at(80, 720)
-        )
+        (PDFAssertions(pdf).assert_number_of_paths(9).assert_no_path_at(80, 720))
 
 
 def test_resize_path_group():
@@ -209,11 +197,7 @@ def test_rotate_via_reference():
         group.rotate(45)
 
         # 45° rotation should move paths from original position
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_no_path_at(80, 720)
-        )
+        (PDFAssertions(pdf).assert_number_of_paths(9).assert_no_path_at(80, 720))
 
 
 def test_move_and_remove_via_reference():
@@ -237,8 +221,4 @@ def test_move_and_remove_via_reference():
         assert len(groups) == 0
 
         # Move then remove: paths are deleted from the PDF
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(7)
-            .assert_no_path_at(80, 720)
-        )
+        (PDFAssertions(pdf).assert_number_of_paths(7).assert_no_path_at(80, 720))

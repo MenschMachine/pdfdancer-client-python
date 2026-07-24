@@ -1,5 +1,5 @@
 from pdfdancer import ObjectType
-from pdfdancer.pdfdancer_v1 import PDFDancer
+from pdfdancer.pdfdancer_v2 import PDFDancer
 from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
@@ -11,7 +11,7 @@ def test_find_form_fields():
         form_fields = pdf.select_form_fields()
         assert len(form_fields) == 10
         assert form_fields[0].object_type == ObjectType.TEXT_FIELD
-        assert form_fields[4].object_type == ObjectType.CHECK_BOX
+        assert form_fields[4].object_type == ObjectType.CHECKBOX
         assert form_fields[6].object_type == ObjectType.RADIO_BUTTON
 
         # Verify not all fields at origin
@@ -87,7 +87,7 @@ def test_edit_form_fields():
         assert f.object_type == ObjectType.TEXT_FIELD
         assert f.internal_id == "FORM_FIELD_0_000001"
 
-        f.edit().value("Donald Duck").apply()
+        f.set_value("Donald Duck")
 
         updated = pdf.select_form_fields_by_name("firstName")[0]
         assert updated.name == "firstName"
@@ -98,3 +98,29 @@ def test_edit_form_fields():
             .assert_form_field_exists("firstName")
             .assert_form_field_has_value("firstName", "Donald Duck")
         )
+
+
+def test_criterion_based_page_form_field_selectors_and_no_match():
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        named = pdf.page(1).select_form_field_by_name("firstName")
+        assert named is not None
+        assert named.name == "firstName"
+        assert named.internal_id == "FORM_FIELD_0_000001"
+        assert pdf.page(1).select_form_field_by_name("nonExistent") is None
+
+        positioned = pdf.page(1).select_form_field_at(280, 455, 1)
+        assert positioned is not None
+        assert positioned.internal_id == "FORM_FIELD_0_000008"
+        assert pdf.page(1).select_form_field_at(1000, 1000, 1) is None
+
+
+def test_name_based_document_form_field_selector_and_no_match():
+    base_url, token, pdf_path = _require_env_and_fixture("mixed-form-types.pdf")
+
+    with PDFDancer.open(pdf_path, token=token, base_url=base_url) as pdf:
+        named = pdf.select_form_field_by_name("firstName")
+        assert named is not None
+        assert named.internal_id == "FORM_FIELD_0_000001"
+        assert pdf.select_form_field_by_name("nonExistent") is None

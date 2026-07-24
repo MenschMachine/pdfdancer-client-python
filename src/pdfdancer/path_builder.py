@@ -5,13 +5,14 @@ Provides fluent interface for constructing vector paths with lines and curves.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, List, Optional
 
 from .exceptions import ValidationException
 from .models import Bezier, Color, Line, Path, PathSegment, Point, Position
 
 if TYPE_CHECKING:
-    from .pdfdancer_v1 import PDFDancer
+    from .pdfdancer_v2 import PDFDancer
 
 
 class PathBuilder:
@@ -31,16 +32,20 @@ class PathBuilder:
         """
         if client is None:
             raise ValidationException("Client cannot be null")
+        if page_number < 1:
+            raise ValidationException("Page number must be >= 1")
 
         self._client = client
         self._page_number = page_number
         self._segments: List[PathSegment] = []
         self._even_odd_fill: bool = False
-        self._current_stroke_color: Optional[Color] = Color(0, 0, 0)  # Black default
+        self._current_stroke_color: Optional[Color] = Color.BLACK
         self._current_fill_color: Optional[Color] = None
         self._current_stroke_width: float = 1.0
         self._current_dash_array: Optional[List[float]] = None
         self._current_dash_phase: Optional[float] = None
+        self._current_point: Optional[Point] = None
+        self._subpath_start: Optional[Point] = None
 
     def stroke_color(self, color: Color) -> "PathBuilder":
         """
@@ -78,8 +83,8 @@ class PathBuilder:
         Returns:
             Self for method chaining
         """
-        if width <= 0:
-            raise ValidationException("Stroke width must be positive")
+        if not math.isfinite(width) or width < 0:
+            raise ValidationException("Stroke width must be finite and nonnegative")
         self._current_stroke_width = width
         return self
 
@@ -96,8 +101,60 @@ class PathBuilder:
         Returns:
             Self for method chaining
         """
-        self._current_dash_array = dash_array
+        self._validate_dash(dash_array, dash_phase)
+        self._current_dash_array = list(dash_array)
         self._current_dash_phase = dash_phase
+        return self
+
+    def move_to(self, x: float, y: float) -> "PathBuilder":
+        self._validate_coordinates(x, y)
+        self._current_point = Point(x, y)
+        self._subpath_start = self._current_point
+        return self
+
+    def line_to(self, x: float, y: float) -> "PathBuilder":
+        if self._current_point is None:
+            raise ValidationException("Call move_to() before line_to()")
+        self._validate_coordinates(x, y)
+        next_point = Point(x, y)
+        self.add_line(self._current_point, next_point)
+        self._current_point = next_point
+        return self
+
+    def bezier_to(
+        self,
+        control1_x: float,
+        control1_y: float,
+        control2_x: float,
+        control2_y: float,
+        x: float,
+        y: float,
+    ) -> "PathBuilder":
+        if self._current_point is None:
+            raise ValidationException("Call move_to() before bezier_to()")
+        self._validate_coordinates(control1_x, control1_y, control2_x, control2_y, x, y)
+        end = Point(x, y)
+        self.add_bezier(
+            self._current_point,
+            Point(control1_x, control1_y),
+            Point(control2_x, control2_y),
+            end,
+        )
+        self._current_point = end
+        return self
+
+    def close_path(self) -> "PathBuilder":
+        if self._current_point is None or self._subpath_start is None:
+            raise ValidationException("Call move_to() before close_path()")
+        if self._current_point != self._subpath_start:
+            self.line_to(self._subpath_start.x, self._subpath_start.y)
+        self._current_point = self._subpath_start
+        return self
+
+    def add_segment(self, segment: PathSegment) -> "PathBuilder":
+        if segment is None:
+            raise ValidationException("Path segment cannot be null")
+        self._segments.append(segment)
         return self
 
     def solid(self) -> "PathBuilder":
@@ -176,6 +233,7 @@ class PathBuilder:
         Returns:
             Self for method chaining
         """
+        self._validate_coordinates(x, y, width, height)
         if width <= 0:
             raise ValidationException("Rectangle width must be positive")
         if height <= 0:
@@ -194,6 +252,69 @@ class PathBuilder:
         self.add_line(top_left, bottom_left)
 
         return self
+
+    def rectangle(
+        self, x: float, y: float, width: float, height: float
+    ) -> "PathBuilder":
+        return self.add_rectangle(x, y, width, height)
+
+    def circle(self, center_x: float, center_y: float, radius: float) -> "PathBuilder":
+        self._validate_coordinates(center_x, center_y, radius)
+        if radius <= 0:
+            raise ValidationException("Circle radius must be positive")
+        kappa = 0.5522847498 * radius
+        return (
+            self.move_to(center_x, center_y + radius)
+            .bezier_to(
+                center_x + kappa,
+                center_y + radius,
+                center_x + radius,
+                center_y + kappa,
+                center_x + radius,
+                center_y,
+            )
+            .bezier_to(
+                center_x + radius,
+                center_y - kappa,
+                center_x + kappa,
+                center_y - radius,
+                center_x,
+                center_y - radius,
+            )
+            .bezier_to(
+                center_x - kappa,
+                center_y - radius,
+                center_x - radius,
+                center_y - kappa,
+                center_x - radius,
+                center_y,
+            )
+            .bezier_to(
+                center_x - radius,
+                center_y + kappa,
+                center_x - kappa,
+                center_y + radius,
+                center_x,
+                center_y + radius,
+            )
+            .close_path()
+        )
+
+    @staticmethod
+    def _validate_coordinates(*values: float) -> None:
+        if any(not math.isfinite(value) for value in values):
+            raise ValidationException("Coordinates must be finite numbers")
+
+    @staticmethod
+    def _validate_dash(dash_array: List[float], dash_phase: float) -> None:
+        if dash_array is None:
+            raise ValidationException("Dash pattern cannot be null")
+        if any(not math.isfinite(value) or value < 0 for value in dash_array):
+            raise ValidationException("Dash values must be finite and nonnegative")
+        if dash_array and all(value == 0 for value in dash_array):
+            raise ValidationException("Dash pattern cannot be all zero")
+        if not math.isfinite(dash_phase) or dash_phase < 0:
+            raise ValidationException("Dash phase must be finite and nonnegative")
 
     def even_odd_fill(self, enabled: bool = True) -> "PathBuilder":
         """
@@ -772,7 +893,7 @@ class RectangleBuilder:
         top_left = Point(self._x, self._y + self._height)
 
         # Create four lines forming the rectangle
-        lines = [
+        lines: List[PathSegment] = [
             Line(
                 p0=bottom_left,
                 p1=bottom_right,

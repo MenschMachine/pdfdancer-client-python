@@ -3,6 +3,7 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as get_package_version
 from pathlib import Path
+from typing import Callable, cast
 
 
 def resolve_package_version(default: str = "0.0.0.dev0") -> str:
@@ -14,9 +15,10 @@ def resolve_package_version(default: str = "0.0.0.dev0") -> str:
         pass
 
     try:
-        from setuptools_scm import get_version
+        from setuptools_scm import get_version  # type: ignore[import-not-found]
 
-        return get_version(
+        scm_get_version = cast(Callable[..., str], get_version)
+        return scm_get_version(
             root=str(Path(__file__).resolve().parents[2]), relative_to=__file__
         )
     except Exception:

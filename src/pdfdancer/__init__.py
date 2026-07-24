@@ -35,7 +35,6 @@ from .models import (
     Orientation,
     PageRef,
     PageSize,
-    Paragraph,
     Path,
     PathGroupInfo,
     PathObjectRef,
@@ -43,31 +42,60 @@ from .models import (
     Point,
     Position,
     PositionMode,
-    RedactResponse,
-    RedactTarget,
-    ReflowPreset,
     ShapeType,
     Size,
     StandardFonts,
-    TextObjectRef,
-    TextStatus,
 )
 from .page_builder import PageBuilder
-from .paragraph_builder import ParagraphBuilder
-from .path_builder import BezierBuilder, LineBuilder, PathBuilder
-from .text_line_builder import TextLineBuilder
-from .types import PathGroupObject
+from .path_builder import BezierBuilder, LineBuilder, PathBuilder, RectangleBuilder
+from .text_editing import (
+    PdfAffineTransform,
+    PdfAffineTransformBuilder,
+    PdfColorRequest,
+    PdfColorSpace,
+    TextDeleteBuilder,
+    TextDeleteRequest,
+    TextEditChangeDiagnostic,
+    TextEditResponse,
+    TextInsertBuilder,
+    TextInsertCaret,
+    TextInsertRequest,
+    TextLayoutMode,
+    TextLayoutProfile,
+    TextLayoutRequest,
+    TextOperationDiagnostic,
+    TextReplaceBuilder,
+    TextReplacementImageRequest,
+    TextReplaceRequest,
+    TextSelectorRequest,
+    TextStyleBuilder,
+    TextStyleNumericFilterRequest,
+    TextStylePatchRequest,
+    TextStyleRequest,
+    TextStyleRunFilterRequest,
+    TextStyleRunsSelectorRequest,
+    TextStyleSelectorRequest,
+    TextStyleSetRequest,
+)
+from .types import (
+    FormFieldObject,
+    FormObject,
+    ImageObject,
+    PathEditSession,
+    PathGroupObject,
+    PathObject,
+    PDFObjectBase,
+)
 
 __version__ = resolve_package_version()
 
 __all__ = [
     "PDFDancer",
-    "ParagraphBuilder",
-    "TextLineBuilder",
     "PageBuilder",
     "PathBuilder",
     "LineBuilder",
     "BezierBuilder",
+    "RectangleBuilder",
     "ObjectRef",
     "PathObjectRef",
     "ModifyPathRequest",
@@ -81,9 +109,7 @@ __all__ = [
     "ImageTransformType",
     "Size",
     "BoundingRect",
-    "Paragraph",
     "FormFieldRef",
-    "TextObjectRef",
     "PageRef",
     "PositionMode",
     "ShapeType",
@@ -91,7 +117,6 @@ __all__ = [
     "StandardFonts",
     "PageSize",
     "Orientation",
-    "TextStatus",
     "FontRecommendation",
     "FontType",
     "PathSegment",
@@ -100,9 +125,12 @@ __all__ = [
     "Path",
     "PathGroupInfo",
     "PathGroupObject",
-    "RedactTarget",
-    "RedactResponse",
-    "ReflowPreset",
+    "PDFObjectBase",
+    "PathObject",
+    "ImageObject",
+    "FormObject",
+    "FormFieldObject",
+    "PathEditSession",
     "PdfDancerException",
     "FontNotFoundException",
     "ValidationException",
@@ -111,10 +139,37 @@ __all__ = [
     "SessionNotFoundException",
     "RateLimitException",
     "set_ssl_verify",
+    "PdfAffineTransform",
+    "PdfAffineTransformBuilder",
+    "PdfColorRequest",
+    "PdfColorSpace",
+    "TextDeleteBuilder",
+    "TextDeleteRequest",
+    "TextEditChangeDiagnostic",
+    "TextEditResponse",
+    "TextInsertBuilder",
+    "TextInsertCaret",
+    "TextInsertRequest",
+    "TextLayoutMode",
+    "TextLayoutProfile",
+    "TextLayoutRequest",
+    "TextOperationDiagnostic",
+    "TextReplaceBuilder",
+    "TextReplaceRequest",
+    "TextReplacementImageRequest",
+    "TextSelectorRequest",
+    "TextStyleBuilder",
+    "TextStyleNumericFilterRequest",
+    "TextStylePatchRequest",
+    "TextStyleRequest",
+    "TextStyleRunFilterRequest",
+    "TextStyleRunsSelectorRequest",
+    "TextStyleSelectorRequest",
+    "TextStyleSetRequest",
 ]
 
-from . import pdfdancer_v1
-from .pdfdancer_v1 import PDFDancer
+from . import pdfdancer_v2
+from .pdfdancer_v2 import PDFDancer
 
 
 def set_ssl_verify(enabled: bool) -> None:
@@ -132,4 +187,4 @@ def set_ssl_verify(enabled: bool) -> None:
         import pdfdancer
         pdfdancer.set_ssl_verify(False)  # Disable SSL verification
     """
-    pdfdancer_v1.DISABLE_SSL_VERIFY = not enabled
+    pdfdancer_v2.DISABLE_SSL_VERIFY = not enabled

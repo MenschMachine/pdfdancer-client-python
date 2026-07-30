@@ -1,6 +1,6 @@
 # PDFDancer Python Client
 
-This README documents `pdfdancer-client-python` version `3.0.1`.
+This README documents `pdfdancer-client-python` version `3.0.2`.
 
 ![PDFDancer logo](media/logo-silver-60h.webp)
 
@@ -33,7 +33,7 @@ pixel-perfect control from Python. The same API is also available for TypeScript
 ## Installation
 
 ```bash
-pip install pdfdancer-client-python==3.0.1
+pip install pdfdancer-client-python==3.0.2
 
 # Editable install for local development
 pip install -e .
@@ -390,8 +390,8 @@ Releases are published automatically to PyPI when a `v*` tag is pushed to GitHub
 
 ```bash
 # Create and push a release tag — GitHub Actions handles the rest
-git tag v3.0.1
-git push origin v3.0.1
+git tag v3.0.2
+git push origin v3.0.2
 ```
 
 #### Code Quality

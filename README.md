@@ -103,6 +103,20 @@ snapshot = first_page.get_snapshot()
 
 Page-scoped selectors, text editing, and builders automatically restrict the operation to that page.
 
+## Reading Units
+
+Reading-unit analysis returns semantically classified text blocks with reading order, source provenance, bounds, and
+relationships. Each call analyzes the current session state and makes a fresh request.
+
+```python
+document_analysis = pdf.analyze_reading_units()
+page_analysis = pdf.page(1).analyze_reading_units()
+
+for page in document_analysis.pages:
+    for unit in page.units:
+        print(unit.role, unit.text)
+```
+
 ## Selection
 
 Document- and page-scoped selectors return typed objects for images, paths, form XObjects, and form fields. Position

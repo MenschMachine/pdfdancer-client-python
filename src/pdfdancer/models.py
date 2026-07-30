@@ -268,6 +268,119 @@ class ShapeType(Enum):
     RECT = "RECT"  # Rectangular area with width and height
 
 
+class ReadingUnitRole(Enum):
+    HEADING = "HEADING"
+    PARAGRAPH = "PARAGRAPH"
+    LIST = "LIST"
+    TABLE = "TABLE"
+    CAPTION = "CAPTION"
+    CALLOUT = "CALLOUT"
+    PREFORMATTED_TEXT = "PREFORMATTED_TEXT"
+    PAGE_HEADER = "PAGE_HEADER"
+    PAGE_FOOTER = "PAGE_FOOTER"
+    PAGE_NUMBER = "PAGE_NUMBER"
+    FOOTNOTE = "FOOTNOTE"
+    WATERMARK = "WATERMARK"
+    UNKNOWN = "UNKNOWN"
+
+    @classmethod
+    def from_value(cls, value: Any) -> tuple["ReadingUnitRole", str]:
+        raw = value if isinstance(value, str) else "UNKNOWN"
+        try:
+            return cls(raw), raw
+        except ValueError:
+            return cls.UNKNOWN, raw
+
+
+class ReadingUnitRelationshipType(Enum):
+    CAPTION_FOR = "CAPTION_FOR"
+    HEADING_PARENT_OF = "HEADING_PARENT_OF"
+    UNKNOWN = "UNKNOWN"
+
+    @classmethod
+    def from_value(cls, value: Any) -> tuple["ReadingUnitRelationshipType", str]:
+        raw = value if isinstance(value, str) else "UNKNOWN"
+        try:
+            return cls(raw), raw
+        except ValueError:
+            return cls.UNKNOWN, raw
+
+
+class ReadingUnitMode(Enum):
+    PRIMARY = "PRIMARY"
+    UNKNOWN = "UNKNOWN"
+
+    @classmethod
+    def from_value(cls, value: Any) -> tuple["ReadingUnitMode", str]:
+        raw = value if isinstance(value, str) else "UNKNOWN"
+        try:
+            return cls(raw), raw
+        except ValueError:
+            return cls.UNKNOWN, raw
+
+
+@dataclass(frozen=True)
+class ReadingUnitBounds:
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+@dataclass(frozen=True)
+class ReadingUnitProvenance:
+    page_number: int
+    source_element_ids: List[str]
+    bounds: ReadingUnitBounds
+
+
+@dataclass(frozen=True)
+class ReadingUnitStreamMembership:
+    included: bool
+    order: Optional[int]
+
+
+@dataclass(frozen=True)
+class ReadingUnitRelationship:
+    type: ReadingUnitRelationshipType
+    raw_type: str
+    target_unit_id: str
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ReadingUnitRelationship":
+        relationship_type, raw_type = ReadingUnitRelationshipType.from_value(
+            data.get("type")
+        )
+        return cls(relationship_type, raw_type, str(data.get("targetUnitId", "")))
+
+
+@dataclass(frozen=True)
+class ReadingUnit:
+    id: str
+    role: ReadingUnitRole
+    raw_role: str
+    text: str
+    stream: Mapping[str, ReadingUnitStreamMembership]
+    provenance: ReadingUnitProvenance
+    relationships: List[ReadingUnitRelationship]
+
+
+@dataclass(frozen=True)
+class ReadingUnitPageAnalysis:
+    page_number: int
+    mode: ReadingUnitMode
+    raw_mode: str
+    units: List[ReadingUnit]
+
+
+@dataclass(frozen=True)
+class ReadingUnitDocumentAnalysis:
+    page_count: int
+    mode: ReadingUnitMode
+    raw_mode: str
+    pages: List[ReadingUnitPageAnalysis]
+
+
 @dataclass
 class Point:
     """Represents a 2D point with x and y coordinates."""

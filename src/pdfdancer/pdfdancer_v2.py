@@ -74,6 +74,15 @@ from .models import (
     PathObjectRef,
     Position,
     PositionMode,
+    ReadingUnit,
+    ReadingUnitBounds,
+    ReadingUnitDocumentAnalysis,
+    ReadingUnitMode,
+    ReadingUnitPageAnalysis,
+    ReadingUnitProvenance,
+    ReadingUnitRelationship,
+    ReadingUnitRole,
+    ReadingUnitStreamMembership,
     ShapeType,
     TextObjectRef,
 )
@@ -720,6 +729,11 @@ class PageClient:
 
     def get_snapshot(self, types: Optional[str] = None) -> PageSnapshot:
         return self.root.get_page_snapshot(self.page_number, types)
+
+    def analyze_reading_units(self) -> ReadingUnitPageAnalysis:
+        return cast(
+            ReadingUnitPageAnalysis, self.root.analyze_reading_units(self.page_number)
+        )
 
     @property
     def size(self) -> Optional[PageSize]:
@@ -2480,6 +2494,22 @@ class PDFDancer:
 
         return self._parse_document_snapshot(data)
 
+    def analyze_reading_units(
+        self, page_number: Optional[int] = None
+    ) -> Union[ReadingUnitDocumentAnalysis, ReadingUnitPageAnalysis]:
+        """Analyze the current session PDF, or one one-based page, into reading units."""
+        if page_number is not None:
+            if page_number < 1:
+                raise ValidationException(
+                    f"Page number must be >= 1 (1-based indexing), got {page_number}"
+                )
+            response = self._make_request(
+                "GET", f"/pdf/page/{page_number}/reading-units"
+            )
+            return self._parse_reading_unit_page_analysis(response.json())
+        response = self._make_request("GET", "/pdf/document/reading-units")
+        return self._parse_reading_unit_document_analysis(response.json())
+
     def get_page_snapshot(
         self, page_number: int, types: Optional[str] = None
     ) -> PageSnapshot:
@@ -3128,6 +3158,64 @@ class PDFDancer:
         ]
 
         return DocumentSnapshot(page_count=page_count, fonts=fonts, pages=pages)
+
+    def _parse_reading_unit_page_analysis(
+        self, data: Mapping[str, Any]
+    ) -> ReadingUnitPageAnalysis:
+        mode, raw_mode = ReadingUnitMode.from_value(data.get("mode"))
+        return ReadingUnitPageAnalysis(
+            page_number=int(data.get("pageNumber", 0)),
+            mode=mode,
+            raw_mode=raw_mode,
+            units=[self._parse_reading_unit(unit) for unit in data.get("units", [])],
+        )
+
+    def _parse_reading_unit_document_analysis(
+        self, data: Mapping[str, Any]
+    ) -> ReadingUnitDocumentAnalysis:
+        mode, raw_mode = ReadingUnitMode.from_value(data.get("mode"))
+        return ReadingUnitDocumentAnalysis(
+            page_count=int(data.get("pageCount", 0)),
+            mode=mode,
+            raw_mode=raw_mode,
+            pages=[
+                self._parse_reading_unit_page_analysis(page)
+                for page in data.get("pages", [])
+            ],
+        )
+
+    def _parse_reading_unit(self, data: Mapping[str, Any]) -> ReadingUnit:
+        role, raw_role = ReadingUnitRole.from_value(data.get("role"))
+        provenance_data = data.get("provenance") or {}
+        bounds_data = provenance_data.get("bounds") or {}
+        stream = {
+            str(mode): ReadingUnitStreamMembership(
+                bool(membership.get("included", False)), membership.get("order")
+            )
+            for mode, membership in (data.get("stream") or {}).items()
+        }
+        provenance = ReadingUnitProvenance(
+            page_number=int(provenance_data.get("pageNumber", 0)),
+            source_element_ids=list(provenance_data.get("sourceElementIds") or []),
+            bounds=ReadingUnitBounds(
+                float(bounds_data.get("x", 0)),
+                float(bounds_data.get("y", 0)),
+                float(bounds_data.get("width", 0)),
+                float(bounds_data.get("height", 0)),
+            ),
+        )
+        return ReadingUnit(
+            id=str(data.get("id", "")),
+            role=role,
+            raw_role=raw_role,
+            text=str(data.get("text", "")),
+            stream=stream,
+            provenance=provenance,
+            relationships=[
+                ReadingUnitRelationship.from_dict(item)
+                for item in data.get("relationships", [])
+            ],
+        )
 
     # Context Manager Support (Python enhancement)
     def __enter__(self) -> "PDFDancer":

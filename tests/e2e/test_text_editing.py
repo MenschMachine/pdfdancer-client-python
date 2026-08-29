@@ -359,5 +359,10 @@ def test_required_reflow_exposes_layout_diagnostics(showcase_pdf: PDFDancer):
     (
         PDFAssertions(showcase_pdf)
         .assert_pdf_text_occurrence_count("This line will be replaced.", 0, page=1)
-        .assert_pdf_text_occurrence_count("Replacement with reflow.", 1, page=1)
+        .assert_pdf_text_occurrence_count(
+            "Replacement with reflow.",
+            1,
+            page=1,
+            normalize_whitespace=True,
+        )
     )

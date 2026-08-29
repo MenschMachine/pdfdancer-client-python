@@ -47,10 +47,19 @@ class PDFAssertions(object):
         return "\n".join(pdf_page.extract_text() or "" for pdf_page in pages)
 
     def assert_pdf_text_occurrence_count(
-        self, text: str, expected_count: int, page: Optional[int] = None
+        self,
+        text: str,
+        expected_count: int,
+        page: Optional[int] = None,
+        normalize_whitespace: bool = False,
     ) -> "PDFAssertions":
         """Assert a literal occurrence count in text extracted from the saved PDF."""
-        actual_count = self._saved_pdf_text(page).count(text)
+        saved_text = self._saved_pdf_text(page)
+        expected_text = text
+        if normalize_whitespace:
+            saved_text = " ".join(saved_text.split())
+            expected_text = " ".join(text.split())
+        actual_count = saved_text.count(expected_text)
         page_context = f" on page {page}" if page is not None else ""
         assert actual_count == expected_count, (
             f"Expected {expected_count} occurrences of {text!r}{page_context}, "

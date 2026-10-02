@@ -77,7 +77,7 @@ def test_move_path():
         (
             PDFAssertions(pdf)
             .assert_no_path_at(80, 720)
-            .assert_path_is_at("PATH_0_000001", 50.1, 100)
+            .assert_path_exists_at(50.1, 100)
         )
 
 

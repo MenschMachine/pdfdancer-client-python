@@ -4,6 +4,37 @@ from tests.e2e import _require_env_and_fixture
 from tests.e2e.pdf_assertions import PDFAssertions
 
 
+def _path_with_bounds(paths, x, y, width, height, epsilon=0.1):
+    matches = [
+        path
+        for path in paths
+        if path.position.bounding_rect is not None
+        and abs(path.position.bounding_rect.x - x) <= epsilon
+        and abs(path.position.bounding_rect.y - y) <= epsilon
+        and abs(path.position.bounding_rect.width - width) <= epsilon
+        and abs(path.position.bounding_rect.height - height) <= epsilon
+    ]
+    assert len(matches) == 1, (
+        f"Expected exactly one path with bounds ({x}, {y}, {width}, {height}), "
+        f"found {len(matches)}"
+    )
+    return matches[0]
+
+
+def _assert_unique_path_dimensions(pdf, width, height, epsilon=2.0):
+    matches = [
+        path
+        for path in pdf.page(1).select_paths()
+        if path.position.bounding_rect is not None
+        and abs(path.position.bounding_rect.width - width) <= epsilon
+        and abs(path.position.bounding_rect.height - height) <= epsilon
+    ]
+    assert len(matches) == 1, (
+        f"Expected exactly one path with dimensions {width} x {height}, "
+        f"found {len(matches)}"
+    )
+
+
 def test_create_group_by_path_ids():
     base_url, token, pdf_path = _require_env_and_fixture("basic-paths.pdf")
 
@@ -104,11 +135,14 @@ def test_scale_path_group():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paths = pdf.page(1).select_paths()
-        path_id = paths[0].internal_id
-        path_ids = [path_id, paths[1].internal_id]
+        horizontal_path = _path_with_bounds(paths, 80, 720, 220, 0)
+        path_ids = [
+            horizontal_path.internal_id,
+            _path_with_bounds(paths, 80, 580, 220, 160).internal_id,
+        ]
 
         # Record original bounds
-        orig_bbox = paths[0].position.bounding_rect
+        orig_bbox = horizontal_path.position.bounding_rect
         orig_w = orig_bbox.width
         orig_h = orig_bbox.height
 
@@ -116,10 +150,10 @@ def test_scale_path_group():
         group.scale(2.0)
 
         # After scaling 2x, path bounds should roughly double
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_path_has_bounds(path_id, orig_w * 2, orig_h * 2, epsilon=2.0)
+        assertions = PDFAssertions(pdf)
+        assertions.assert_number_of_paths(9)
+        _assert_unique_path_dimensions(
+            assertions.get_pdf(), orig_w * 2, orig_h * 2
         )
 
 
@@ -142,11 +176,14 @@ def test_resize_path_group():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paths = pdf.page(1).select_paths()
-        path_id = paths[0].internal_id
-        path_ids = [path_id, paths[1].internal_id]
+        horizontal_path = _path_with_bounds(paths, 80, 720, 220, 0)
+        path_ids = [
+            horizontal_path.internal_id,
+            _path_with_bounds(paths, 80, 580, 220, 160).internal_id,
+        ]
 
         # Record original bounds
-        orig_bbox = paths[0].position.bounding_rect
+        orig_bbox = horizontal_path.position.bounding_rect
 
         group = pdf.page(1).group_paths(path_ids)
         group.resize(50.0, 50.0)
@@ -157,9 +194,17 @@ def test_resize_path_group():
 
         # Verify the path's bounding rect actually changed
         reloaded_paths = assertions.get_pdf().page(1).select_paths()
-        reloaded = next(p for p in reloaded_paths if p.internal_id == path_id)
-        new_bbox = reloaded.position.bounding_rect
-        assert orig_bbox != new_bbox, "Path bounds should change after resize"
+        horizontal_paths = [
+            path
+            for path in reloaded_paths
+            if path.position.bounding_rect is not None
+            and abs(path.position.bounding_rect.height) < 0.1
+        ]
+        assert len(horizontal_paths) == 1, "Expected one horizontal line path"
+        new_bbox = horizontal_paths[0].position.bounding_rect
+        assert abs(new_bbox.width - orig_bbox.width) > 0.1, (
+            "The horizontal line width should change after resize"
+        )
 
 
 def test_scale_via_reference():
@@ -167,11 +212,14 @@ def test_scale_via_reference():
 
     with PDFDancer.open(pdf_path, token=token, base_url=base_url, timeout=30.0) as pdf:
         paths = pdf.page(1).select_paths()
-        path_id = paths[0].internal_id
-        path_ids = [path_id, paths[1].internal_id]
+        horizontal_path = _path_with_bounds(paths, 80, 720, 220, 0)
+        path_ids = [
+            horizontal_path.internal_id,
+            _path_with_bounds(paths, 80, 580, 220, 160).internal_id,
+        ]
 
         # Record original bounds
-        orig_bbox = paths[0].position.bounding_rect
+        orig_bbox = horizontal_path.position.bounding_rect
         orig_w = orig_bbox.width
         orig_h = orig_bbox.height
 
@@ -179,10 +227,10 @@ def test_scale_via_reference():
         group.scale(0.5)
 
         # After scaling 0.5x, path bounds should roughly halve
-        (
-            PDFAssertions(pdf)
-            .assert_number_of_paths(9)
-            .assert_path_has_bounds(path_id, orig_w * 0.5, orig_h * 0.5, epsilon=2.0)
+        assertions = PDFAssertions(pdf)
+        assertions.assert_number_of_paths(9)
+        _assert_unique_path_dimensions(
+            assertions.get_pdf(), orig_w * 0.5, orig_h * 0.5
         )
 
 

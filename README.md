@@ -208,8 +208,28 @@ signature = pdf.select_form_fields_by_name("signature")[0]
 changed = signature.set_value("Signed by Jane Doe")
 ```
 
-Selectors return typed objects (`ImageObject`, `FormFieldObject`, `PathObject`, `PageClient`, …) with generic helpers
-such as `delete()`, `move_to(x, y)`, and `clear_clipping()` where supported by the selected object type.
+Selectors return typed objects (`ImageObject`, `FormFieldObject`, `PathObject`, `TextLineObject`, `PageClient`, …) with
+generic helpers such as `delete()`, `move_to(x, y)`, `move_x(dx)`, `move_y(dy)`, and `clear_clipping()` where supported
+by the selected object type.
+
+### Moving Objects and Text Lines
+
+Selected images, paths, form XObjects, form fields, path groups, and text lines share the same movement helpers.
+`move_to(x, y)` uses absolute page coordinates; `move_x(dx)` and `move_y(dy)` are relative offsets in PDF points. Each
+returns `True` when the object was moved, and successive relative moves compose.
+
+```python
+line = pdf.page(1).select_text_lines()[0]
+print(line.text)
+
+line.move_to(100, 500)
+line.move_x(20)
+line.move_y(-15)
+```
+
+Text-line moves apply to whole lines. Use `pdf.text()` to edit the text itself. Lines are detected from the page
+content, so a line moved onto another line's baseline may be read back as one merged line, and text moved outside its
+clipping region is no longer detected.
 
 ## Text Editing
 

@@ -99,6 +99,7 @@ from .types import (
     FormObject,
     ImageObject,
     PathObject,
+    TextLineObject,
 )
 
 if TYPE_CHECKING:
@@ -495,6 +496,23 @@ class PageClient:
         # noinspection PyProtectedMember
         return self.root._to_image_objects(
             self.root._find_images(Position.at_page(self.page_number))
+        )
+
+    def select_text_lines(self) -> List[TextLineObject]:
+        """Searches for text lines on this page."""
+        # noinspection PyProtectedMember
+        return self.root._to_text_line_objects(
+            self.root._find(ObjectType.TEXT_LINE, Position.at_page(self.page_number))
+        )
+
+    def select_text_lines_at(
+        self, x: float, y: float, tolerance: float = DEFAULT_TOLERANCE
+    ) -> List[TextLineObject]:
+        """Searches for text lines at the given page coordinates."""
+        position = Position.at_page_coordinates(self.page_number, x, y)
+        # noinspection PyProtectedMember
+        return self.root._to_text_line_objects(
+            self.root._find(ObjectType.TEXT_LINE, position, tolerance)
         )
 
     def select_images_at(
@@ -1638,6 +1656,14 @@ class PDFDancer:
         Searches for image objects in the whole document
         """
         return self._to_image_objects(self._find(ObjectType.IMAGE, None))
+
+    def select_text_lines(self) -> List[TextLineObject]:
+        """
+        Searches for text lines in the whole document.
+
+        Returned lines can be moved with ``move_to``, ``move_x`` and ``move_y``.
+        """
+        return self._to_text_line_objects(self._find(ObjectType.TEXT_LINE, None))
 
     def select_forms(self) -> List[FormObject]:
         """
@@ -3247,6 +3273,9 @@ class PDFDancer:
         return [
             ImageObject(self, ref.internal_id, ref.type, ref.position) for ref in refs
         ]
+
+    def _to_text_line_objects(self, refs: List[ObjectRef]) -> List[TextLineObject]:
+        return [TextLineObject(self, ref) for ref in refs]
 
     def _to_form_objects(self, refs: List[ObjectRef]) -> List[FormObject]:
         return [

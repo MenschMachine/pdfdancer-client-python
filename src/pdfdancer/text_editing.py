@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import base64
 import math
+import warnings
 from dataclasses import dataclass, replace
-from enum import Enum
+from enum import Enum, EnumMeta
 from pathlib import Path
 from typing import Any, Optional, Sequence, cast
 
@@ -230,10 +231,51 @@ class TextLayoutMode(Enum):
     REQUIRE_REFLOW = "requireReflow"
 
 
-class TextLayoutProfile(Enum):
+class _TextLayoutProfileMeta(EnumMeta):
+    """Keeps the deprecated ``NO_REFLOW`` name working, with a DeprecationWarning."""
+
+    _DEPRECATED = {"NO_REFLOW": "KEEP_LINE_BREAKS"}
+
+    def _warn_deprecated(cls, name: str) -> str:
+        replacement = cls._DEPRECATED[name]
+        warnings.warn(
+            f"TextLayoutProfile.{name} is deprecated; use "
+            f"TextLayoutProfile.{replacement} instead",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return replacement
+
+    def __getattr__(cls, name: str) -> Any:
+        if name in cls._DEPRECATED:
+            return getattr(cls, cls._warn_deprecated(name))
+        parent = getattr(super(), "__getattr__", None)  # only present before 3.12
+        if parent is not None:
+            return parent(name)
+        raise AttributeError(name)
+
+    def __getitem__(cls, name: str) -> Any:
+        if name in cls._DEPRECATED:
+            name = cls._warn_deprecated(name)
+        return super().__getitem__(name)
+
+
+class TextLayoutProfile(Enum, metaclass=_TextLayoutProfileMeta):
+    """Layout profile for a reflow mode.
+
+    ``KEEP_LINE_BREAKS`` keeps every existing line break. Each line is still
+    recomposed horizontally: following text shifts along the line to make room,
+    nothing wraps onto a new line, and a line may grow beyond its original width.
+    It is sent to the API as ``noReflow``.
+
+    ``NO_REFLOW`` is a deprecated alias of ``KEEP_LINE_BREAKS``: its name
+    contradicted the ``reflow_when_supported`` and ``require_reflow`` modes it is
+    used with. It still works and emits a ``DeprecationWarning``.
+    """
+
     DEFAULT = "default"
     BODY_TEXT = "bodyText"
-    NO_REFLOW = "noReflow"
+    KEEP_LINE_BREAKS = "noReflow"
 
 
 class TextAlignment(Enum):
@@ -257,7 +299,7 @@ class TextLayoutRequest:
 
     An omitted ``mode`` means ``reflowWhenSupported``, as in the API. That mode
     needs a ``profile``. When ``mode`` and ``profile`` are both omitted, the SDK
-    uses the ``noReflow`` profile.
+    uses the ``KEEP_LINE_BREAKS`` profile.
     """
 
     mode: Optional[TextLayoutMode] = None
@@ -285,9 +327,9 @@ class TextLayoutRequest:
         return replace(self, alignment=alignment)
 
     def _effective_profile(self) -> Optional[TextLayoutProfile]:
-        """Return the profile to send. A layout with no mode and no profile gets ``noReflow``."""
+        """Return the profile to send. A layout with no mode and no profile gets ``KEEP_LINE_BREAKS``."""
         if self.profile is None and self.mode is None:
-            return TextLayoutProfile.NO_REFLOW
+            return TextLayoutProfile.KEEP_LINE_BREAKS
         return self.profile
 
     def validated(self) -> "TextLayoutRequest":
@@ -317,7 +359,7 @@ class TextLayoutRequest:
             and self._effective_profile() is None
         ):
             raise ValidationException(
-                f"{mode.value} profile must be one of default, bodyText, noReflow"
+                f"{mode.value} profile must be one of DEFAULT, BODY_TEXT, KEEP_LINE_BREAKS"
             )
         return self
 
@@ -878,7 +920,7 @@ class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
         """Align each edited line explicitly. Valid only for text replace.
 
         Without a layout, this selects ``reflowWhenSupported`` with the
-        ``noReflow`` profile, the API default for an omitted layout. It can be
+        ``KEEP_LINE_BREAKS`` profile, the API default for an omitted layout. It can be
         combined with ``reflow_when_supported(...)`` and ``require_reflow(...)``
         in any order. ``source_anchored()`` and ``replace_with_image(...)`` are
         rejected at ``build()``.
@@ -907,7 +949,7 @@ class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
             return layout
         if layout is None:
             layout = TextLayoutRequest.reflow_when_supported(
-                TextLayoutProfile.NO_REFLOW
+                TextLayoutProfile.KEEP_LINE_BREAKS
             )
         return replace(layout, alignment=self._alignment)
 

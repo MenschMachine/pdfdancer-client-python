@@ -96,6 +96,7 @@ from .types import (
     PathGroupObject,
     PathObject,
     PDFObjectBase,
+    TextLineObject,
 )
 
 __version__ = resolve_package_version()
@@ -149,6 +150,7 @@ __all__ = [
     "PDFObjectBase",
     "PathObject",
     "ImageObject",
+    "TextLineObject",
     "FormObject",
     "FormFieldObject",
     "PathEditSession",

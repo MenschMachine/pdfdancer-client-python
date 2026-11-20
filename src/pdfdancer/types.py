@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Literal, Optional, Type, cast
@@ -67,10 +67,43 @@ class PDFObjectBase:
         return self._client._delete(self.object_ref())
 
     def move_to(self, x: float, y: float) -> bool:
-        """Move this object to a new position."""
-        return self._client._move(
+        """Move this object to a new position (absolute page coordinates)."""
+        moved = self._client._move(
             self.object_ref(),
             Position.at_page_coordinates(cast(int, self.position.page_number), x, y),
+        )
+        if moved:
+            self._record_position(x, y)
+        return moved
+
+    def move_x(self, x_offset: float) -> bool:
+        """Move this object horizontally by ``x_offset`` PDF points."""
+        x, y = self._current_xy()
+        return self.move_to(x + x_offset, y)
+
+    def move_y(self, y_offset: float) -> bool:
+        """Move this object vertically by ``y_offset`` PDF points."""
+        x, y = self._current_xy()
+        return self.move_to(x, y + y_offset)
+
+    def _current_xy(self) -> tuple[float, float]:
+        x = self.position.x() if self.position else None
+        y = self.position.y() if self.position else None
+        if x is None or y is None:
+            raise ValidationException("Cannot move: object has no position")
+        return x, y
+
+    def _record_position(self, x: float, y: float) -> None:
+        """Keep the local position in sync after a move so relative moves compose.
+
+        Replaces ``self.position`` with an updated copy instead of mutating it, so
+        positions already handed out (or shared with the snapshot cache) are untouched.
+        """
+        rect = self.position.bounding_rect
+        width = rect.width if rect else 0
+        height = rect.height if rect else 0
+        self.position = replace(
+            self.position, bounding_rect=ModelBoundingRect(x, y, width, height)
         )
 
     def clear_clipping(self) -> bool:
@@ -399,7 +432,19 @@ class PathGroupObject:
         return self._info.y
 
     def move_to(self, x: float, y: float) -> bool:
-        return self._client._move_path_group(self._page_index, self.group_id, x, y)
+        moved = self._client._move_path_group(self._page_index, self.group_id, x, y)
+        if moved:
+            self._info.x = x
+            self._info.y = y
+        return moved
+
+    def move_x(self, x_offset: float) -> bool:
+        """Move this group horizontally by ``x_offset`` PDF points."""
+        return self.move_to(self.x + x_offset, self.y)
+
+    def move_y(self, y_offset: float) -> bool:
+        """Move this group vertically by ``y_offset`` PDF points."""
+        return self.move_to(self.x, self.y + y_offset)
 
     def scale(self, factor: float) -> bool:
         return self._client._scale_path_group(self._page_index, self.group_id, factor)
@@ -422,6 +467,29 @@ class PathGroupObject:
 
     def __repr__(self) -> str:
         return f"PathGroupObject(group_id={self.group_id!r}, path_count={self.path_count}, page_index={self._page_index})"
+
+
+class TextLineObject(PDFObjectBase):
+    """Represents a single line of text on a PDF page.
+
+    Lines can be moved (``move_to``, ``move_x``, ``move_y``) and deleted. Editing
+    the text itself goes through ``PDFDancer.text()``.
+    """
+
+    def __init__(self, client: "PDFDancer", object_ref: ObjectRef):
+        super().__init__(
+            client, object_ref.internal_id, object_ref.type, object_ref.position
+        )
+        text = getattr(object_ref, "text", None)
+        self._text: Optional[str] = text if isinstance(text, str) else None
+
+    @property
+    def text(self) -> Optional[str]:
+        """The text content of this line, when the server provided it."""
+        return self._text
+
+    def __repr__(self) -> str:
+        return f"TextLineObject(internal_id={self.internal_id!r}, text={self._text!r})"
 
 
 class FormObject(PDFObjectBase):

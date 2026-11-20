@@ -361,7 +361,7 @@ def test_direct_style_selector_validation():
 def test_require_reflow_and_hyphenation_are_available_on_every_builder(factory):
     payload = (
         factory()
-        .require_reflow(TextLayoutProfile.NO_REFLOW)
+        .require_reflow(TextLayoutProfile.KEEP_LINE_BREAKS)
         .hyphenation_enabled(True)
         .build()
         .to_dict()
@@ -417,7 +417,7 @@ def test_layout_enum_aliases_match_java_nesting():
     assert TextLayoutRequest.Profile is TextLayoutProfile
 
 
-NO_REFLOW_RIGHT = {
+KEEP_LINE_BREAKS_RIGHT = {
     "mode": "reflowWhenSupported",
     "profile": "noReflow",
     "alignment": "right",
@@ -425,7 +425,9 @@ NO_REFLOW_RIGHT = {
 
 
 @pytest.mark.parametrize("alignment", list(TextAlignment))
-def test_replace_alignment_alone_implies_reflow_with_no_reflow_profile(alignment):
+def test_replace_alignment_alone_implies_reflow_with_keep_line_breaks_profile(
+    alignment,
+):
     request = TextReplaceRequest.literal("a", "b").alignment(alignment).build()
     assert request.to_dict()["layout"] == {
         "mode": "reflowWhenSupported",
@@ -463,7 +465,7 @@ def test_replace_alignment_combines_with_explicit_layout_in_any_order(
 def test_replace_alignment_combines_with_hyphenation_and_explicit_layout():
     layout = (
         TextReplaceRequest.literal("a", "b")
-        .reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+        .reflow_when_supported(TextLayoutProfile.KEEP_LINE_BREAKS)
         .hyphenation_enabled(False)
         .alignment(TextAlignment.CENTERED)
         .build()
@@ -504,7 +506,7 @@ def test_replace_hyphenation_alone_uses_the_default_profile():
 def test_replace_without_alignment_has_no_alignment_key():
     request = (
         TextReplaceRequest.literal("a", "b")
-        .reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+        .reflow_when_supported(TextLayoutProfile.KEEP_LINE_BREAKS)
         .build()
     )
     assert "alignment" not in request.to_dict()["layout"]
@@ -538,12 +540,14 @@ def test_replace_alignment_with_image_is_rejected():
 
 def test_replace_layout_method_carries_and_keeps_alignment():
     layout = TextLayoutRequest.reflow_when_supported(
-        TextLayoutProfile.NO_REFLOW
+        TextLayoutProfile.KEEP_LINE_BREAKS
     ).with_alignment(TextAlignment.RIGHT)
     request = TextReplaceRequest.literal("a", "b").layout(layout).build()
-    assert request.to_dict()["layout"] == NO_REFLOW_RIGHT
+    assert request.to_dict()["layout"] == KEEP_LINE_BREAKS_RIGHT
     # layout() keeps an alignment that alignment() set, in any order.
-    plain_layout = TextLayoutRequest.reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+    plain_layout = TextLayoutRequest.reflow_when_supported(
+        TextLayoutProfile.KEEP_LINE_BREAKS
+    )
     alignment_first = (
         TextReplaceRequest.literal("a", "b")
         .alignment(TextAlignment.RIGHT)
@@ -556,8 +560,8 @@ def test_replace_layout_method_carries_and_keeps_alignment():
         .alignment(TextAlignment.RIGHT)
         .build()
     )
-    assert alignment_first.to_dict()["layout"] == NO_REFLOW_RIGHT
-    assert layout_first.to_dict()["layout"] == NO_REFLOW_RIGHT
+    assert alignment_first.to_dict()["layout"] == KEEP_LINE_BREAKS_RIGHT
+    assert layout_first.to_dict()["layout"] == KEEP_LINE_BREAKS_RIGHT
     # layout(None) keeps the alignment too. The alignment then uses the default layout.
     cleared = (
         TextReplaceRequest.literal("a", "b")
@@ -565,7 +569,7 @@ def test_replace_layout_method_carries_and_keeps_alignment():
         .layout(None)
         .build()
     )
-    assert cleared.to_dict()["layout"] == NO_REFLOW_RIGHT
+    assert cleared.to_dict()["layout"] == KEEP_LINE_BREAKS_RIGHT
     # A layout with its own alignment replaces the earlier alignment.
     replaced = (
         TextReplaceRequest.literal("a", "b")
@@ -578,10 +582,10 @@ def test_replace_layout_method_carries_and_keeps_alignment():
 
 def test_layout_request_alignment_serialization_and_validation():
     layout = TextLayoutRequest.reflow_when_supported(
-        TextLayoutProfile.NO_REFLOW
+        TextLayoutProfile.KEEP_LINE_BREAKS
     ).with_alignment(TextAlignment.RIGHT)
     assert layout.alignment is TextAlignment.RIGHT
-    assert layout.to_dict() == NO_REFLOW_RIGHT
+    assert layout.to_dict() == KEEP_LINE_BREAKS_RIGHT
     with pytest.raises(ValidationException, match="layout.alignment is not valid"):
         TextLayoutRequest.source_anchored().with_alignment(
             TextAlignment.LEFT
@@ -589,7 +593,7 @@ def test_layout_request_alignment_serialization_and_validation():
     with pytest.raises(ValidationException, match="must be a TextAlignment"):
         TextLayoutRequest(
             TextLayoutMode.REFLOW_WHEN_SUPPORTED,
-            TextLayoutProfile.NO_REFLOW,
+            TextLayoutProfile.KEEP_LINE_BREAKS,
             alignment="right",  # type: ignore[arg-type]
         ).validated()
 
@@ -604,7 +608,7 @@ def test_layout_request_alignment_serialization_and_validation():
 )
 def test_alignment_is_rejected_on_delete_insert_and_style(factory):
     layout = TextLayoutRequest.reflow_when_supported(
-        TextLayoutProfile.NO_REFLOW
+        TextLayoutProfile.KEEP_LINE_BREAKS
     ).with_alignment(TextAlignment.RIGHT)
     with pytest.raises(ValidationException, match="valid only for text replace"):
         factory().layout(layout).build()
@@ -612,7 +616,7 @@ def test_alignment_is_rejected_on_delete_insert_and_style(factory):
 
 def test_omitted_mode_means_reflow_when_supported_as_in_the_api():
     layout = TextLayoutRequest(
-        profile=TextLayoutProfile.NO_REFLOW, alignment=TextAlignment.RIGHT
+        profile=TextLayoutProfile.KEEP_LINE_BREAKS, alignment=TextAlignment.RIGHT
     )
     assert layout.validated() is layout
     assert layout.to_dict() == {"profile": "noReflow", "alignment": "right"}
@@ -646,7 +650,7 @@ def test_explicit_reflow_mode_without_profile_asks_for_a_profile(mode, message):
 
 
 def test_replace_image_rejects_a_layout_with_omitted_mode():
-    layout = TextLayoutRequest(profile=TextLayoutProfile.NO_REFLOW)
+    layout = TextLayoutRequest(profile=TextLayoutProfile.KEEP_LINE_BREAKS)
     builder = (
         TextReplaceRequest.builder()
         .literal("{{logo}}")

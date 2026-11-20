@@ -6,13 +6,17 @@ import pytest
 from pdfdancer import (
     PdfAffineTransform,
     PdfColorRequest,
+    TextAlignment,
     TextDeleteRequest,
     TextEditResponse,
     TextInsertRequest,
     TextLayoutMode,
     TextLayoutProfile,
     TextLayoutRequest,
+    TextOperationDiagnostic,
+    TextReplacementImageRequest,
     TextReplaceRequest,
+    TextSelectorRequest,
     TextStyleNumericFilterRequest,
     TextStylePatchRequest,
     TextStyleRequest,
@@ -156,7 +160,6 @@ def test_replace_image_uses_base64_and_pdf_matrix_order():
         lambda: TextReplaceRequest.literal("x", "y").max_matches(0),
         lambda: TextReplaceRequest.literal("x", "y").size(0),
         lambda: TextReplaceRequest.literal("x", "y").font(" "),
-        lambda: TextReplaceRequest.literal("x", "y").hyphenation_enabled(True),
     ],
 )
 def test_replace_rejects_invalid_contract_values(builder):
@@ -412,3 +415,293 @@ def test_text_edit_response_preserves_omitted_lists_as_none():
 def test_layout_enum_aliases_match_java_nesting():
     assert TextLayoutRequest.Mode is TextLayoutMode
     assert TextLayoutRequest.Profile is TextLayoutProfile
+
+
+NO_REFLOW_RIGHT = {
+    "mode": "reflowWhenSupported",
+    "profile": "noReflow",
+    "alignment": "right",
+}
+
+
+@pytest.mark.parametrize("alignment", list(TextAlignment))
+def test_replace_alignment_alone_implies_reflow_with_no_reflow_profile(alignment):
+    request = TextReplaceRequest.literal("a", "b").alignment(alignment).build()
+    assert request.to_dict()["layout"] == {
+        "mode": "reflowWhenSupported",
+        "profile": "noReflow",
+        "alignment": alignment.value,
+    }
+
+
+def test_alignment_values_match_the_api():
+    assert {a.value for a in TextAlignment} == {
+        "left",
+        "right",
+        "centered",
+        "justified",
+    }
+
+
+@pytest.mark.parametrize("alignment_first", [True, False])
+def test_replace_alignment_combines_with_explicit_layout_in_any_order(
+    alignment_first,
+):
+    builder = TextReplaceRequest.literal("a", "b")
+    if alignment_first:
+        builder = builder.alignment(TextAlignment.RIGHT)
+    builder = builder.require_reflow(TextLayoutProfile.BODY_TEXT)
+    if not alignment_first:
+        builder = builder.alignment(TextAlignment.RIGHT)
+    assert builder.build().to_dict()["layout"] == {
+        "mode": "requireReflow",
+        "profile": "bodyText",
+        "alignment": "right",
+    }
+
+
+def test_replace_alignment_combines_with_hyphenation_and_explicit_layout():
+    layout = (
+        TextReplaceRequest.literal("a", "b")
+        .reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+        .hyphenation_enabled(False)
+        .alignment(TextAlignment.CENTERED)
+        .build()
+        .to_dict()["layout"]
+    )
+    assert layout == {
+        "mode": "reflowWhenSupported",
+        "profile": "noReflow",
+        "hyphenationEnabled": False,
+        "alignment": "centered",
+    }
+
+
+@pytest.mark.parametrize("alignment_first", [True, False])
+def test_replace_alignment_with_only_hyphenation_uses_the_default_profile(
+    alignment_first,
+):
+    builder = TextReplaceRequest.literal("a", "b")
+    if alignment_first:
+        builder = builder.alignment(TextAlignment.RIGHT).hyphenation_enabled(False)
+    else:
+        builder = builder.hyphenation_enabled(False).alignment(TextAlignment.RIGHT)
+    assert builder.build().to_dict()["layout"] == {
+        "profile": "noReflow",
+        "hyphenationEnabled": False,
+        "alignment": "right",
+    }
+
+
+def test_replace_hyphenation_alone_uses_the_default_profile():
+    request = TextReplaceRequest.literal("a", "b").hyphenation_enabled(True).build()
+    assert request.to_dict()["layout"] == {
+        "profile": "noReflow",
+        "hyphenationEnabled": True,
+    }
+
+
+def test_replace_without_alignment_has_no_alignment_key():
+    request = (
+        TextReplaceRequest.literal("a", "b")
+        .reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+        .build()
+    )
+    assert "alignment" not in request.to_dict()["layout"]
+    assert "layout" not in TextReplaceRequest.literal("a", "b").build().to_dict()
+
+
+@pytest.mark.parametrize("alignment_first", [True, False])
+def test_replace_alignment_with_source_anchored_is_rejected(alignment_first):
+    builder = TextReplaceRequest.literal("a", "b")
+    if alignment_first:
+        builder = builder.alignment(TextAlignment.RIGHT).source_anchored()
+    else:
+        builder = builder.source_anchored().alignment(TextAlignment.RIGHT)
+    with pytest.raises(ValidationException, match="layout.alignment is not valid"):
+        builder.build()
+
+
+def test_replace_alignment_with_image_is_rejected():
+    builder = (
+        TextReplaceRequest.builder()
+        .literal("{{logo}}")
+        .alignment(TextAlignment.RIGHT)
+        .replace_with_image(b"image", PdfAffineTransform.builder().build())
+    )
+    with pytest.raises(
+        ValidationException,
+        match="layout.alignment is not valid with replaceWithImage",
+    ):
+        builder.build()
+
+
+def test_replace_layout_method_carries_and_keeps_alignment():
+    layout = TextLayoutRequest.reflow_when_supported(
+        TextLayoutProfile.NO_REFLOW
+    ).with_alignment(TextAlignment.RIGHT)
+    request = TextReplaceRequest.literal("a", "b").layout(layout).build()
+    assert request.to_dict()["layout"] == NO_REFLOW_RIGHT
+    # layout() keeps an alignment that alignment() set, in any order.
+    plain_layout = TextLayoutRequest.reflow_when_supported(TextLayoutProfile.NO_REFLOW)
+    alignment_first = (
+        TextReplaceRequest.literal("a", "b")
+        .alignment(TextAlignment.RIGHT)
+        .layout(plain_layout)
+        .build()
+    )
+    layout_first = (
+        TextReplaceRequest.literal("a", "b")
+        .layout(plain_layout)
+        .alignment(TextAlignment.RIGHT)
+        .build()
+    )
+    assert alignment_first.to_dict()["layout"] == NO_REFLOW_RIGHT
+    assert layout_first.to_dict()["layout"] == NO_REFLOW_RIGHT
+    # layout(None) keeps the alignment too. The alignment then uses the default layout.
+    cleared = (
+        TextReplaceRequest.literal("a", "b")
+        .alignment(TextAlignment.RIGHT)
+        .layout(None)
+        .build()
+    )
+    assert cleared.to_dict()["layout"] == NO_REFLOW_RIGHT
+    # A layout with its own alignment replaces the earlier alignment.
+    replaced = (
+        TextReplaceRequest.literal("a", "b")
+        .alignment(TextAlignment.LEFT)
+        .layout(plain_layout.with_alignment(TextAlignment.CENTERED))
+        .build()
+    )
+    assert replaced.to_dict()["layout"]["alignment"] == "centered"
+
+
+def test_layout_request_alignment_serialization_and_validation():
+    layout = TextLayoutRequest.reflow_when_supported(
+        TextLayoutProfile.NO_REFLOW
+    ).with_alignment(TextAlignment.RIGHT)
+    assert layout.alignment is TextAlignment.RIGHT
+    assert layout.to_dict() == NO_REFLOW_RIGHT
+    with pytest.raises(ValidationException, match="layout.alignment is not valid"):
+        TextLayoutRequest.source_anchored().with_alignment(
+            TextAlignment.LEFT
+        ).validated()
+    with pytest.raises(ValidationException, match="must be a TextAlignment"):
+        TextLayoutRequest(
+            TextLayoutMode.REFLOW_WHEN_SUPPORTED,
+            TextLayoutProfile.NO_REFLOW,
+            alignment="right",  # type: ignore[arg-type]
+        ).validated()
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: TextDeleteRequest.literal("a"),
+        lambda: TextInsertRequest.after("a", "b"),
+        lambda: TextStyleRequest.literal("a").font("Helvetica"),
+    ],
+)
+def test_alignment_is_rejected_on_delete_insert_and_style(factory):
+    layout = TextLayoutRequest.reflow_when_supported(
+        TextLayoutProfile.NO_REFLOW
+    ).with_alignment(TextAlignment.RIGHT)
+    with pytest.raises(ValidationException, match="valid only for text replace"):
+        factory().layout(layout).build()
+
+
+def test_omitted_mode_means_reflow_when_supported_as_in_the_api():
+    layout = TextLayoutRequest(
+        profile=TextLayoutProfile.NO_REFLOW, alignment=TextAlignment.RIGHT
+    )
+    assert layout.validated() is layout
+    assert layout.to_dict() == {"profile": "noReflow", "alignment": "right"}
+
+
+@pytest.mark.parametrize(
+    "layout, expected",
+    [
+        (TextLayoutRequest(), {"profile": "noReflow"}),
+        (
+            TextLayoutRequest(hyphenation_enabled=True),
+            {"profile": "noReflow", "hyphenationEnabled": True},
+        ),
+    ],
+)
+def test_omitted_mode_without_profile_uses_the_default_profile(layout, expected):
+    assert layout.validated() is layout
+    assert layout.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "mode, message",
+    [
+        (TextLayoutMode.REFLOW_WHEN_SUPPORTED, "reflowWhenSupported profile"),
+        (TextLayoutMode.REQUIRE_REFLOW, "requireReflow profile"),
+    ],
+)
+def test_explicit_reflow_mode_without_profile_asks_for_a_profile(mode, message):
+    with pytest.raises(ValidationException, match=message):
+        TextLayoutRequest(mode=mode).validated()
+
+
+def test_replace_image_rejects_a_layout_with_omitted_mode():
+    layout = TextLayoutRequest(profile=TextLayoutProfile.NO_REFLOW)
+    builder = (
+        TextReplaceRequest.builder()
+        .literal("{{logo}}")
+        .layout(layout)
+        .replace_with_image(b"image", PdfAffineTransform.builder().build())
+    )
+    with pytest.raises(ValidationException, match="only sourceAnchored"):
+        builder.build()
+
+
+def _image_request(layout):
+    return TextReplaceRequest(
+        None,
+        TextSelectorRequest(literal="{{logo}}"),
+        None,
+        TextReplacementImageRequest(b"image", PdfAffineTransform.builder().build()),
+        None,
+        layout,
+    )
+
+
+def test_replace_image_without_layout_gets_a_source_anchored_layout():
+    request = _image_request(None)
+    assert request.validated().layout == TextLayoutRequest.source_anchored()
+    assert request.to_dict()["layout"] == {"mode": "sourceAnchored"}
+    assert request.with_pages([1]).to_dict()["layout"] == {"mode": "sourceAnchored"}
+
+
+def test_replace_image_keeps_an_explicit_source_anchored_layout():
+    layout = TextLayoutRequest.source_anchored()
+    assert _image_request(layout).validated().layout is layout
+
+
+def test_alignment_not_honored_code_matches_the_api():
+    assert TextOperationDiagnostic.ALIGNMENT_NOT_HONORED == "TEXT_ALIGNMENT_NOT_HONORED"
+    response = TextEditResponse.from_dict(
+        {
+            "matched": 1,
+            "changed": 0,
+            "pagesChanged": [],
+            "change": [],
+            "warnings": [],
+            "errors": [
+                {
+                    "page": 1,
+                    "code": "TEXT_ALIGNMENT_NOT_HONORED",
+                    "message": "m",
+                    "elementIds": ["e"],
+                    "reflowUnitIds": ["r"],
+                }
+            ],
+        }
+    )
+    assert response.errors[0].code == TextOperationDiagnostic.ALIGNMENT_NOT_HONORED
+
+
+def test_layout_alignment_alias_matches_java_nesting():
+    assert TextLayoutRequest.Alignment is TextAlignment

@@ -236,11 +236,34 @@ class TextLayoutProfile(Enum):
     NO_REFLOW = "noReflow"
 
 
+class TextAlignment(Enum):
+    """Explicit alignment of each edited line. Valid only for text replace.
+
+    Each edited line keeps its original visible text extent as the reference:
+    ``LEFT`` keeps the left edge, ``RIGHT`` keeps the right edge, ``CENTERED``
+    keeps the midpoint, and ``JUSTIFIED`` keeps both edges by changing the word
+    gaps (the last line of a paragraph stays left-aligned).
+    """
+
+    LEFT = "left"
+    RIGHT = "right"
+    CENTERED = "centered"
+    JUSTIFIED = "justified"
+
+
 @dataclass(frozen=True)
 class TextLayoutRequest:
+    """Layout policy of a text edit.
+
+    An omitted ``mode`` means ``reflowWhenSupported``, as in the API. That mode
+    needs a ``profile``. When ``mode`` and ``profile`` are both omitted, the SDK
+    uses the ``noReflow`` profile.
+    """
+
     mode: Optional[TextLayoutMode] = None
     profile: Optional[TextLayoutProfile] = None
     hyphenation_enabled: Optional[bool] = None
+    alignment: Optional[TextAlignment] = None
 
     @classmethod
     def source_anchored(cls) -> "TextLayoutRequest":
@@ -257,8 +280,21 @@ class TextLayoutRequest:
     def with_hyphenation_enabled(self, enabled: bool) -> "TextLayoutRequest":
         return replace(self, hyphenation_enabled=enabled)
 
+    def with_alignment(self, alignment: TextAlignment) -> "TextLayoutRequest":
+        """Set the explicit alignment. Valid only for text replace."""
+        return replace(self, alignment=alignment)
+
+    def _effective_profile(self) -> Optional[TextLayoutProfile]:
+        """Return the profile to send. A layout with no mode and no profile gets ``noReflow``."""
+        if self.profile is None and self.mode is None:
+            return TextLayoutProfile.NO_REFLOW
+        return self.profile
+
     def validated(self) -> "TextLayoutRequest":
-        mode = self.mode or TextLayoutMode.SOURCE_ANCHORED
+        # The API treats an omitted mode as reflowWhenSupported.
+        mode = self.mode or TextLayoutMode.REFLOW_WHEN_SUPPORTED
+        if self.alignment is not None and not isinstance(self.alignment, TextAlignment):
+            raise ValidationException("layout.alignment must be a TextAlignment")
         if mode is TextLayoutMode.SOURCE_ANCHORED and self.profile is not None:
             raise ValidationException("sourceAnchored layout must not specify profile")
         if (
@@ -268,13 +304,17 @@ class TextLayoutRequest:
             raise ValidationException(
                 "layout.hyphenationEnabled is not valid when layout.mode is sourceAnchored"
             )
+        if mode is TextLayoutMode.SOURCE_ANCHORED and self.alignment is not None:
+            raise ValidationException(
+                "layout.alignment is not valid when layout.mode is sourceAnchored"
+            )
         if (
             mode
             in (
                 TextLayoutMode.REFLOW_WHEN_SUPPORTED,
                 TextLayoutMode.REQUIRE_REFLOW,
             )
-            and self.profile is None
+            and self._effective_profile() is None
         ):
             raise ValidationException(
                 f"{mode.value} profile must be one of default, bodyText, noReflow"
@@ -283,13 +323,21 @@ class TextLayoutRequest:
 
     def to_dict(self) -> dict[str, Any]:
         self.validated()
+        profile = self._effective_profile()
         return _without_none(
             {
                 "mode": self.mode.value if self.mode else None,
-                "profile": self.profile.value if self.profile else None,
+                "profile": profile.value if profile else None,
                 "hyphenationEnabled": self.hyphenation_enabled,
+                "alignment": self.alignment.value if self.alignment else None,
             }
         )
+
+
+def _reject_alignment(layout: Optional[TextLayoutRequest]) -> None:
+    """Reject ``layout.alignment`` on operations other than text replace."""
+    if layout is not None and layout.alignment is not None:
+        raise ValidationException("layout.alignment is valid only for text replace")
 
 
 @dataclass(frozen=True)
@@ -764,43 +812,52 @@ class TextReplaceRequest:
         return replace(self, pages=tuple(pages)).validated()
 
     def validated(self) -> "TextReplaceRequest":
+        """Validate the request.
+
+        ``replaceWithImage`` needs a ``sourceAnchored`` layout. When ``layout`` is
+        ``None``, the returned request has ``TextLayoutRequest.source_anchored()``.
+        """
         _validated_pages(self.pages)
         self.select.validated()
         if (self.replace_with is None) == (self.replace_with_image is None):
             raise ValidationException(
                 "Exactly one of replaceWith or replaceWithImage is required"
             )
+        request = self
         if self.replace_with_image is not None:
             self.replace_with_image.validated()
             if self.style is not None:
                 raise ValidationException("style is not valid with replaceWithImage")
-            if self.layout and self.layout.mode not in (
-                None,
-                TextLayoutMode.SOURCE_ANCHORED,
-            ):
+            if self.layout is not None and self.layout.alignment is not None:
+                raise ValidationException(
+                    "layout.alignment is not valid with replaceWithImage"
+                )
+            if self.layout is None:
+                request = replace(self, layout=TextLayoutRequest.source_anchored())
+            elif self.layout.mode is not TextLayoutMode.SOURCE_ANCHORED:
                 raise ValidationException(
                     "replaceWithImage supports only sourceAnchored layout"
                 )
         if self.style is not None:
             self.style.validated()
-        if self.layout is not None:
-            self.layout.validated()
-        return self
+        if request.layout is not None:
+            request.layout.validated()
+        return request
 
     def to_dict(self) -> dict[str, Any]:
-        self.validated()
+        request = self.validated()
         return _without_none(
             {
-                "pages": list(self.pages) if self.pages is not None else None,
-                "select": self.select.to_dict(),
-                "replaceWith": self.replace_with,
+                "pages": list(request.pages) if request.pages is not None else None,
+                "select": request.select.to_dict(),
+                "replaceWith": request.replace_with,
                 "replaceWithImage": (
-                    self.replace_with_image.to_dict()
-                    if self.replace_with_image
+                    request.replace_with_image.to_dict()
+                    if request.replace_with_image
                     else None
                 ),
-                "style": self.style.to_dict() if self.style else None,
-                "layout": self.layout.to_dict() if self.layout else None,
+                "style": request.style.to_dict() if request.style else None,
+                "layout": request.layout.to_dict() if request.layout else None,
             }
         )
 
@@ -815,6 +872,44 @@ class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
         self._replace_with_image: Optional[TextReplacementImageRequest] = None
         self._style: Optional[TextStyleSetRequest] = None
         self._reset_spacing_overrides: Optional[bool] = None
+        self._alignment: Optional[TextAlignment] = None
+
+    def alignment(self, alignment: TextAlignment) -> "TextReplaceBuilder":
+        """Align each edited line explicitly. Valid only for text replace.
+
+        Without a layout, this selects ``reflowWhenSupported`` with the
+        ``noReflow`` profile, the API default for an omitted layout. It can be
+        combined with ``reflow_when_supported(...)`` and ``require_reflow(...)``
+        in any order. ``source_anchored()`` and ``replace_with_image(...)`` are
+        rejected at ``build()``.
+
+        ``layout(...)`` keeps this alignment, unless the layout that it gets has
+        its own alignment.
+
+        The API reports an alignment that it cannot apply as an error with code
+        ``TextOperationDiagnostic.ALIGNMENT_NOT_HONORED``. The API then does not
+        change the text of the unit named in the error. Other matches can still
+        change. The response is returned without an exception. Check
+        ``response.errors`` together with ``response.changed``.
+        """
+        self._alignment = alignment
+        return self
+
+    def layout(self, layout: Optional[TextLayoutRequest]) -> Self:
+        super().layout(layout)
+        if layout is not None and layout.alignment is not None:
+            self._alignment = layout.alignment
+        return self
+
+    def _resolved_layout(self) -> Optional[TextLayoutRequest]:
+        layout = super()._resolved_layout()
+        if self._alignment is None:
+            return layout
+        if layout is None:
+            layout = TextLayoutRequest.reflow_when_supported(
+                TextLayoutProfile.NO_REFLOW
+            )
+        return replace(layout, alignment=self._alignment)
 
     def replace_with(self, value: str) -> "TextReplaceBuilder":
         self._replace_with, self._replace_with_image = value, None
@@ -858,16 +953,13 @@ class TextReplaceBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
             if any(value is not None for value in style_values.values())
             else None
         )
-        layout = self._resolved_layout()
-        if self._replace_with_image is not None and layout is None:
-            layout = TextLayoutRequest.source_anchored()
         return TextReplaceRequest(
             self._pages,
             self._selector(),
             self._replace_with,
             self._replace_with_image,
             style,
-            layout,
+            self._resolved_layout(),
         ).validated()
 
 
@@ -895,6 +987,7 @@ class TextDeleteRequest:
     def validated(self) -> "TextDeleteRequest":
         _validated_pages(self.pages)
         self.select.validated()
+        _reject_alignment(self.layout)
         if self.layout:
             self.layout.validated()
         return self
@@ -1103,6 +1196,7 @@ class TextInsertRequest:
             raise ValidationException(
                 "coordinate insertion style.patch requires font and size"
             )
+        _reject_alignment(self.layout)
         if self.layout:
             self.layout.validated()
         return self
@@ -1237,6 +1331,7 @@ class TextStyleRequest:
         if self.style is None:
             raise ValidationException("style must not be null")
         self.style.validated()
+        _reject_alignment(self.layout)
         if self.layout:
             self.layout.validated()
         return self
@@ -1364,6 +1459,12 @@ class TextStyleBuilder(_SelectorLayoutBuilder, _TextStyleBuilderBase):
 
 @dataclass(frozen=True)
 class TextOperationDiagnostic:
+    # Error code of a requested ``layout.alignment`` that the API could not
+    # apply. The API does not change the text of the unit named in the error.
+    # Other matches can still change. No exception is raised; check
+    # ``TextEditResponse.errors`` together with ``TextEditResponse.changed``.
+    ALIGNMENT_NOT_HONORED = "TEXT_ALIGNMENT_NOT_HONORED"
+
     page: Optional[int]
     code: Optional[str]
     message: Optional[str]
@@ -1465,6 +1566,7 @@ class TextEditResponse:
 
 TextLayoutRequest.Mode = TextLayoutMode  # type: ignore[attr-defined]
 TextLayoutRequest.Profile = TextLayoutProfile  # type: ignore[attr-defined]
+TextLayoutRequest.Alignment = TextAlignment  # type: ignore[attr-defined]
 
 
 __all__ = [

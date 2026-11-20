@@ -8,9 +8,11 @@ from pdfdancer import (
     PdfAffineTransform,
     PdfColorRequest,
     PDFDancer,
+    TextAlignment,
     TextDeleteRequest,
     TextInsertRequest,
     TextLayoutProfile,
+    TextOperationDiagnostic,
     TextReplaceRequest,
     TextStyleRequest,
 )
@@ -366,3 +368,79 @@ def test_required_reflow_exposes_layout_diagnostics(showcase_pdf: PDFDancer):
             normalize_whitespace=True,
         )
     )
+
+
+SOURCE_LINE = "This line will be replaced."
+
+
+def _line_extent(pdf: PDFDancer, text: str, page: int = 1) -> tuple[float, float]:
+    """Return the left and right edge of the one line with exactly this text."""
+    units = [
+        unit
+        for unit in pdf.page(page).analyze_reading_units().units
+        if unit.text.strip() == text
+    ]
+    assert len(units) == 1, f"Expected one line {text!r}, found {len(units)}"
+    bounds = units[0].provenance.bounds
+    return bounds.x, bounds.x + bounds.width
+
+
+# LEFT is not tested here. Without an alignment, the API also keeps the left edge,
+# so the test could not detect a dropped alignment field.
+@pytest.mark.parametrize("alignment", [TextAlignment.RIGHT, TextAlignment.CENTERED])
+def test_replace_alignment_keeps_the_reference_of_the_edited_line(
+    showcase_pdf: PDFDancer, alignment: TextAlignment
+):
+    source_left, source_right = _line_extent(showcase_pdf, SOURCE_LINE)
+
+    response = showcase_pdf.text().replace(
+        TextReplaceRequest.literal(SOURCE_LINE, "Short text.")
+        .max_matches(1)
+        .alignment(alignment)
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 1
+    assert not response.errors
+    saved = PDFAssertions(showcase_pdf).get_pdf()
+    left, right = _line_extent(saved, "Short text.")
+    assert right - left < source_right - source_left
+    if alignment is TextAlignment.RIGHT:
+        assert right == pytest.approx(source_right, abs=0.5)
+    else:
+        assert (left + right) / 2 == pytest.approx(
+            (source_left + source_right) / 2, abs=0.5
+        )
+
+
+def test_replace_alignment_that_cannot_be_honored_is_reported_without_raising(
+    showcase_pdf: PDFDancer,
+):
+    response = showcase_pdf.text().replace(
+        TextReplaceRequest.literal(SOURCE_LINE, "Replacement with reflow.")
+        .require_reflow(TextLayoutProfile.BODY_TEXT)
+        .alignment(TextAlignment.RIGHT)
+        .build()
+    )
+
+    assert response.matched == 1
+    assert response.changed == 0
+    assert [error.code for error in response.errors] == [
+        TextOperationDiagnostic.ALIGNMENT_NOT_HONORED
+    ]
+    PDFAssertions(showcase_pdf).assert_pdf_text_occurrence_count(SOURCE_LINE, 1, page=1)
+
+
+def test_replace_alignment_cannot_add_a_line(showcase_pdf: PDFDancer):
+    response = showcase_pdf.text().replace(
+        TextReplaceRequest.literal(SOURCE_LINE, "Line one.\nLine two.")
+        .alignment(TextAlignment.RIGHT)
+        .build()
+    )
+
+    assert response.changed == 0
+    assert [error.code for error in response.errors] == [
+        TextOperationDiagnostic.ALIGNMENT_NOT_HONORED
+    ]
+    PDFAssertions(showcase_pdf).assert_pdf_text_occurrence_count(SOURCE_LINE, 1, page=1)

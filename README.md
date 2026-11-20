@@ -240,6 +240,37 @@ pdf.text().insert(
 Each mutation returns `TextEditResponse`, including match and change counts, changed page numbers, per-change
 diagnostics, warnings, and errors.
 
+### Explicit alignment
+
+Text replace can align each edited line explicitly with `TextAlignment`. Each edited line keeps its original visible
+text extent as the reference: `LEFT` keeps the left edge, `RIGHT` keeps the right edge, `CENTERED` keeps the midpoint,
+and `JUSTIFIED` keeps both edges by changing the word gaps. Without an alignment, the API detects the alignment from
+the source PDF.
+
+```python
+from pdfdancer import TextAlignment, TextOperationDiagnostic, TextReplaceRequest
+
+response = pdf.text().replace(
+    TextReplaceRequest.literal("<<account_number>>", "BC5502731")
+    .alignment(TextAlignment.RIGHT)
+    .build()
+)
+if any(e.code == TextOperationDiagnostic.ALIGNMENT_NOT_HONORED for e in response.errors or ()):
+    ...  # the text of the unit named in the error was not changed; other matches can have changed
+```
+
+- `alignment()` alone uses `reflowWhenSupported` with the `noReflow` profile. You can combine it with
+  `reflow_when_supported(profile)` or `require_reflow(profile)` in any order. `layout(...)` keeps an alignment that
+  you set with `alignment()`, unless the layout that you pass has its own alignment.
+- A layout with no mode and no profile (for example, `hyphenation_enabled(False)` alone) uses the `noReflow` profile.
+- `replace_with_image(...)` uses a `sourceAnchored` layout. If you do not set a layout, the SDK sets it.
+- `alignment()` is valid only for replace. With `source_anchored()` or `replace_with_image(...)`, `build()` raises
+  `ValidationException`. The delete, insert, and style requests reject a layout that has an alignment.
+- If the API cannot apply the alignment (for example, the replacement adds or removes a line, or the profile re-wraps
+  the lines), the response has the error code `TextOperationDiagnostic.ALIGNMENT_NOT_HONORED`. The API does not change
+  the text of the unit named in the error. Other matches can still change. The SDK does not raise an exception for
+  this error. Check `response.errors` together with `response.changed`.
+
 ## Shared Models
 
 `Color` requires integral RGBA components in the inclusive range 0–255. Alpha defaults to 255; `BLACK`, `WHITE`, and

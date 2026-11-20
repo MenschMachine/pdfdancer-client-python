@@ -22,7 +22,7 @@ def test_delete_form(tmp_path: Path):
         assert pdf.select_forms() == []
         remaining_ids = {form.internal_id for form in pdf.select_forms()}
         assert form_ids.isdisjoint(remaining_ids)
-        pdf.save("/tmp/delete-form1.pdf")
+        pdf.save(tmp_path / "delete-form1.pdf")
 
         (PDFAssertions(pdf).assert_number_of_formxobjects(0))
 
